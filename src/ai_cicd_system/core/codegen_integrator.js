@@ -394,34 +394,70 @@ Please fix the described bug, ensuring the solution addresses the root cause and
 {{REQUIREMENTS}}
 
 ## Acceptance Criteria
-{{ACCEPTANCE_CRITERIA}}
-
-## Technical Details
-- Complexity: {{COMPLEXITY}}/10
-- Priority: {{PRIORITY}}
-- Affected Files: {{AFFECTED_FILES}}
-
-## Instructions
-Please implement the new feature according to the specifications, including comprehensive tests and documentation.`
+async sendCodegenRequest(prompt, taskId) {
+    if (this.config.enable_mock) {
+        return this._createMockResponse(prompt, taskId);
+    }
+    
+    // Real API call would go here
+    const startTime = Date.now();
+    
+    try {
+        // Mock API call
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API delay
+        
+        return {
+            success: true,
+            data: {
+                pr_url: `https://github.com/example/repo/pull/${Math.floor(Math.random() * 1000)}`,
+                pr_number: Math.floor(Math.random() * 1000),
+                branch_name: `feature/task-${taskId}`,
+                title: prompt.content.split('\n')[0].replace('# ', ''),
+                status: 'open',
+                created_at: new Date(),
+                modified_files: ['src/main.js', 'tests/main.test.js'],
+                repository: 'example/repo'
+            },
+            response_time_ms: Date.now() - startTime
+        };
+        
+    } catch (error) {
+        // Enhanced error handling based on error type
+        let errorMessage = error.message;
+        let errorType = 'unknown';
+        
+        // Check for common API errors
+        if (error.response) {
+            const status = error.response.status;
+            
+            if (status === 401 || status === 403) {
+                errorType = 'authentication';
+                errorMessage = 'API authentication failed. Please check your API key.';
+            } else if (status === 429) {
+                errorType = 'rate_limit';
+                errorMessage = 'API rate limit exceeded. Please try again later.';
+            } else if (status >= 500) {
+                errorType = 'server_error';
+                errorMessage = 'API server error. The service may be experiencing issues.';
             }
+        } else if (error.code === 'ECONNREFUSED' || error.code === 'ECONNABORTED') {
+            errorType = 'connection';
+            errorMessage = 'Could not connect to the API. Please check your network connection.';
+        } else if (error.code === 'ETIMEDOUT') {
+            errorType = 'timeout';
+            errorMessage = 'API request timed out. The service may be experiencing high load.';
+        }
+        
+        log('error', `Codegen API error (${errorType}): ${errorMessage}`);
+        
+        return {
+            success: false,
+            error: errorMessage,
+            error_type: errorType,
+            response_time_ms: Date.now() - startTime
         };
     }
-
-    getTemplate(type) {
-        return this.templates[type] || this.templates.implementation;
-    }
-
-    getTemplateCount() {
-        return Object.keys(this.templates).length;
-    }
 }
-
-/**
- * Codegen Client
- */
-class CodegenClient {
-    constructor(config) {
-        this.config = config;
     }
 
     async validateConnection() {
