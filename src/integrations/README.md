@@ -9,12 +9,14 @@ This directory contains both external service integrations and the comprehensive
 ## 📁 Components
 
 ### External Integrations
+
 - **Claude Code integration** - Automated PR validation and code analysis
 - **AgentAPI middleware** - Communication bridge for system orchestrator
 - **Linear integration** - Issue management and workflow automation
 - **Codegen SDK integration** - Real API integration for PR creation
 
 ### Component Integration Framework
+
 - **Service Discovery** - Automatic component registration and discovery
 - **Health Monitoring** - Real-time component health checking and status reporting
 - **Configuration Management** - Centralized configuration with hot reloading
@@ -69,42 +71,42 @@ import { createIntegrationFramework } from './src/integrations/index.js';
 ```javascript
 // Create and initialize the framework
 const framework = await createIntegrationFramework({
-    serviceRegistry: { storage: 'memory' },
-    healthMonitor: { checkInterval: 30000 },
-    configManager: { watchFiles: true },
-    eventBus: { enableWebSocket: true }
+	serviceRegistry: { storage: 'memory' },
+	healthMonitor: { checkInterval: 30000 },
+	configManager: { watchFiles: true },
+	eventBus: { enableWebSocket: true }
 });
 
 // Register a component
-await framework.registerComponent({
-    id: 'my-service',
-    name: 'My Service',
-    type: 'api',
-    version: '1.0.0',
-    endpoints: { health: '/health' },
-    healthCheck: () => ({ status: 'healthy' })
-}, componentInstance);
+await framework.registerComponent(
+	{
+		id: 'my-service',
+		name: 'My Service',
+		type: 'api',
+		version: '1.0.0',
+		endpoints: { health: '/health' },
+		healthCheck: () => ({ status: 'healthy' })
+	},
+	componentInstance
+);
 
 // Discover components
 const service = await framework.discoverComponent('my-service');
 
 // Send requests with circuit breaker and rate limiting
-const result = await framework.sendRequest(
-    'my-service', 
-    'GET', 
-    '/data', 
-    { query: 'test' }
-);
+const result = await framework.sendRequest('my-service', 'GET', '/data', {
+	query: 'test'
+});
 
 // Subscribe to events
 framework.subscribe('service.started', (data) => {
-    console.log('Service started:', data);
+	console.log('Service started:', data);
 });
 
 // Broadcast events
 await framework.broadcastEvent('service.started', {
-    serviceId: 'my-service',
-    timestamp: new Date().toISOString()
+	serviceId: 'my-service',
+	timestamp: new Date().toISOString()
 });
 ```
 
@@ -142,7 +144,7 @@ The integration framework meets the following performance requirements:
 ✅ **Claude Code Integration** - Implemented and tested  
 🚧 **AgentAPI Middleware** - In development  
 🚧 **Linear Integration** - Planned  
-🚧 **Enhanced Codegen SDK** - Planned  
+🚧 **Enhanced Codegen SDK** - Planned
 
 ## 🤝 Contributing
 

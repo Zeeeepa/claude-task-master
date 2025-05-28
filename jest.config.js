@@ -17,11 +17,11 @@ export default {
 	// The glob patterns Jest uses to detect test files
 	testMatch: ['**/__tests__/**/*.js', '**/?(*.)+(spec|test).js'],
 
-	// Transform files
+	// Transform files - disable for ES modules
 	transform: {},
 
-	// Disable transformations for node_modules
-	transformIgnorePatterns: ['/node_modules/'],
+	// Disable transformations for node_modules except for ES modules
+	transformIgnorePatterns: ['node_modules/(?!(.*\\.mjs$))'],
 
 	// Set moduleNameMapper for absolute paths
 	moduleNameMapper: {

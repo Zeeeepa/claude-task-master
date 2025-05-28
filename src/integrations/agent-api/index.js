@@ -1,6 +1,6 @@
 /**
  * AgentAPI Middleware Integration
- * 
+ *
  * Main entry point for the AgentAPI middleware system.
  * Exports all components for easy integration with the System Orchestrator.
  */
@@ -13,4 +13,3 @@ export { RateLimiter } from './rate-limiter.js';
 
 // Default export for convenience
 export { MiddlewareServer as default } from './middleware-server.js';
-
