@@ -12,6 +12,7 @@ import { ValidationEngine } from './core/validation_engine.js';
 import { WorkflowOrchestrator } from './core/workflow_orchestrator.js';
 import { ContextManager } from './core/context_manager.js';
 import { SystemMonitor } from './monitoring/system_monitor.js';
+import { WebhookSystem } from './webhooks/index.js';
 import { log } from '../scripts/modules/utils.js';
 
 /**
@@ -49,6 +50,7 @@ export class AICICDSystem {
                 'codegenIntegrator',
                 'validationEngine',
                 'workflowOrchestrator',
+                'webhookSystem',
                 'systemMonitor'
             ]);
 
@@ -237,6 +239,59 @@ export class AICICDSystem {
     }
 
     /**
+     * Get webhook system status
+     * @returns {Promise<Object>} Webhook system status
+     */
+    async getWebhookStatus() {
+        if (!this.isInitialized) {
+            return { status: 'not_initialized' };
+        }
+
+        const webhookSystem = this.components.get('webhookSystem');
+        if (!webhookSystem) {
+            return { status: 'not_available' };
+        }
+
+        return await webhookSystem.getHealth();
+    }
+
+    /**
+     * Get webhook queue status
+     * @returns {Promise<Object>} Queue status information
+     */
+    async getWebhookQueueStatus() {
+        if (!this.isInitialized) {
+            return { status: 'not_initialized' };
+        }
+
+        const webhookSystem = this.components.get('webhookSystem');
+        if (!webhookSystem) {
+            return { status: 'not_available' };
+        }
+
+        return await webhookSystem.getQueueStatus();
+    }
+
+    /**
+     * Reprocess webhook dead letter queue item
+     * @param {string} jobId - Job ID to reprocess
+     * @param {string} queueType - Target queue type
+     * @returns {Promise<boolean>} Success status
+     */
+    async reprocessWebhookDeadLetterItem(jobId, queueType = 'default') {
+        if (!this.isInitialized) {
+            throw new Error('System not initialized');
+        }
+
+        const webhookSystem = this.components.get('webhookSystem');
+        if (!webhookSystem) {
+            throw new Error('Webhook system not available');
+        }
+
+        return await webhookSystem.reprocessDeadLetterItem(jobId, queueType);
+    }
+
+    /**
      * Shutdown the system gracefully
      */
     async shutdown() {
@@ -257,6 +312,7 @@ export class AICICDSystem {
             // Shutdown components in reverse order
             const shutdownOrder = [
                 'systemMonitor',
+                'webhookSystem',
                 'workflowOrchestrator',
                 'validationEngine',
                 'codegenIntegrator',
@@ -294,6 +350,7 @@ export class AICICDSystem {
         this.components.set('codegenIntegrator', new CodegenIntegrator(this.config.codegen));
         this.components.set('validationEngine', new ValidationEngine(this.config.validation));
         this.components.set('workflowOrchestrator', new WorkflowOrchestrator(this.config.workflow));
+        this.components.set('webhookSystem', new WebhookSystem(this.config.webhooks));
         this.components.set('systemMonitor', new SystemMonitor(this.config.monitoring));
     }
 
@@ -407,4 +464,3 @@ export async function processRequirement(requirement, config = {}) {
 }
 
 export default AICICDSystem;
-
