@@ -1,0 +1,35 @@
+{
+  "id": "refactor_medium",
+  "name": "Medium Complexity Refactoring Template",
+  "type": "refactor",
+  "complexity_level": "medium",
+  "version": "1.0.0",
+  "description": "Template for medium complexity code refactoring with quality improvements",
+  "content": "# Code Refactoring: {{TASK_TITLE}}\n\n## Refactoring Objectives\n{{TASK_DESCRIPTION}}\n\n## Current Code Issues\n{{CURRENT_ISSUES}}\n\n## Proposed Improvements\n{{IMPROVEMENTS}}\n\n## Refactoring Strategy\n{{REFACTORING_STRATEGY}}\n\n## Code Quality Goals\n{{QUALITY_GOALS}}\n\n## Design Pattern Implementation\n{{DESIGN_PATTERNS}}\n\n## Performance Optimizations\n{{PERFORMANCE_OPTIMIZATIONS}}\n\n## Maintainability Improvements\n{{MAINTAINABILITY_IMPROVEMENTS}}\n\n## Files to Refactor\n{{TARGET_FILES}}\n\n## Backward Compatibility\n{{COMPATIBILITY_NOTES}}\n\n## Testing Strategy\n{{TESTING_STRATEGY}}\n\n## Migration Plan\n{{MIGRATION_PLAN}}\n\n## Risk Mitigation\n{{RISK_MITIGATION}}\n\n## Code Review Checklist\n{{CODE_REVIEW_CHECKLIST}}\n\n## Refactoring Guidelines\n- Maintain existing functionality while improving code structure\n- Apply SOLID principles and clean code practices\n- Improve code readability and maintainability\n- Reduce code duplication and complexity\n- Enhance error handling and logging\n- Optimize performance where applicable\n- Ensure comprehensive test coverage\n- Update documentation to reflect changes\n- Consider future extensibility\n- Follow established coding standards\n- Implement proper separation of concerns\n- Use appropriate design patterns\n\n## Success Criteria\n- All existing tests continue to pass\n- Code complexity metrics improve\n- Performance benchmarks meet or exceed current levels\n- Code coverage maintains or improves\n- No breaking changes to public APIs\n- Documentation is updated and accurate\n- Code review approval from team leads",
+  "variables": {
+    "CURRENT_ISSUES": "Detailed analysis of current code problems and technical debt",
+    "IMPROVEMENTS": "Specific improvements to be implemented",
+    "REFACTORING_STRATEGY": "Overall approach and methodology for refactoring",
+    "QUALITY_GOALS": "Specific code quality metrics and targets",
+    "DESIGN_PATTERNS": "Design patterns to be implemented or improved",
+    "PERFORMANCE_OPTIMIZATIONS": "Performance improvements to be made",
+    "MAINTAINABILITY_IMPROVEMENTS": "Changes to improve code maintainability",
+    "TARGET_FILES": "List of files and modules to be refactored",
+    "COMPATIBILITY_NOTES": "Backward compatibility considerations and requirements",
+    "TESTING_STRATEGY": "Testing approach to ensure refactoring success",
+    "MIGRATION_PLAN": "Plan for migrating existing code and data",
+    "RISK_MITIGATION": "Identified risks and mitigation strategies",
+    "CODE_REVIEW_CHECKLIST": "Specific items for code review focus"
+  },
+  "metadata": {
+    "created_at": "2025-05-28T16:30:00.000Z",
+    "updated_at": "2025-05-28T16:30:00.000Z",
+    "author": "Enhanced Codegen Integrator",
+    "tags": ["refactor", "medium", "quality", "maintenance"],
+    "estimated_complexity": 6,
+    "estimated_time_hours": 16,
+    "requires_review": true,
+    "requires_testing": true
+  }
+}
+
