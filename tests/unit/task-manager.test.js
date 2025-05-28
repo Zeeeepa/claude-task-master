@@ -156,7 +156,7 @@ const testParsePRD = async (prdPath, outputPath, numTasks, options = {}) => {
 
 		const prdContent = mockReadFileSync(prdPath, 'utf8');
 		// Modify mockCallClaude to accept lastTaskId parameter
-		let newTasks = await mockCallClaude(prdContent, prdPath, numTasks);
+		const newTasks = await mockCallClaude(prdContent, prdPath, numTasks);
 
 		// Merge tasks if appending
 		const tasksData = append

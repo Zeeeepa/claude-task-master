@@ -32,7 +32,9 @@ database/
 ### Core Tables
 
 #### `tasks`
+
 Main tasks table storing all task information:
+
 - `id` (UUID) - Primary key
 - `title` (VARCHAR) - Task title
 - `description` (TEXT) - Task description
@@ -54,7 +56,9 @@ Main tasks table storing all task information:
 - `metadata` (JSONB) - Additional metadata
 
 #### `task_contexts`
+
 Contextual information and metadata for tasks:
+
 - `id` (UUID) - Primary key
 - `task_id` (UUID) - Foreign key to tasks
 - `context_type` (VARCHAR) - Type of context
@@ -64,7 +68,9 @@ Contextual information and metadata for tasks:
 - `metadata` (JSONB) - Additional metadata
 
 #### `workflow_states`
+
 Workflow execution states and progress tracking:
+
 - `id` (UUID) - Primary key
 - `workflow_id` (VARCHAR) - Workflow identifier
 - `task_id` (UUID) - Associated task
@@ -78,7 +84,9 @@ Workflow execution states and progress tracking:
 - `metadata` (JSONB) - Additional metadata
 
 #### `audit_logs`
+
 Audit trail for all database changes:
+
 - `id` (UUID) - Primary key
 - `entity_type` (VARCHAR) - Type of entity
 - `entity_id` (UUID) - Entity identifier
@@ -93,7 +101,9 @@ Audit trail for all database changes:
 - `metadata` (JSONB) - Additional metadata
 
 #### `task_dependencies`
+
 Task dependency relationships:
+
 - `id` (UUID) - Primary key
 - `parent_task_id` (UUID) - Parent task
 - `child_task_id` (UUID) - Child task
@@ -114,6 +124,7 @@ The schema includes comprehensive indexes for performance:
 ### Triggers
 
 Automatic triggers for:
+
 - **Updated timestamps** - Automatically update `updated_at` fields
 - **Audit logging** - Automatically log all changes to audit_logs table
 
@@ -154,10 +165,10 @@ DB_AUDIT_RETENTION_DAYS=90
 
 ```javascript
 const taskStorage = new TaskStorageManager({
-    enable_mock: false,              // Use real database
-    auto_migrate: true,              // Run migrations automatically
-    enable_audit: true,              // Enable audit logging
-    enable_performance_tracking: true // Track performance metrics
+	enable_mock: false, // Use real database
+	auto_migrate: true, // Run migrations automatically
+	enable_audit: true, // Enable audit logging
+	enable_performance_tracking: true // Track performance metrics
 });
 ```
 
@@ -174,13 +185,13 @@ await taskStorage.initialize();
 
 // Store a task
 const taskId = await taskStorage.storeTask({
-    title: 'Implement feature X',
-    description: 'Add new functionality',
-    type: 'feature',
-    priority: 7,
-    complexity_score: 8,
-    requirements: ['Requirement 1', 'Requirement 2'],
-    acceptance_criteria: ['Criteria 1', 'Criteria 2']
+	title: 'Implement feature X',
+	description: 'Add new functionality',
+	type: 'feature',
+	priority: 7,
+	complexity_score: 8,
+	requirements: ['Requirement 1', 'Requirement 2'],
+	acceptance_criteria: ['Criteria 1', 'Criteria 2']
 });
 
 // Retrieve a task
@@ -188,23 +199,23 @@ const task = await taskStorage.getTask(taskId);
 
 // Update task status
 await taskStorage.updateTaskStatus(taskId, 'in_progress', {
-    started_by: 'developer-123',
-    notes: 'Starting implementation'
+	started_by: 'developer-123',
+	notes: 'Starting implementation'
 });
 
 // List tasks with filters
 const pendingTasks = await taskStorage.listTasks({
-    status: 'pending',
-    priority: 8,
-    sort_by: 'created_at',
-    sort_order: 'DESC',
-    limit: 50
+	status: 'pending',
+	priority: 8,
+	sort_by: 'created_at',
+	sort_order: 'DESC',
+	limit: 50
 });
 
 // Store context
 await taskStorage.storeTaskContext(taskId, 'codebase', {
-    files_analyzed: ['file1.js', 'file2.js'],
-    complexity_metrics: { cyclomatic: 5 }
+	files_analyzed: ['file1.js', 'file2.js'],
+	complexity_metrics: { cyclomatic: 5 }
 });
 
 // Get full context
@@ -216,11 +227,11 @@ const fullContext = await taskStorage.getTaskFullContext(taskId);
 ```javascript
 // Store AI interaction
 await taskStorage.storeAIInteraction(taskId, 'claude-3', {
-    type: 'code_generation',
-    request: { prompt: 'Generate function' },
-    response: { code: 'function test() {}' },
-    execution_time_ms: 1500,
-    success: true
+	type: 'code_generation',
+	request: { prompt: 'Generate function' },
+	response: { code: 'function test() {}' },
+	execution_time_ms: 1500,
+	success: true
 });
 
 // Add task dependency
@@ -228,19 +239,21 @@ await taskStorage.addTaskDependency(parentTaskId, childTaskId, 'blocks');
 
 // Store validation result
 await taskStorage.storeValidationResult(
-    taskId,
-    'code_quality',
-    'eslint',
-    'passed',
-    85,
-    { issues: 2, warnings: 1 },
-    { improve_naming: true }
+	taskId,
+	'code_quality',
+	'eslint',
+	'passed',
+	85,
+	{ issues: 2, warnings: 1 },
+	{ improve_naming: true }
 );
 
 // Get metrics
 const metrics = await taskStorage.getTaskMetrics();
 console.log(`Total tasks: ${metrics.total_tasks}`);
-console.log(`Completion rate: ${(metrics.completed_tasks / metrics.total_tasks * 100).toFixed(1)}%`);
+console.log(
+	`Completion rate: ${((metrics.completed_tasks / metrics.total_tasks) * 100).toFixed(1)}%`
+);
 ```
 
 ## Migration Management
@@ -266,7 +279,7 @@ console.log(`Applied: ${status.applied}, Pending: ${status.pending}`);
 // Validate migrations
 const validation = await migrationRunner.validateMigrations();
 if (!validation.valid) {
-    console.error('Migration validation failed:', validation.errors);
+	console.error('Migration validation failed:', validation.errors);
 }
 ```
 
@@ -274,7 +287,9 @@ if (!validation.valid) {
 
 ```javascript
 const migrationRunner = new MigrationRunner(connection);
-const migrationPath = await migrationRunner.createMigration('add_new_feature_table');
+const migrationPath = await migrationRunner.createMigration(
+	'add_new_feature_table'
+);
 console.log(`Created migration: ${migrationPath}`);
 ```
 
@@ -283,6 +298,7 @@ console.log(`Created migration: ${migrationPath}`);
 ### Connection Pooling
 
 The database connection uses PostgreSQL connection pooling with:
+
 - **Min connections**: 2
 - **Max connections**: 10
 - **Idle timeout**: 10 seconds
@@ -316,14 +332,14 @@ The database connection uses PostgreSQL connection pooling with:
 ```javascript
 // Automatic fallback to mock mode
 const taskStorage = new TaskStorageManager({
-    enable_mock: false // Will fallback to mock if database fails
+	enable_mock: false // Will fallback to mock if database fails
 });
 
 try {
-    await taskStorage.initialize();
+	await taskStorage.initialize();
 } catch (error) {
-    // Will automatically switch to mock mode
-    console.log('Database failed, using mock mode');
+	// Will automatically switch to mock mode
+	console.log('Database failed, using mock mode');
 }
 ```
 
@@ -367,11 +383,11 @@ console.log('Query performance:', health.query_performance);
 ```javascript
 const metrics = await taskStorage.getTaskMetrics();
 console.log('Task metrics:', {
-    total: metrics.total_tasks,
-    pending: metrics.pending_tasks,
-    completed: metrics.completed_tasks,
-    avgComplexity: metrics.avg_complexity,
-    estimationAccuracy: metrics.avg_estimation_accuracy
+	total: metrics.total_tasks,
+	pending: metrics.pending_tasks,
+	completed: metrics.completed_tasks,
+	avgComplexity: metrics.avg_complexity,
+	estimationAccuracy: metrics.avg_estimation_accuracy
 });
 ```
 
@@ -397,16 +413,19 @@ console.log('Task metrics:', {
 ### Common Issues
 
 1. **Connection Timeout**
+
    - Check database server status
    - Verify network connectivity
    - Review connection pool settings
 
 2. **Migration Failures**
+
    - Check database permissions
    - Verify schema compatibility
    - Review migration logs
 
 3. **Performance Issues**
+
    - Monitor slow query logs
    - Check index usage
    - Review connection pool metrics
@@ -420,11 +439,11 @@ console.log('Task metrics:', {
 
 ```javascript
 const taskStorage = new TaskStorageManager({
-    enable_mock: false,
-    monitoring: {
-        log_queries: true,
-        log_slow_queries: true
-    }
+	enable_mock: false,
+	monitoring: {
+		log_queries: true,
+		log_slow_queries: true
+	}
 });
 ```
 
@@ -442,4 +461,3 @@ When contributing to the database implementation:
 ## License
 
 This database implementation is part of the TaskMaster AI CI/CD System and follows the same license terms.
-

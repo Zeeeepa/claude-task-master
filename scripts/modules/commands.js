@@ -292,7 +292,7 @@ async function runInteractiveSetup(projectRoot) {
 		commonPrefix.push(customOpenRouterOption);
 		commonPrefix.push(customOllamaOption);
 
-		let prefixLength = commonPrefix.length; // Initial prefix length
+		const prefixLength = commonPrefix.length; // Initial prefix length
 
 		if (allowNone) {
 			choices = [
@@ -629,7 +629,7 @@ function registerCommands(programInstance) {
 			const append = options.append || false;
 			const research = options.research || false;
 			let useForce = force;
-			let useAppend = append;
+			const useAppend = append;
 
 			// Helper function to check if tasks.json exists and confirm overwrite
 			async function confirmOverwriteIfNeeded() {

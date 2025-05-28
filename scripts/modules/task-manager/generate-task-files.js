@@ -129,7 +129,7 @@ function generateTaskFiles(tasksPath, outputDir, options = {}) {
 
 					if (subtask.dependencies && subtask.dependencies.length > 0) {
 						// Format subtask dependencies
-						let subtaskDeps = subtask.dependencies
+						const subtaskDeps = subtask.dependencies
 							.map((depId) => {
 								if (typeof depId === 'number') {
 									// Handle numeric dependencies to other subtasks

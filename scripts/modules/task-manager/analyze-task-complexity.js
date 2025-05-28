@@ -222,7 +222,7 @@ async function analyzeTaskComplexity(options, context = {}) {
 
 		// Check for existing report before doing analysis
 		let existingReport = null;
-		let existingAnalysisMap = new Map(); // For quick lookups by task ID
+		const existingAnalysisMap = new Map(); // For quick lookups by task ID
 		try {
 			if (fs.existsSync(outputPath)) {
 				existingReport = readJSON(outputPath);

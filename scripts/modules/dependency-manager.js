@@ -149,7 +149,7 @@ async function addDependency(tasksPath, taskId, dependencyId) {
 	}
 
 	// Check for circular dependencies
-	let dependencyChain = [formattedTaskId];
+	const dependencyChain = [formattedTaskId];
 	if (
 		!isCircularDependency(data.tasks, formattedDependencyId, dependencyChain)
 	) {

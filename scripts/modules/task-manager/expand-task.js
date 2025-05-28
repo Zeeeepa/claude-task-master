@@ -284,9 +284,9 @@ function parseSubtasksFromText(
 		const patternStartIndex = jsonToParse.indexOf(targetPattern);
 
 		if (patternStartIndex !== -1) {
-			let openBraces = 0;
-			let firstBraceFound = false;
-			let extractedJsonBlock = '';
+			const openBraces = 0;
+			const firstBraceFound = false;
+			const extractedJsonBlock = '';
 			// ... (loop for brace counting as before) ...
 			// ... (if successful, jsonToParse = extractedJsonBlock) ...
 			// ... (if that fails, fallbacks as before) ...
