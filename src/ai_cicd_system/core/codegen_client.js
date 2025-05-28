@@ -1,206 +1,361 @@
 /**
- * @fileoverview Real Codegen HTTP Client
- * @description Production-grade Codegen API client based on Python SDK patterns
+ * @fileoverview Production Codegen SDK Client
+ * @description Real Codegen SDK integration with comprehensive error handling and rate limiting
  */
 
+import axios from 'axios';
 import { log } from '../../scripts/modules/utils.js';
 
 /**
- * Codegen Agent - mimics the Python SDK Agent class
+ * Production Codegen SDK Client
+ * Provides HTTP-based interface to Codegen services
  */
-export class CodegenAgent {
-    constructor(config) {
-        this.orgId = config.org_id;
-        this.token = config.token;
-        this.baseURL = config.baseURL || 'https://api.codegen.sh';
-        this.timeout = config.timeout || 120000; // 2 minutes
-        this.retries = config.retries || 3;
-        this.retryDelay = config.retryDelay || 1000;
-        
-        // Validate required config
-        if (!this.orgId || !this.token) {
-            throw new Error('Codegen Agent requires org_id and token');
-        }
-        
-        log('debug', `Initialized Codegen Agent for org ${this.orgId}`);
-    }
-
-    /**
-     * Run a task with the Codegen API
-     * @param {string} prompt - Task description/prompt
-     * @param {Object} options - Additional options
-     * @returns {Promise<CodegenTask>} Task object
-     */
-    async run(prompt, options = {}) {
-        log('info', `Creating Codegen task: ${prompt.substring(0, 100)}...`);
-        
-        const taskData = {
-            prompt: prompt,
-            org_id: this.orgId,
-            ...options
+export class CodegenClient {
+    constructor(config = {}) {
+        this.config = {
+            apiKey: config.apiKey || process.env.CODEGEN_API_KEY,
+            baseUrl: config.baseUrl || process.env.CODEGEN_BASE_URL || 'https://api.codegen.com',
+            timeout: config.timeout || 30000,
+            retries: config.retries || 3,
+            rateLimit: {
+                requests: config.rateLimit?.requests || 100,
+                window: config.rateLimit?.window || 60000 // 1 minute
+            },
+            ...config
         };
 
-        try {
-            const response = await this._makeRequest('POST', '/v1/tasks', taskData);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        // Validate required configuration
+        if (!this.config.apiKey) {
+            throw new CodegenError('API key is required for Codegen client');
+        }
+
+        // Initialize HTTP client
+        this.httpClient = axios.create({
+            baseURL: this.config.baseUrl,
+            timeout: this.config.timeout,
+            headers: {
+                'Authorization': `Bearer ${this.config.apiKey}`,
+                'Content-Type': 'application/json',
+                'User-Agent': 'claude-task-master/1.0.0'
             }
-            
-            const taskResult = await response.json();
-            
-            // Create and return a CodegenTask instance
-            const task = new CodegenTask(taskResult.id, this, taskResult);
-            
-            log('info', `Created Codegen task ${task.id} with status: ${task.status}`);
-            return task;
-            
+        });
+
+        // Request tracking for rate limiting
+        this.requestHistory = [];
+        this.activeRequests = new Map();
+
+        // Setup request/response interceptors
+        this._setupInterceptors();
+
+        log('info', 'Codegen client initialized');
+    }
+
+    /**
+     * Setup HTTP interceptors for logging and error handling
+     * @private
+     */
+    _setupInterceptors() {
+        // Request interceptor
+        this.httpClient.interceptors.request.use(
+            (config) => {
+                const requestId = this._generateRequestId();
+                config.metadata = { requestId, startTime: Date.now() };
+                
+                log('debug', `Codegen API request: ${config.method?.toUpperCase()} ${config.url}`, {
+                    requestId,
+                    headers: this._sanitizeHeaders(config.headers)
+                });
+
+                return config;
+            },
+            (error) => {
+                log('error', 'Codegen API request error', { error: error.message });
+                return Promise.reject(error);
+            }
+        );
+
+        // Response interceptor
+        this.httpClient.interceptors.response.use(
+            (response) => {
+                const { requestId, startTime } = response.config.metadata || {};
+                const duration = Date.now() - startTime;
+
+                log('debug', `Codegen API response: ${response.status}`, {
+                    requestId,
+                    duration,
+                    status: response.status
+                });
+
+                return response;
+            },
+            (error) => {
+                const { requestId, startTime } = error.config?.metadata || {};
+                const duration = startTime ? Date.now() - startTime : 0;
+
+                log('error', 'Codegen API error', {
+                    requestId,
+                    duration,
+                    status: error.response?.status,
+                    message: error.message
+                });
+
+                return Promise.reject(this._handleApiError(error));
+            }
+        );
+    }
+
+    /**
+     * Create a new code generation task
+     * @param {Object} taskData - Task configuration
+     * @returns {Promise<CodegenTask>} Created task
+     */
+    async createTask(taskData) {
+        await this._checkRateLimit();
+
+        try {
+            const response = await this.httpClient.post('/v1/tasks', {
+                prompt: taskData.prompt,
+                context: taskData.context,
+                repository: taskData.repository,
+                branch: taskData.branch,
+                options: taskData.options || {}
+            });
+
+            return new CodegenTask(response.data, this);
         } catch (error) {
-            log('error', `Failed to create Codegen task: ${error.message}`);
-            throw new CodegenError('TASK_CREATION_FAILED', error.message, error);
+            throw this._enhanceError(error, 'Failed to create Codegen task');
         }
     }
 
     /**
-     * Get task status by ID
+     * Get task status and results
      * @param {string} taskId - Task identifier
-     * @returns {Promise<Object>} Task data
+     * @returns {Promise<Object>} Task status and results
      */
     async getTask(taskId) {
+        await this._checkRateLimit();
+
         try {
-            const response = await this._makeRequest('GET', `/v1/tasks/${taskId}`);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            return await response.json();
-            
+            const response = await this.httpClient.get(`/v1/tasks/${taskId}`);
+            return response.data;
         } catch (error) {
-            log('error', `Failed to get task ${taskId}: ${error.message}`);
-            throw new CodegenError('TASK_FETCH_FAILED', error.message, error);
+            throw this._enhanceError(error, `Failed to get task ${taskId}`);
         }
     }
 
     /**
-     * Make HTTP request with retry logic
-     * @param {string} method - HTTP method
-     * @param {string} endpoint - API endpoint
-     * @param {Object} data - Request data
-     * @returns {Promise<Response>} HTTP response
+     * Cancel a running task
+     * @param {string} taskId - Task identifier
+     * @returns {Promise<boolean>} Success status
+     */
+    async cancelTask(taskId) {
+        await this._checkRateLimit();
+
+        try {
+            await this.httpClient.delete(`/v1/tasks/${taskId}`);
+            return true;
+        } catch (error) {
+            throw this._enhanceError(error, `Failed to cancel task ${taskId}`);
+        }
+    }
+
+    /**
+     * Validate API connection and credentials
+     * @returns {Promise<Object>} Health status
+     */
+    async validateConnection() {
+        try {
+            const response = await this.httpClient.get('/v1/health');
+            return {
+                status: 'healthy',
+                data: response.data,
+                timestamp: new Date().toISOString()
+            };
+        } catch (error) {
+            return {
+                status: 'unhealthy',
+                error: error.message,
+                timestamp: new Date().toISOString()
+            };
+        }
+    }
+
+    /**
+     * Get API usage statistics
+     * @returns {Promise<Object>} Usage statistics
+     */
+    async getUsageStats() {
+        await this._checkRateLimit();
+
+        try {
+            const response = await this.httpClient.get('/v1/usage');
+            return response.data;
+        } catch (error) {
+            throw this._enhanceError(error, 'Failed to get usage statistics');
+        }
+    }
+
+    /**
+     * Check rate limiting before making requests
      * @private
      */
-    async _makeRequest(method, endpoint, data = null) {
-        const url = `${this.baseURL}${endpoint}`;
-        
-        const headers = {
-            'Authorization': `Bearer ${this.token}`,
-            'Content-Type': 'application/json',
-            'User-Agent': 'claude-task-master/1.0.0'
-        };
+    async _checkRateLimit() {
+        const now = Date.now();
+        const windowStart = now - this.config.rateLimit.window;
 
-        const requestOptions = {
-            method,
-            headers,
-            timeout: this.timeout
-        };
+        // Clean old requests
+        this.requestHistory = this.requestHistory.filter(time => time > windowStart);
 
-        if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
-            requestOptions.body = JSON.stringify(data);
-        }
-
-        let lastError;
-        
-        for (let attempt = 1; attempt <= this.retries; attempt++) {
-            try {
-                log('debug', `Making ${method} request to ${url} (attempt ${attempt}/${this.retries})`);
-                
-                const response = await fetch(url, requestOptions);
-                
-                // If successful or non-retryable error, return immediately
-                if (response.ok || !this._isRetryableError(response.status)) {
-                    return response;
-                }
-                
-                lastError = new Error(`HTTP ${response.status}: ${response.statusText}`);
-                
-            } catch (error) {
-                lastError = error;
-                log('warning', `Request attempt ${attempt} failed: ${error.message}`);
-            }
+        // Check if we're at the limit
+        if (this.requestHistory.length >= this.config.rateLimit.requests) {
+            const oldestRequest = Math.min(...this.requestHistory);
+            const waitTime = oldestRequest + this.config.rateLimit.window - now;
             
-            // Wait before retry (exponential backoff)
-            if (attempt < this.retries) {
-                const delay = this.retryDelay * Math.pow(2, attempt - 1);
-                log('debug', `Retrying in ${delay}ms...`);
-                await new Promise(resolve => setTimeout(resolve, delay));
+            if (waitTime > 0) {
+                log('warn', `Rate limit reached, waiting ${waitTime}ms`);
+                await new Promise(resolve => setTimeout(resolve, waitTime));
             }
         }
-        
-        throw lastError;
+
+        // Record this request
+        this.requestHistory.push(now);
     }
 
     /**
-     * Check if HTTP status code is retryable
-     * @param {number} status - HTTP status code
-     * @returns {boolean} Whether the error is retryable
+     * Handle API errors with enhanced context
      * @private
      */
-    _isRetryableError(status) {
-        // Retry on server errors and rate limiting
-        return status >= 500 || status === 429 || status === 408;
+    _handleApiError(error) {
+        if (error.response) {
+            const { status, data } = error.response;
+            
+            switch (status) {
+                case 401:
+                    return new CodegenError('Authentication failed - invalid API key', 'AUTHENTICATION_ERROR', error);
+                case 403:
+                    return new CodegenError('Access forbidden - insufficient permissions', 'AUTHORIZATION_ERROR', error);
+                case 429:
+                    return new CodegenError('Rate limit exceeded', 'RATE_LIMIT_ERROR', error);
+                case 500:
+                case 502:
+                case 503:
+                case 504:
+                    return new CodegenError('Codegen service unavailable', 'SERVICE_ERROR', error);
+                default:
+                    return new CodegenError(data?.message || 'API request failed', 'API_ERROR', error);
+            }
+        } else if (error.code === 'ECONNREFUSED') {
+            return new CodegenError('Cannot connect to Codegen service', 'CONNECTION_ERROR', error);
+        } else if (error.code === 'ETIMEDOUT') {
+            return new CodegenError('Request timeout', 'TIMEOUT_ERROR', error);
+        } else {
+            return new CodegenError(error.message || 'Unknown error', 'UNKNOWN_ERROR', error);
+        }
+    }
+
+    /**
+     * Enhance error with additional context
+     * @private
+     */
+    _enhanceError(error, context) {
+        if (error instanceof CodegenError) {
+            error.context = context;
+            return error;
+        }
+        return new CodegenError(`${context}: ${error.message}`, 'ENHANCED_ERROR', error);
+    }
+
+    /**
+     * Generate unique request ID
+     * @private
+     */
+    _generateRequestId() {
+        return `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    }
+
+    /**
+     * Sanitize headers for logging (remove sensitive data)
+     * @private
+     */
+    _sanitizeHeaders(headers) {
+        const sanitized = { ...headers };
+        if (sanitized.Authorization) {
+            sanitized.Authorization = 'Bearer [REDACTED]';
+        }
+        return sanitized;
+    }
+
+    /**
+     * Cleanup resources
+     */
+    async shutdown() {
+        // Cancel any active requests
+        for (const [requestId, cancelToken] of this.activeRequests) {
+            try {
+                cancelToken.cancel(`Shutdown requested for ${requestId}`);
+            } catch (error) {
+                log('warn', `Failed to cancel request ${requestId}:`, error.message);
+            }
+        }
+        
+        this.activeRequests.clear();
+        this.requestHistory = [];
+        
+        log('info', 'Codegen client shutdown complete');
     }
 }
 
 /**
- * Codegen Task - mimics the Python SDK Task class
+ * Represents a Codegen task with status tracking
  */
 export class CodegenTask {
-    constructor(id, agent, initialData = {}) {
-        this.id = id;
-        this.agent = agent;
-        this.status = initialData.status || 'pending';
-        this.result = initialData.result || null;
-        this.error = initialData.error || null;
-        this.createdAt = initialData.created_at || new Date();
-        this.updatedAt = initialData.updated_at || new Date();
-        this._rawData = initialData;
+    constructor(taskData, client) {
+        this.id = taskData.id;
+        this.status = taskData.status;
+        this.prompt = taskData.prompt;
+        this.context = taskData.context;
+        this.repository = taskData.repository;
+        this.branch = taskData.branch;
+        this.createdAt = new Date(taskData.created_at);
+        this.updatedAt = new Date(taskData.updated_at);
+        this.result = taskData.result;
+        this.error = taskData.error;
+        this.metadata = taskData.metadata || {};
+        
+        this._client = client;
     }
 
     /**
-     * Refresh task status from API
+     * Refresh task status from server
      * @returns {Promise<void>}
      */
     async refresh() {
         try {
-            log('debug', `Refreshing task ${this.id} status`);
+            const taskData = await this._client.getTask(this.id);
             
-            const taskData = await this.agent.getTask(this.id);
-            
-            // Update task properties
+            // Update properties
             this.status = taskData.status;
+            this.updatedAt = new Date(taskData.updated_at);
             this.result = taskData.result;
             this.error = taskData.error;
-            this.updatedAt = taskData.updated_at || new Date();
-            this._rawData = taskData;
+            this.metadata = taskData.metadata || {};
             
-            log('debug', `Task ${this.id} status updated to: ${this.status}`);
-            
+            log('debug', `Task ${this.id} refreshed, status: ${this.status}`);
         } catch (error) {
-            log('error', `Failed to refresh task ${this.id}: ${error.message}`);
+            log('error', `Failed to refresh task ${this.id}:`, error.message);
             throw error;
         }
     }
 
     /**
-     * Wait for task completion with polling
-     * @param {Object} options - Polling options
+     * Wait for task completion
+     * @param {Object} options - Wait options
      * @returns {Promise<Object>} Final result
      */
     async waitForCompletion(options = {}) {
         const {
-            pollInterval = 5000, // 5 seconds
-            maxWaitTime = 600000, // 10 minutes
+            pollInterval = 5000,
+            maxWaitTime = 300000, // 5 minutes
             onProgress = null
         } = options;
 
@@ -209,10 +364,10 @@ export class CodegenTask {
         while (this.status === 'pending' || this.status === 'running') {
             // Check timeout
             if (Date.now() - startTime > maxWaitTime) {
-                throw new CodegenError('TASK_TIMEOUT', `Task ${this.id} timed out after ${maxWaitTime}ms`);
+                throw new CodegenError(`Task ${this.id} timed out after ${maxWaitTime}ms`, 'TIMEOUT_ERROR');
             }
-            
-            // Wait before polling
+
+            // Wait before next poll
             await new Promise(resolve => setTimeout(resolve, pollInterval));
             
             // Refresh status
@@ -222,27 +377,33 @@ export class CodegenTask {
             if (onProgress) {
                 onProgress(this);
             }
-            
-            log('debug', `Task ${this.id} status: ${this.status}`);
         }
-        
-        if (this.status === 'completed') {
-            return this.result;
-        } else if (this.status === 'failed') {
-            throw new CodegenError('TASK_FAILED', this.error || 'Task failed without error message');
-        } else {
-            throw new CodegenError('TASK_UNKNOWN_STATUS', `Task ${this.id} ended with unknown status: ${this.status}`);
+
+        if (this.status === 'failed') {
+            throw new CodegenError(`Task ${this.id} failed: ${this.error}`, 'TASK_FAILED');
         }
+
+        return this.result;
     }
 
     /**
-     * Get task metadata
-     * @returns {Object} Task metadata
+     * Cancel this task
+     * @returns {Promise<boolean>}
      */
-    getMetadata() {
+    async cancel() {
+        return await this._client.cancelTask(this.id);
+    }
+
+    /**
+     * Get task summary
+     * @returns {Object} Task summary
+     */
+    toSummary() {
         return {
             id: this.id,
             status: this.status,
+            repository: this.repository,
+            branch: this.branch,
             createdAt: this.createdAt,
             updatedAt: this.updatedAt,
             hasResult: !!this.result,
@@ -252,14 +413,15 @@ export class CodegenTask {
 }
 
 /**
- * Codegen Error class for better error handling
+ * Custom error class for Codegen operations
  */
 export class CodegenError extends Error {
-    constructor(code, message, originalError = null) {
+    constructor(message, code = 'CODEGEN_ERROR', originalError = null) {
         super(message);
         this.name = 'CodegenError';
         this.code = code;
         this.originalError = originalError;
+        this.timestamp = new Date().toISOString();
         
         // Maintain proper stack trace
         if (Error.captureStackTrace) {
@@ -269,104 +431,88 @@ export class CodegenError extends Error {
 
     /**
      * Check if error is retryable
-     * @returns {boolean} Whether the error should be retried
+     * @returns {boolean}
      */
     isRetryable() {
         const retryableCodes = [
-            'NETWORK_ERROR',
             'TIMEOUT_ERROR',
-            'RATE_LIMIT_EXCEEDED',
-            'SERVER_ERROR'
+            'CONNECTION_ERROR',
+            'SERVICE_ERROR',
+            'RATE_LIMIT_ERROR'
         ];
-        
         return retryableCodes.includes(this.code);
     }
 
     /**
-     * Get user-friendly error message
-     * @returns {string} User-friendly message
+     * Get error details for logging
+     * @returns {Object}
      */
-    getUserMessage() {
-        const messageMap = {
-            'AUTHENTICATION_FAILED': 'Invalid API credentials. Please check your token and org_id.',
-            'RATE_LIMIT_EXCEEDED': 'API rate limit exceeded. Please try again later.',
-            'TASK_CREATION_FAILED': 'Failed to create task. Please check your prompt and try again.',
-            'TASK_FETCH_FAILED': 'Failed to retrieve task status. The task may not exist.',
-            'TASK_TIMEOUT': 'Task took too long to complete. Please try with a simpler request.',
-            'TASK_FAILED': 'Task execution failed. Please check your prompt and try again.',
-            'INSUFFICIENT_CREDITS': 'Insufficient Codegen credits. Please check your account.',
-            'REPOSITORY_ACCESS_DENIED': 'No access to the specified repository.',
-            'NETWORK_ERROR': 'Network connection failed. Please check your internet connection.',
-            'SERVER_ERROR': 'Codegen service is experiencing issues. Please try again later.'
+    toLogObject() {
+        return {
+            name: this.name,
+            message: this.message,
+            code: this.code,
+            timestamp: this.timestamp,
+            context: this.context,
+            originalError: this.originalError?.message
         };
-        
-        return messageMap[this.code] || this.message;
     }
 }
 
 /**
- * Rate Limiter for API requests
+ * Rate limiter for Codegen API requests
  */
 export class RateLimiter {
     constructor(config = {}) {
-        this.requestsPerMinute = config.requestsPerMinute || 60;
-        this.requestsPerHour = config.requestsPerHour || 1000;
-        this.requests = [];
+        this.requests = config.requests || 100;
+        this.window = config.window || 60000; // 1 minute
+        this.requestHistory = [];
     }
 
     /**
-     * Acquire permission to make a request
-     * @returns {Promise<void>}
+     * Check if request is allowed
+     * @returns {Promise<boolean>}
      */
-    async acquire() {
+    async checkLimit() {
         const now = Date.now();
-        
+        const windowStart = now - this.window;
+
         // Clean old requests
-        this.requests = this.requests.filter(time => now - time < 3600000); // 1 hour
-        
-        // Check hourly limit
-        if (this.requests.length >= this.requestsPerHour) {
-            const oldestRequest = Math.min(...this.requests);
-            const waitTime = 3600000 - (now - oldestRequest);
+        this.requestHistory = this.requestHistory.filter(time => time > windowStart);
+
+        // Check if we're at the limit
+        if (this.requestHistory.length >= this.requests) {
+            const oldestRequest = Math.min(...this.requestHistory);
+            const waitTime = oldestRequest + this.window - now;
             
-            log('warning', `Hourly rate limit reached. Waiting ${waitTime}ms`);
-            await new Promise(resolve => setTimeout(resolve, waitTime));
-            return this.acquire();
+            if (waitTime > 0) {
+                await new Promise(resolve => setTimeout(resolve, waitTime));
+            }
         }
-        
-        // Check minute limit
-        const recentRequests = this.requests.filter(time => now - time < 60000); // 1 minute
-        if (recentRequests.length >= this.requestsPerMinute) {
-            const oldestRecentRequest = Math.min(...recentRequests);
-            const waitTime = 60000 - (now - oldestRecentRequest);
-            
-            log('warning', `Per-minute rate limit reached. Waiting ${waitTime}ms`);
-            await new Promise(resolve => setTimeout(resolve, waitTime));
-            return this.acquire();
-        }
-        
+
         // Record this request
-        this.requests.push(now);
+        this.requestHistory.push(now);
+        return true;
     }
 
     /**
-     * Get current rate limit status
-     * @returns {Object} Rate limit status
+     * Get current usage statistics
+     * @returns {Object}
      */
-    getStatus() {
+    getUsage() {
         const now = Date.now();
-        const recentRequests = this.requests.filter(time => now - time < 60000);
-        const hourlyRequests = this.requests.filter(time => now - time < 3600000);
-        
+        const windowStart = now - this.window;
+        const recentRequests = this.requestHistory.filter(time => time > windowStart);
+
         return {
-            requestsThisMinute: recentRequests.length,
-            requestsThisHour: hourlyRequests.length,
-            minuteLimit: this.requestsPerMinute,
-            hourlyLimit: this.requestsPerHour,
-            canMakeRequest: recentRequests.length < this.requestsPerMinute && hourlyRequests.length < this.requestsPerHour
+            requests: recentRequests.length,
+            limit: this.requests,
+            window: this.window,
+            remaining: Math.max(0, this.requests - recentRequests.length),
+            resetTime: recentRequests.length > 0 ? Math.min(...recentRequests) + this.window : now
         };
     }
 }
 
-export default CodegenAgent;
+export default CodegenClient;
 

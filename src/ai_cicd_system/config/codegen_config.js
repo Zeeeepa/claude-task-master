@@ -1,250 +1,230 @@
 /**
- * @fileoverview Codegen Configuration Management
- * @description Environment-based configuration for Codegen API integration
+ * @fileoverview Enhanced Codegen Configuration
+ * @description Production-ready configuration for Codegen SDK integration
  */
 
 import { log } from '../../scripts/modules/utils.js';
 
 /**
- * Codegen Configuration Manager
+ * Enhanced Codegen configuration class with production settings
  */
 export class CodegenConfig {
     constructor(config = {}) {
-        this.config = this._buildConfig(config);
+        // Core API configuration
+        this.api = {
+            apiKey: config.apiKey || process.env.CODEGEN_API_KEY,
+            baseUrl: config.baseUrl || process.env.CODEGEN_BASE_URL || 'https://api.codegen.com',
+            timeout: config.timeout || 30000,
+            retries: config.retries || 3,
+            version: config.version || 'v1',
+            ...config.api
+        };
+
+        // Authentication configuration
+        this.authentication = {
+            type: config.authenticationType || 'bearer',
+            refreshToken: config.refreshToken || process.env.CODEGEN_REFRESH_TOKEN,
+            tokenExpiry: config.tokenExpiry || 3600000, // 1 hour
+            autoRefresh: config.autoRefresh !== false,
+            ...config.authentication
+        };
+
+        // Rate limiting configuration
+        this.rateLimiting = {
+            enabled: config.rateLimitingEnabled !== false,
+            requests: config.requests || 100,
+            window: config.window || 60000, // 1 minute
+            strategy: config.strategy || 'sliding_window',
+            backoffMultiplier: config.backoffMultiplier || 2,
+            maxBackoffTime: config.maxBackoffTime || 30000,
+            ...config.rateLimiting
+        };
+
+        // Error handling configuration
+        this.errorHandling = {
+            enabled: config.errorHandlingEnabled !== false,
+            maxRetries: config.maxRetries || 3,
+            retryDelay: config.retryDelay || 1000,
+            exponentialBackoff: config.exponentialBackoff !== false,
+            circuitBreakerThreshold: config.circuitBreakerThreshold || 5,
+            circuitBreakerTimeout: config.circuitBreakerTimeout || 60000,
+            ...config.errorHandling
+        };
+
+        // Quota management configuration
+        this.quota = {
+            enabled: config.quotaEnabled !== false,
+            dailyLimit: config.dailyLimit || 1000,
+            monthlyLimit: config.monthlyLimit || 10000,
+            warningThreshold: config.warningThreshold || 0.8,
+            trackUsage: config.trackUsage !== false,
+            ...config.quota
+        };
+
+        // NLP processing configuration
+        this.nlp = {
+            enabled: config.nlpEnabled !== false,
+            maxContextLength: config.maxContextLength || 8000,
+            enableSemanticAnalysis: config.enableSemanticAnalysis !== false,
+            enableIntentClassification: config.enableIntentClassification !== false,
+            enableComplexityAnalysis: config.enableComplexityAnalysis !== false,
+            supportedLanguages: config.supportedLanguages || ['javascript', 'typescript', 'python', 'java', 'go'],
+            ...config.nlp
+        };
+
+        // Prompt generation configuration
+        this.promptGeneration = {
+            enabled: config.promptGenerationEnabled !== false,
+            maxPromptLength: config.maxPromptLength || 8000,
+            enableTemplates: config.enableTemplates !== false,
+            enableOptimization: config.enableOptimization !== false,
+            includeExamples: config.includeExamples || false,
+            templateVersion: config.templateVersion || '1.0',
+            ...config.promptGeneration
+        };
+
+        // Context enrichment configuration
+        this.contextEnrichment = {
+            enabled: config.contextEnrichmentEnabled !== false,
+            maxContextSize: config.maxContextSize || 8000,
+            enableFileAnalysis: config.enableFileAnalysis !== false,
+            enableDependencyAnalysis: config.enableDependencyAnalysis !== false,
+            enablePatternAnalysis: config.enablePatternAnalysis !== false,
+            cacheEnabled: config.cacheEnabled !== false,
+            cacheTTL: config.cacheTTL || 3600000, // 1 hour
+            ...config.contextEnrichment
+        };
+
+        // Quality validation configuration
+        this.qualityValidation = {
+            enabled: config.qualityValidationEnabled !== false,
+            minQualityScore: config.minQualityScore || 75,
+            enableCodeAnalysis: config.enableCodeAnalysis !== false,
+            enableContentAnalysis: config.enableContentAnalysis !== false,
+            enableSecurityAnalysis: config.enableSecurityAnalysis !== false,
+            enablePerformanceAnalysis: config.enablePerformanceAnalysis !== false,
+            strictMode: config.strictMode || false,
+            ...config.qualityValidation
+        };
+
+        // Monitoring and logging configuration
+        this.monitoring = {
+            enabled: config.monitoringEnabled !== false,
+            logLevel: config.logLevel || 'info',
+            enableMetrics: config.enableMetrics !== false,
+            enableTracing: config.enableTracing !== false,
+            metricsInterval: config.metricsInterval || 60000, // 1 minute
+            ...config.monitoring
+        };
+
+        // Cache configuration
+        this.cache = {
+            enabled: config.cacheEnabled !== false,
+            ttl: config.cacheTTL || 3600000, // 1 hour
+            maxSize: config.cacheMaxSize || 1000,
+            strategy: config.cacheStrategy || 'lru',
+            ...config.cache
+        };
+
+        // Development and testing configuration
+        this.development = {
+            mockMode: config.mockMode || false,
+            debugMode: config.debugMode || false,
+            testMode: config.testMode || false,
+            enableValidation: config.enableValidation !== false,
+            ...config.development
+        };
+
+        // Validate configuration
         this._validateConfig();
-        
-        log('debug', 'Codegen configuration initialized', {
-            mode: this.config.mode,
-            baseURL: this.config.api.baseURL,
-            enableMock: this.config.api.enableMock
+
+        log('info', 'Codegen configuration initialized', {
+            mockMode: this.development.mockMode,
+            apiConfigured: !!this.api.apiKey,
+            rateLimitingEnabled: this.rateLimiting.enabled
         });
     }
 
     /**
-     * Build configuration from environment and overrides
-     * @param {Object} overrides - Configuration overrides
+     * Get configuration for a specific component
+     * @param {string} component - Component name
+     * @returns {Object} Component configuration
+     */
+    getComponent(component) {
+        return this[component] || {};
+    }
+
+    /**
+     * Get all configuration
      * @returns {Object} Complete configuration
-     * @private
      */
-    _buildConfig(overrides) {
-        const envConfig = this._getEnvironmentConfig();
-        const defaultConfig = this._getDefaultConfig();
-        
-        return this._mergeConfigs(defaultConfig, envConfig, overrides);
+    getAll() {
+        return {
+            api: this.api,
+            authentication: this.authentication,
+            rateLimiting: this.rateLimiting,
+            errorHandling: this.errorHandling,
+            quota: this.quota,
+            nlp: this.nlp,
+            promptGeneration: this.promptGeneration,
+            contextEnrichment: this.contextEnrichment,
+            qualityValidation: this.qualityValidation,
+            monitoring: this.monitoring,
+            cache: this.cache,
+            development: this.development
+        };
     }
 
     /**
-     * Get default configuration
-     * @returns {Object} Default configuration
-     * @private
+     * Check if mock mode is enabled
+     * @returns {boolean} Mock mode status
      */
-    _getDefaultConfig() {
+    isMockEnabled() {
+        return this.development.mockMode;
+    }
+
+    /**
+     * Check if debug mode is enabled
+     * @returns {boolean} Debug mode status
+     */
+    isDebugEnabled() {
+        return this.development.debugMode;
+    }
+
+    /**
+     * Get API configuration
+     * @returns {Object} API configuration
+     */
+    getApiConfig() {
         return {
-            mode: 'development', // development, production, test
-            
-            api: {
-                baseURL: 'https://api.codegen.sh',
-                timeout: 120000, // 2 minutes
-                enableMock: false,
-                version: 'v1'
-            },
-            
-            authentication: {
-                token: null,
-                orgId: null,
-                validateOnInit: true
-            },
-            
-            rateLimiting: {
-                enabled: true,
-                requestsPerSecond: 2,
-                requestsPerMinute: 60,
-                requestsPerHour: 1000,
-                requestsPerDay: 10000,
-                burstSize: 5,
-                burstRefillRate: 1000,
-                backoffStrategy: 'exponential',
-                baseDelay: 1000,
-                maxDelay: 60000,
-                maxQueueSize: 100,
-                enableQueue: true
-            },
-            
-            retry: {
-                enabled: true,
-                maxRetries: 3,
-                baseDelay: 1000,
-                maxDelay: 30000,
-                retryableErrors: [
-                    'NETWORK_ERROR',
-                    'TIMEOUT_ERROR',
-                    'RATE_LIMIT_EXCEEDED',
-                    'SERVER_ERROR'
-                ]
-            },
-            
-            errorHandling: {
-                enableCircuitBreaker: true,
-                circuitBreakerThreshold: 5,
-                circuitBreakerTimeout: 60000,
-                enableErrorTracking: true,
-                maxErrorHistory: 1000
-            },
-            
-            polling: {
-                defaultInterval: 5000, // 5 seconds
-                maxWaitTime: 600000, // 10 minutes
-                backoffMultiplier: 1.5,
-                maxInterval: 30000 // 30 seconds
-            },
-            
-            quota: {
-                dailyLimit: 10000,
-                monthlyLimit: 100000,
-                enableWarnings: true,
-                warningThresholds: [0.8, 0.9, 0.95]
-            },
-            
-            logging: {
-                level: 'info', // debug, info, warning, error
-                enableRequestLogging: false,
-                enableResponseLogging: false,
-                enableMetrics: true
-            },
-            
-            cache: {
-                enabled: false,
-                ttl: 300000, // 5 minutes
-                maxSize: 100
-            },
-            
-            monitoring: {
-                enableHealthChecks: true,
-                healthCheckInterval: 60000, // 1 minute
-                enableMetrics: true,
-                metricsInterval: 30000 // 30 seconds
+            baseURL: this.api.baseUrl,
+            timeout: this.api.timeout,
+            headers: {
+                'Authorization': `Bearer ${this.api.apiKey}`,
+                'Content-Type': 'application/json',
+                'User-Agent': 'claude-task-master/1.0.0'
             }
         };
     }
 
     /**
-     * Get configuration from environment variables
-     * @returns {Object} Environment configuration
-     * @private
+     * Update configuration
+     * @param {Object} updates - Configuration updates
      */
-    _getEnvironmentConfig() {
-        const env = process.env;
-        
-        return {
-            mode: env.NODE_ENV || env.CODEGEN_MODE,
-            
-            api: {
-                baseURL: env.CODEGEN_API_URL,
-                timeout: this._parseNumber(env.CODEGEN_API_TIMEOUT),
-                enableMock: this._parseBoolean(env.CODEGEN_ENABLE_MOCK)
-            },
-            
-            authentication: {
-                token: env.CODEGEN_API_KEY || env.CODEGEN_TOKEN,
-                orgId: env.CODEGEN_ORG_ID,
-                validateOnInit: this._parseBoolean(env.CODEGEN_VALIDATE_ON_INIT)
-            },
-            
-            rateLimiting: {
-                enabled: this._parseBoolean(env.CODEGEN_RATE_LIMITING_ENABLED),
-                requestsPerSecond: this._parseNumber(env.CODEGEN_REQUESTS_PER_SECOND),
-                requestsPerMinute: this._parseNumber(env.CODEGEN_REQUESTS_PER_MINUTE),
-                requestsPerHour: this._parseNumber(env.CODEGEN_REQUESTS_PER_HOUR),
-                requestsPerDay: this._parseNumber(env.CODEGEN_REQUESTS_PER_DAY),
-                maxQueueSize: this._parseNumber(env.CODEGEN_MAX_QUEUE_SIZE)
-            },
-            
-            retry: {
-                enabled: this._parseBoolean(env.CODEGEN_RETRY_ENABLED),
-                maxRetries: this._parseNumber(env.CODEGEN_MAX_RETRIES),
-                baseDelay: this._parseNumber(env.CODEGEN_RETRY_BASE_DELAY),
-                maxDelay: this._parseNumber(env.CODEGEN_RETRY_MAX_DELAY)
-            },
-            
-            polling: {
-                defaultInterval: this._parseNumber(env.CODEGEN_POLL_INTERVAL),
-                maxWaitTime: this._parseNumber(env.CODEGEN_MAX_WAIT_TIME)
-            },
-            
-            quota: {
-                dailyLimit: this._parseNumber(env.CODEGEN_DAILY_LIMIT),
-                monthlyLimit: this._parseNumber(env.CODEGEN_MONTHLY_LIMIT),
-                enableWarnings: this._parseBoolean(env.CODEGEN_QUOTA_WARNINGS)
-            },
-            
-            logging: {
-                level: env.CODEGEN_LOG_LEVEL,
-                enableRequestLogging: this._parseBoolean(env.CODEGEN_LOG_REQUESTS),
-                enableResponseLogging: this._parseBoolean(env.CODEGEN_LOG_RESPONSES)
-            }
-        };
-    }
-
-    /**
-     * Merge multiple configuration objects
-     * @param {...Object} configs - Configuration objects to merge
-     * @returns {Object} Merged configuration
-     * @private
-     */
-    _mergeConfigs(...configs) {
-        const result = {};
-        
-        for (const config of configs) {
-            this._deepMerge(result, config);
-        }
-        
-        return result;
-    }
-
-    /**
-     * Deep merge two objects
-     * @param {Object} target - Target object
-     * @param {Object} source - Source object
-     * @private
-     */
-    _deepMerge(target, source) {
-        if (!source) return;
-        
-        for (const key in source) {
-            if (source[key] !== null && source[key] !== undefined) {
-                if (typeof source[key] === 'object' && !Array.isArray(source[key])) {
-                    if (!target[key]) target[key] = {};
-                    this._deepMerge(target[key], source[key]);
-                } else {
-                    target[key] = source[key];
-                }
+    update(updates) {
+        // Deep merge updates
+        for (const [key, value] of Object.entries(updates)) {
+            if (this[key] && typeof this[key] === 'object' && typeof value === 'object') {
+                this[key] = { ...this[key], ...value };
+            } else {
+                this[key] = value;
             }
         }
-    }
 
-    /**
-     * Parse boolean from string
-     * @param {string} value - String value
-     * @returns {boolean|undefined} Parsed boolean or undefined
-     * @private
-     */
-    _parseBoolean(value) {
-        if (value === undefined || value === null) return undefined;
-        if (typeof value === 'boolean') return value;
-        return value.toLowerCase() === 'true';
-    }
+        // Re-validate configuration
+        this._validateConfig();
 
-    /**
-     * Parse number from string
-     * @param {string} value - String value
-     * @returns {number|undefined} Parsed number or undefined
-     * @private
-     */
-    _parseNumber(value) {
-        if (value === undefined || value === null) return undefined;
-        if (typeof value === 'number') return value;
-        const parsed = parseInt(value, 10);
-        return isNaN(parsed) ? undefined : parsed;
+        log('debug', 'Configuration updated', { updatedKeys: Object.keys(updates) });
     }
 
     /**
@@ -253,273 +233,118 @@ export class CodegenConfig {
      */
     _validateConfig() {
         const errors = [];
-        
-        // Validate authentication in production mode
-        if (this.config.mode === 'production' && !this.config.api.enableMock) {
-            if (!this.config.authentication.token) {
-                errors.push('CODEGEN_API_KEY or CODEGEN_TOKEN is required in production mode');
-            }
-            if (!this.config.authentication.orgId) {
-                errors.push('CODEGEN_ORG_ID is required in production mode');
-            }
-        }
-        
+
         // Validate API configuration
-        if (!this.config.api.baseURL) {
-            errors.push('API base URL is required');
+        if (!this.development.mockMode && !this.api.apiKey) {
+            errors.push('API key is required when not in mock mode');
         }
-        
-        if (this.config.api.timeout < 1000) {
-            errors.push('API timeout must be at least 1000ms');
+
+        if (!this.api.baseUrl) {
+            errors.push('Base URL is required');
         }
-        
-        // Validate rate limiting
-        if (this.config.rateLimiting.enabled) {
-            if (this.config.rateLimiting.requestsPerSecond <= 0) {
-                errors.push('Requests per second must be positive');
+
+        // Validate rate limiting configuration
+        if (this.rateLimiting.enabled) {
+            if (this.rateLimiting.requests <= 0) {
+                errors.push('Rate limiting requests must be positive');
             }
-            if (this.config.rateLimiting.requestsPerMinute <= 0) {
-                errors.push('Requests per minute must be positive');
-            }
-        }
-        
-        // Validate retry configuration
-        if (this.config.retry.enabled) {
-            if (this.config.retry.maxRetries < 0) {
-                errors.push('Max retries must be non-negative');
-            }
-            if (this.config.retry.baseDelay < 0) {
-                errors.push('Base delay must be non-negative');
+            if (this.rateLimiting.window <= 0) {
+                errors.push('Rate limiting window must be positive');
             }
         }
-        
+
+        // Validate error handling configuration
+        if (this.errorHandling.maxRetries < 0) {
+            errors.push('Max retries cannot be negative');
+        }
+
+        // Validate quota configuration
+        if (this.quota.enabled) {
+            if (this.quota.dailyLimit <= 0) {
+                errors.push('Daily quota limit must be positive');
+            }
+            if (this.quota.monthlyLimit <= 0) {
+                errors.push('Monthly quota limit must be positive');
+            }
+        }
+
+        // Validate NLP configuration
+        if (this.nlp.maxContextLength <= 0) {
+            errors.push('Max context length must be positive');
+        }
+
+        // Validate quality validation configuration
+        if (this.qualityValidation.minQualityScore < 0 || this.qualityValidation.minQualityScore > 100) {
+            errors.push('Minimum quality score must be between 0 and 100');
+        }
+
         if (errors.length > 0) {
-            throw new Error(`Configuration validation failed:\n${errors.join('\n')}`);
+            throw new ConfigurationError(`Configuration validation failed: ${errors.join(', ')}`);
         }
     }
 
     /**
-     * Get configuration value by path
-     * @param {string} path - Configuration path (e.g., 'api.timeout')
-     * @returns {*} Configuration value
+     * Get configuration summary for logging
+     * @returns {Object} Configuration summary
      */
-    get(path) {
-        const parts = path.split('.');
-        let value = this.config;
-        
-        for (const part of parts) {
-            if (value && typeof value === 'object') {
-                value = value[part];
-            } else {
-                return undefined;
-            }
-        }
-        
-        return value;
-    }
-
-    /**
-     * Set configuration value by path
-     * @param {string} path - Configuration path
-     * @param {*} value - Value to set
-     */
-    set(path, value) {
-        const parts = path.split('.');
-        let target = this.config;
-        
-        for (let i = 0; i < parts.length - 1; i++) {
-            const part = parts[i];
-            if (!target[part] || typeof target[part] !== 'object') {
-                target[part] = {};
-            }
-            target = target[part];
-        }
-        
-        target[parts[parts.length - 1]] = value;
-        
-        // Re-validate after changes
-        this._validateConfig();
-    }
-
-    /**
-     * Get full configuration
-     * @returns {Object} Complete configuration
-     */
-    getAll() {
-        return { ...this.config };
-    }
-
-    /**
-     * Get configuration for specific component
-     * @param {string} component - Component name
-     * @returns {Object} Component configuration
-     */
-    getComponent(component) {
-        return this.config[component] || {};
-    }
-
-    /**
-     * Check if running in production mode
-     * @returns {boolean} Whether in production mode
-     */
-    isProduction() {
-        return this.config.mode === 'production';
-    }
-
-    /**
-     * Check if running in development mode
-     * @returns {boolean} Whether in development mode
-     */
-    isDevelopment() {
-        return this.config.mode === 'development';
-    }
-
-    /**
-     * Check if running in test mode
-     * @returns {boolean} Whether in test mode
-     */
-    isTest() {
-        return this.config.mode === 'test';
-    }
-
-    /**
-     * Check if mock mode is enabled
-     * @returns {boolean} Whether mock mode is enabled
-     */
-    isMockEnabled() {
-        return this.config.api.enableMock;
-    }
-
-    /**
-     * Get environment-specific configuration
-     * @returns {Object} Environment configuration
-     */
-    getEnvironmentConfig() {
-        const baseConfig = {
-            api: this.config.api,
-            authentication: this.config.authentication,
-            logging: this.config.logging
+    getSummary() {
+        return {
+            mockMode: this.development.mockMode,
+            debugMode: this.development.debugMode,
+            apiConfigured: !!this.api.apiKey,
+            rateLimitingEnabled: this.rateLimiting.enabled,
+            errorHandlingEnabled: this.errorHandling.enabled,
+            quotaEnabled: this.quota.enabled,
+            nlpEnabled: this.nlp.enabled,
+            qualityValidationEnabled: this.qualityValidation.enabled,
+            monitoringEnabled: this.monitoring.enabled,
+            cacheEnabled: this.cache.enabled
         };
-        
-        switch (this.config.mode) {
-            case 'production':
-                return {
-                    ...baseConfig,
-                    rateLimiting: this.config.rateLimiting,
-                    retry: this.config.retry,
-                    errorHandling: this.config.errorHandling,
-                    monitoring: this.config.monitoring
-                };
-                
-            case 'development':
-                return {
-                    ...baseConfig,
-                    rateLimiting: {
-                        ...this.config.rateLimiting,
-                        requestsPerSecond: Math.max(this.config.rateLimiting.requestsPerSecond, 5)
-                    },
-                    retry: {
-                        ...this.config.retry,
-                        maxRetries: Math.min(this.config.retry.maxRetries, 2)
-                    },
-                    logging: {
-                        ...this.config.logging,
-                        level: 'debug',
-                        enableRequestLogging: true
-                    }
-                };
-                
-            case 'test':
-                return {
-                    ...baseConfig,
-                    api: {
-                        ...this.config.api,
-                        enableMock: true,
-                        timeout: 5000
-                    },
-                    rateLimiting: {
-                        ...this.config.rateLimiting,
-                        enabled: false
-                    },
-                    retry: {
-                        ...this.config.retry,
-                        enabled: false
-                    },
-                    logging: {
-                        ...this.config.logging,
-                        level: 'error'
-                    }
-                };
-                
-            default:
-                return baseConfig;
-        }
     }
 
     /**
-     * Create configuration for specific use case
-     * @param {string} useCase - Use case name
-     * @returns {Object} Use case configuration
+     * Export configuration to JSON
+     * @param {boolean} includeSensitive - Include sensitive data
+     * @returns {string} JSON configuration
      */
-    createUseCaseConfig(useCase) {
-        const baseConfig = this.getEnvironmentConfig();
+    toJSON(includeSensitive = false) {
+        const config = this.getAll();
         
-        switch (useCase) {
-            case 'batch_processing':
-                return {
-                    ...baseConfig,
-                    rateLimiting: {
-                        ...baseConfig.rateLimiting,
-                        requestsPerSecond: 1,
-                        requestsPerMinute: 30,
-                        enableQueue: true,
-                        maxQueueSize: 1000
-                    },
-                    polling: {
-                        ...this.config.polling,
-                        defaultInterval: 10000,
-                        maxWaitTime: 1800000 // 30 minutes
-                    }
-                };
-                
-            case 'interactive':
-                return {
-                    ...baseConfig,
-                    rateLimiting: {
-                        ...baseConfig.rateLimiting,
-                        requestsPerSecond: 3,
-                        burstSize: 10
-                    },
-                    polling: {
-                        ...this.config.polling,
-                        defaultInterval: 2000,
-                        maxWaitTime: 300000 // 5 minutes
-                    }
-                };
-                
-            case 'background':
-                return {
-                    ...baseConfig,
-                    rateLimiting: {
-                        ...baseConfig.rateLimiting,
-                        requestsPerSecond: 0.5,
-                        requestsPerMinute: 20
-                    },
-                    polling: {
-                        ...this.config.polling,
-                        defaultInterval: 15000,
-                        maxWaitTime: 3600000 // 1 hour
-                    }
-                };
-                
-            default:
-                return baseConfig;
+        if (!includeSensitive) {
+            // Remove sensitive information
+            if (config.api.apiKey) {
+                config.api.apiKey = '[REDACTED]';
+            }
+            if (config.authentication.refreshToken) {
+                config.authentication.refreshToken = '[REDACTED]';
+            }
         }
+        
+        return JSON.stringify(config, null, 2);
+    }
+
+    /**
+     * Load configuration from environment variables
+     * @static
+     * @returns {CodegenConfig} Configuration instance
+     */
+    static fromEnvironment() {
+        return new CodegenConfig({
+            apiKey: process.env.CODEGEN_API_KEY,
+            baseUrl: process.env.CODEGEN_BASE_URL,
+            timeout: parseInt(process.env.CODEGEN_TIMEOUT) || undefined,
+            retries: parseInt(process.env.CODEGEN_RETRIES) || undefined,
+            mockMode: process.env.CODEGEN_MOCK_MODE === 'true',
+            debugMode: process.env.CODEGEN_DEBUG_MODE === 'true',
+            rateLimitingEnabled: process.env.CODEGEN_RATE_LIMITING !== 'false',
+            requests: parseInt(process.env.CODEGEN_RATE_LIMIT_REQUESTS) || undefined,
+            window: parseInt(process.env.CODEGEN_RATE_LIMIT_WINDOW) || undefined
+        });
     }
 }
 
 /**
- * Create configuration instance
+ * Create Codegen configuration with defaults
  * @param {Object} config - Configuration overrides
  * @returns {CodegenConfig} Configuration instance
  */
@@ -527,5 +352,18 @@ export function createCodegenConfig(config = {}) {
     return new CodegenConfig(config);
 }
 
-export default CodegenConfig;
+/**
+ * Configuration error class
+ */
+export class ConfigurationError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'ConfigurationError';
+        
+        if (Error.captureStackTrace) {
+            Error.captureStackTrace(this, ConfigurationError);
+        }
+    }
+}
 
+export default CodegenConfig;
