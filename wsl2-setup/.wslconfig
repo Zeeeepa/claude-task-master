@@ -1,0 +1,39 @@
+# WSL2 Configuration for AgentAPI
+# Place this file in your Windows user directory (C:\Users\<username>\.wslconfig)
+
+[wsl2]
+# Limits VM memory to use no more than 4 GB
+memory=4GB
+
+# Sets the VM to use two virtual processors
+processors=2
+
+# Specify a custom Linux kernel to use with your installed distros
+# kernel=C:\\temp\\myCustomKernel
+
+# Sets additional kernel parameters
+# kernelCommandLine = vsyscall=emulate
+
+# Sets amount of swap storage space to 1GB
+swap=1GB
+
+# Sets swapfile path location
+# swapfile=C:\\temp\\wsl-swap.vhdx
+
+# Disable page reporting so WSL retains all allocated memory claimed from Windows
+# pageReporting=false
+
+# Turn off default connection to bind WSL 2 localhost to Windows localhost
+# localhostforwarding=true
+
+# Disables nested virtualization
+# nestedVirtualization=false
+
+# Turns on output console showing contents of dmesg when opening a WSL 2 distro for debugging
+# debugConsole=true
+
+# Enable experimental features
+[experimental]
+# Enables experimental features
+sparseVhd=true
+
