@@ -82,6 +82,7 @@
 		"glob": "^11.0.0",
 		"inquirer": "^12.1.0",
 		"js-yaml": "^4.1.0",
+		"jsonwebtoken": "^9.0.2",
 		"lodash": "^4.17.21",
 		"node-cron": "^3.0.3",
 		"ollama-ai-provider": "^1.2.0",
