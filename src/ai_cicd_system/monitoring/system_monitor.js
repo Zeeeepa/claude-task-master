@@ -1,12 +1,18 @@
 /**
  * @fileoverview System Monitor
- * @description Comprehensive system monitoring and metrics collection
+ * @description Comprehensive system monitoring and metrics collection with enhanced observability
  */
 
 import { log } from '../../scripts/modules/utils.js';
+import PerformanceTracker from './performance_tracker.js';
+import MetricsCollector from './metrics_collector.js';
+import DashboardGenerator from './dashboard_generator.js';
+import DistributedTracer from '../observability/tracer.js';
+import EnhancedLogger from '../observability/logger.js';
+import PerformanceAnalyzer from '../analytics/performance_analyzer.js';
 
 /**
- * System monitor for comprehensive health tracking and metrics
+ * Enhanced system monitor for comprehensive health tracking and metrics
  */
 export class SystemMonitor {
     constructor(config = {}) {
@@ -17,6 +23,9 @@ export class SystemMonitor {
             health_check_interval: config.health_check_interval || 30000, // 30 seconds
             metrics_collection_interval: config.metrics_collection_interval || 60000, // 1 minute
             enable_performance_tracking: config.enable_performance_tracking !== false,
+            enable_observability: config.enable_observability !== false,
+            enable_analytics: config.enable_analytics !== false,
+            enable_dashboards: config.enable_dashboards !== false,
             ...config
         };
         
@@ -25,54 +34,83 @@ export class SystemMonitor {
         this.metricsInterval = null;
         this.systemMetrics = new Map();
         this.componentHealth = new Map();
-        this.performanceMetrics = new PerformanceTracker(this.config);
+        
+        // Initialize enhanced components
+        this.performanceTracker = new PerformanceTracker(this.config);
+        this.metricsCollector = new MetricsCollector(this.config);
+        this.dashboardGenerator = new DashboardGenerator(this.config);
+        this.tracer = new DistributedTracer(this.config);
+        this.logger = new EnhancedLogger(this.config);
+        this.performanceAnalyzer = new PerformanceAnalyzer(this.config);
         this.alertManager = new AlertManager(this.config);
+        
+        // Set up event listeners for integration
+        this._setupEventListeners();
     }
 
     /**
-     * Initialize the system monitor
+     * Initialize the enhanced system monitor
      */
     async initialize() {
-        log('debug', 'Initializing system monitor...');
+        log('debug', 'Initializing enhanced system monitor...');
         
         if (!this.config.enable_metrics) {
             log('info', 'System monitoring disabled');
             return;
         }
         
-        await this.performanceMetrics.initialize();
+        // Initialize all components
+        await this.performanceTracker.initialize();
+        await this.metricsCollector.initialize();
+        await this.dashboardGenerator.initialize();
+        await this.tracer.initialize();
+        await this.logger.initialize();
+        await this.performanceAnalyzer.initialize();
         await this.alertManager.initialize();
         
-        log('debug', 'System monitor initialized');
+        // Generate default dashboards
+        if (this.config.enable_dashboards) {
+            this._generateDefaultDashboards();
+        }
+        
+        log('debug', 'Enhanced system monitor initialized');
     }
 
     /**
-     * Start monitoring
+     * Start comprehensive monitoring
      */
     async startMonitoring() {
         if (!this.config.enable_metrics || this.isMonitoring) {
             return;
         }
         
-        log('info', 'Starting system monitoring...');
+        const span = this.tracer.startTrace('system_monitor_start');
+        const correlationId = this.tracer.getCorrelationId(span);
+        const childLogger = this.logger.child(correlationId, { component: 'system_monitor' });
+        
+        childLogger.info('Starting comprehensive system monitoring...');
         
         this.isMonitoring = true;
         
+        // Start all monitoring components
+        await this.metricsCollector.startCollection();
+        
         // Start health checks
         this.healthCheckInterval = setInterval(async () => {
-            await this._performHealthCheck();
+            await this._performEnhancedHealthCheck();
         }, this.config.health_check_interval);
         
         // Start metrics collection
         this.metricsInterval = setInterval(async () => {
-            await this._collectMetrics();
+            await this._collectEnhancedMetrics();
         }, this.config.metrics_collection_interval);
         
         // Initial health check and metrics collection
-        await this._performHealthCheck();
-        await this._collectMetrics();
+        await this._performEnhancedHealthCheck();
+        await this._collectEnhancedMetrics();
         
-        log('info', 'System monitoring started');
+        this.tracer.finishSpan(span, { success: true });
+        childLogger.info('Comprehensive system monitoring started');
     }
 
     /**
@@ -83,10 +121,15 @@ export class SystemMonitor {
             return;
         }
         
-        log('info', 'Stopping system monitoring...');
+        const span = this.tracer.startTrace('system_monitor_stop');
+        const correlationId = this.tracer.getCorrelationId(span);
+        const childLogger = this.logger.child(correlationId, { component: 'system_monitor' });
+        
+        childLogger.info('Stopping system monitoring...');
         
         this.isMonitoring = false;
         
+        // Stop intervals
         if (this.healthCheckInterval) {
             clearInterval(this.healthCheckInterval);
             this.healthCheckInterval = null;
@@ -97,7 +140,231 @@ export class SystemMonitor {
             this.metricsInterval = null;
         }
         
-        log('info', 'System monitoring stopped');
+        // Stop collection
+        await this.metricsCollector.stopCollection();
+        
+        // Cleanup components
+        await this.logger.cleanup();
+        
+        this.tracer.finishSpan(span, { success: true });
+        childLogger.info('System monitoring stopped');
+    }
+
+    /**
+     * Track operation performance
+     */
+    trackOperation(operationName, metadata = {}) {
+        const span = this.tracer.startSpan(operationName, null, metadata);
+        const trackingData = this.performanceTracker.startTracking(operationName, metadata);
+        
+        return {
+            span,
+            trackingData,
+            finish: (result = {}) => {
+                this.tracer.finishSpan(span, result);
+                this.performanceTracker.endTracking(operationName, result);
+                
+                // Add to performance analyzer
+                this.performanceAnalyzer.addDataPoint({
+                    type: metadata.type || 'operation',
+                    operationId: operationName,
+                    duration: result.duration || (Date.now() - trackingData.startTime),
+                    metadata,
+                    result
+                });
+            }
+        };
+    }
+
+    /**
+     * Get comprehensive system status
+     */
+    async getSystemStatus() {
+        const span = this.tracer.startSpan('get_system_status');
+        
+        try {
+            const status = {
+                timestamp: new Date(),
+                overall_health: 'healthy',
+                components: {},
+                metrics: this.metricsCollector.getCurrentMetrics(),
+                performance: this.performanceTracker.getAnalytics(),
+                analytics: this.performanceAnalyzer.generatePerformanceReport('1h'),
+                active_alerts: this.alertManager.getActiveAlerts(),
+                traces: this.tracer.getTraceStatistics(),
+                uptime: process.uptime()
+            };
+            
+            // Check component health
+            for (const [component, health] of this.componentHealth) {
+                status.components[component] = health;
+                if (health.status !== 'healthy') {
+                    status.overall_health = 'degraded';
+                }
+            }
+            
+            this.tracer.finishSpan(span, { success: true });
+            return status;
+        } catch (error) {
+            this.tracer.finishSpan(span, { error });
+            throw error;
+        }
+    }
+
+    /**
+     * Get performance insights and recommendations
+     */
+    async getPerformanceInsights() {
+        const span = this.tracer.startSpan('get_performance_insights');
+        
+        try {
+            const insights = {
+                recommendations: this.performanceTracker.getPerformanceRecommendations(),
+                analytics: this.performanceAnalyzer.generatePerformanceReport('24h'),
+                bottlenecks: this.performanceAnalyzer.identifyBottlenecks(),
+                anomalies: this.performanceAnalyzer.detectAnomalies(),
+                predictions: this.performanceAnalyzer.generatePredictions(),
+                capacity: this.performanceAnalyzer.generateCapacityPlanningInsights()
+            };
+            
+            this.tracer.finishSpan(span, { success: true });
+            return insights;
+        } catch (error) {
+            this.tracer.finishSpan(span, { error });
+            throw error;
+        }
+    }
+
+    /**
+     * Export monitoring data
+     */
+    async exportData(format = 'json') {
+        const span = this.tracer.startSpan('export_monitoring_data');
+        
+        try {
+            const data = {
+                metrics: this.metricsCollector.exportMetrics(format),
+                traces: this.tracer.exportTraces(format),
+                logs: this.logger.exportLogs(format),
+                performance: this.performanceTracker.getAnalytics(),
+                analytics: this.performanceAnalyzer.generatePerformanceReport()
+            };
+            
+            this.tracer.finishSpan(span, { success: true });
+            return data;
+        } catch (error) {
+            this.tracer.finishSpan(span, { error });
+            throw error;
+        }
+    }
+
+    /**
+     * Private methods for enhanced functionality
+     */
+    _setupEventListeners() {
+        // Performance tracker events
+        this.performanceTracker.on('tracking_completed', (data) => {
+            this.metricsCollector.recordMetric('operation_duration', data.duration, {
+                operation: data.operationId,
+                success: data.result.success
+            });
+        });
+        
+        // Metrics collector events
+        this.metricsCollector.on('metric_recorded', (metric) => {
+            this.logger.logEvent('metric_recorded', metric);
+        });
+        
+        // Performance analyzer events
+        this.performanceAnalyzer.on('anomalies_detected', (anomalies) => {
+            anomalies.forEach(anomaly => {
+                this.alertManager.fireAlert('performance_anomaly', {
+                    severity: anomaly.severity,
+                    message: `Performance anomaly detected in ${anomaly.operation}`,
+                    data: anomaly
+                });
+            });
+        });
+        
+        this.performanceAnalyzer.on('bottlenecks_identified', (bottlenecks) => {
+            bottlenecks.forEach(bottleneck => {
+                this.alertManager.fireAlert('performance_bottleneck', {
+                    severity: bottleneck.severity,
+                    message: `Performance bottleneck identified: ${bottleneck.type}`,
+                    data: bottleneck
+                });
+            });
+        });
+    }
+
+    async _performEnhancedHealthCheck() {
+        const span = this.tracer.startSpan('health_check');
+        
+        try {
+            // Check system resources
+            const resourceUsage = this.performanceTracker._getCurrentResourceUsage();
+            
+            // Record resource metrics
+            this.metricsCollector.recordGauge('memory_usage_bytes', resourceUsage.memory.heapUsed, { type: 'heap' });
+            this.metricsCollector.recordGauge('memory_usage_bytes', resourceUsage.memory.rss, { type: 'rss' });
+            this.metricsCollector.recordGauge('cpu_usage_microseconds', resourceUsage.cpu.user, { type: 'user' });
+            this.metricsCollector.recordGauge('cpu_usage_microseconds', resourceUsage.cpu.system, { type: 'system' });
+            
+            // Update component health
+            this._updateComponentHealth('system_monitor', 'healthy', {
+                memory_usage: resourceUsage.memory.heapUsed,
+                cpu_usage: resourceUsage.cpu.user + resourceUsage.cpu.system,
+                uptime: resourceUsage.uptime
+            });
+            
+            this.tracer.finishSpan(span, { success: true });
+        } catch (error) {
+            this.tracer.finishSpan(span, { error });
+            this.logger.logError(error, { component: 'health_check' });
+        }
+    }
+
+    async _collectEnhancedMetrics() {
+        const span = this.tracer.startSpan('collect_metrics');
+        
+        try {
+            // Trigger business metrics collection
+            this.metricsCollector.emit('collect_business_metrics');
+            
+            // Get performance analytics
+            const analytics = this.performanceTracker.getAnalytics('5m');
+            
+            // Record analytics as metrics
+            if (analytics.summary.totalOperations > 0) {
+                this.metricsCollector.recordGauge('avg_operation_duration', analytics.summary.avgDuration);
+                this.metricsCollector.recordGauge('operation_success_rate', analytics.summary.successRate);
+                this.metricsCollector.recordGauge('operation_error_rate', analytics.summary.errorRate);
+            }
+            
+            this.tracer.finishSpan(span, { success: true });
+        } catch (error) {
+            this.tracer.finishSpan(span, { error });
+            this.logger.logError(error, { component: 'metrics_collection' });
+        }
+    }
+
+    _generateDefaultDashboards() {
+        // Generate CI/CD dashboard
+        this.dashboardGenerator.generateCICDDashboard(this.metricsCollector, this.performanceTracker);
+        
+        // Generate performance dashboard
+        this.dashboardGenerator.generatePerformanceDashboard(this.performanceTracker);
+        
+        // Generate system health dashboard
+        this.dashboardGenerator.generateSystemHealthDashboard(this);
+    }
+
+    _updateComponentHealth(component, status, metadata = {}) {
+        this.componentHealth.set(component, {
+            status,
+            last_check: new Date(),
+            metadata
+        });
     }
 
     /**
@@ -293,63 +560,6 @@ export class SystemMonitor {
         // Clear all data
         this.systemMetrics.clear();
         this.componentHealth.clear();
-    }
-
-    // Private methods
-
-    /**
-     * Perform health check on all components
-     * @private
-     */
-    async _performHealthCheck() {
-        try {
-            // Record health check event
-            await this.recordEvent('health_check', {
-                components_checked: this.componentHealth.size,
-                timestamp: new Date()
-            });
-            
-            // Update system metrics
-            this.systemMetrics.set('last_health_check', new Date());
-            this.systemMetrics.set('health_check_count', 
-                (this.systemMetrics.get('health_check_count') || 0) + 1
-            );
-            
-        } catch (error) {
-            log('error', `Health check failed: ${error.message}`);
-        }
-    }
-
-    /**
-     * Collect system metrics
-     * @private
-     */
-    async _collectMetrics() {
-        try {
-            // Collect system metrics
-            const systemStats = {
-                memory_usage: process.memoryUsage(),
-                cpu_usage: process.cpuUsage(),
-                uptime: process.uptime(),
-                timestamp: new Date()
-            };
-            
-            this.systemMetrics.set('system_stats', systemStats);
-            
-            // Record metrics collection event
-            await this.recordEvent('metrics_collection', {
-                metrics_collected: this.systemMetrics.size,
-                timestamp: new Date()
-            });
-            
-            // Update collection count
-            this.systemMetrics.set('metrics_collection_count',
-                (this.systemMetrics.get('metrics_collection_count') || 0) + 1
-            );
-            
-        } catch (error) {
-            log('error', `Metrics collection failed: ${error.message}`);
-        }
     }
 }
 
@@ -638,4 +848,3 @@ class AlertManager {
 }
 
 export default SystemMonitor;
-
