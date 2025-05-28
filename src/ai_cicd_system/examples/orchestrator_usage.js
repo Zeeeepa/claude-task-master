@@ -5,444 +5,473 @@
 
 import { UnifiedSystem } from '../core/unified_system.js';
 import { SystemOrchestrator } from '../orchestrator/system_orchestrator.js';
-import { ComponentInterface, ServiceComponentInterface } from '../core/component_interface.js';
+import {
+	ComponentInterface,
+	ServiceComponentInterface
+} from '../core/component_interface.js';
 import { log } from '../../../scripts/modules/utils.js';
 
 // Example custom service component
 class ExampleService extends ServiceComponentInterface {
-    constructor(config = {}) {
-        super(config);
-        this.name = 'ExampleService';
-        this.version = '1.0.0';
-        this.processedTasks = 0;
-    }
+	constructor(config = {}) {
+		super(config);
+		this.name = 'ExampleService';
+		this.version = '1.0.0';
+		this.processedTasks = 0;
+	}
 
-    async initialize() {
-        log('info', `Initializing ${this.name}...`);
-        
-        // Register service endpoints
-        this.registerEndpoint('processTask', this.processTask.bind(this));
-        this.registerEndpoint('getStats', this.getStats.bind(this));
-        this.registerEndpoint('reset', this.reset.bind(this));
-        
-        this.isInitialized = true;
-        log('info', `${this.name} initialized successfully`);
-    }
+	async initialize() {
+		log('info', `Initializing ${this.name}...`);
 
-    async processTask(task) {
-        log('debug', `Processing task: ${task.id}`);
-        
-        // Simulate task processing
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        this.processedTasks++;
-        
-        return {
-            task_id: task.id,
-            processed_by: this.name,
-            processed_at: new Date().toISOString(),
-            result: 'success'
-        };
-    }
+		// Register service endpoints
+		this.registerEndpoint('processTask', this.processTask.bind(this));
+		this.registerEndpoint('getStats', this.getStats.bind(this));
+		this.registerEndpoint('reset', this.reset.bind(this));
 
-    async getStats() {
-        return {
-            service: this.name,
-            processed_tasks: this.processedTasks,
-            uptime: this.isInitialized ? 'running' : 'stopped'
-        };
-    }
+		this.isInitialized = true;
+		log('info', `${this.name} initialized successfully`);
+	}
 
-    async reset() {
-        this.processedTasks = 0;
-        return { message: 'Stats reset successfully' };
-    }
+	async processTask(task) {
+		log('debug', `Processing task: ${task.id}`);
 
-    async getHealth() {
-        return {
-            status: this.isInitialized ? 'healthy' : 'unhealthy',
-            name: this.name,
-            version: this.version,
-            processed_tasks: this.processedTasks
-        };
-    }
+		// Simulate task processing
+		await new Promise((resolve) => setTimeout(resolve, 100));
 
-    async shutdown() {
-        log('info', `Shutting down ${this.name}...`);
-        this.isInitialized = false;
-        log('info', `${this.name} shutdown complete`);
-    }
+		this.processedTasks++;
+
+		return {
+			task_id: task.id,
+			processed_by: this.name,
+			processed_at: new Date().toISOString(),
+			result: 'success'
+		};
+	}
+
+	async getStats() {
+		return {
+			service: this.name,
+			processed_tasks: this.processedTasks,
+			uptime: this.isInitialized ? 'running' : 'stopped'
+		};
+	}
+
+	async reset() {
+		this.processedTasks = 0;
+		return { message: 'Stats reset successfully' };
+	}
+
+	async getHealth() {
+		return {
+			status: this.isInitialized ? 'healthy' : 'unhealthy',
+			name: this.name,
+			version: this.version,
+			processed_tasks: this.processedTasks
+		};
+	}
+
+	async shutdown() {
+		log('info', `Shutting down ${this.name}...`);
+		this.isInitialized = false;
+		log('info', `${this.name} shutdown complete`);
+	}
 }
 
 // Example storage component
 class ExampleStorage extends ComponentInterface {
-    constructor(config = {}) {
-        super(config);
-        this.name = 'ExampleStorage';
-        this.version = '1.0.0';
-        this.dependencies = ['ExampleService'];
-        this.storage = new Map();
-    }
+	constructor(config = {}) {
+		super(config);
+		this.name = 'ExampleStorage';
+		this.version = '1.0.0';
+		this.dependencies = ['ExampleService'];
+		this.storage = new Map();
+	}
 
-    async initialize() {
-        log('info', `Initializing ${this.name}...`);
-        this.isInitialized = true;
-        log('info', `${this.name} initialized successfully`);
-    }
+	async initialize() {
+		log('info', `Initializing ${this.name}...`);
+		this.isInitialized = true;
+		log('info', `${this.name} initialized successfully`);
+	}
 
-    async store(key, value) {
-        this.storage.set(key, {
-            value,
-            stored_at: new Date().toISOString()
-        });
-        return true;
-    }
+	async store(key, value) {
+		this.storage.set(key, {
+			value,
+			stored_at: new Date().toISOString()
+		});
+		return true;
+	}
 
-    async retrieve(key) {
-        return this.storage.get(key) || null;
-    }
+	async retrieve(key) {
+		return this.storage.get(key) || null;
+	}
 
-    async list() {
-        return Array.from(this.storage.keys());
-    }
+	async list() {
+		return Array.from(this.storage.keys());
+	}
 
-    async clear() {
-        this.storage.clear();
-        return true;
-    }
+	async clear() {
+		this.storage.clear();
+		return true;
+	}
 
-    async getHealth() {
-        return {
-            status: this.isInitialized ? 'healthy' : 'unhealthy',
-            name: this.name,
-            version: this.version,
-            stored_items: this.storage.size
-        };
-    }
+	async getHealth() {
+		return {
+			status: this.isInitialized ? 'healthy' : 'unhealthy',
+			name: this.name,
+			version: this.version,
+			stored_items: this.storage.size
+		};
+	}
 
-    async shutdown() {
-        log('info', `Shutting down ${this.name}...`);
-        this.isInitialized = false;
-        log('info', `${this.name} shutdown complete`);
-    }
+	async shutdown() {
+		log('info', `Shutting down ${this.name}...`);
+		this.isInitialized = false;
+		log('info', `${this.name} shutdown complete`);
+	}
 }
 
 /**
  * Example 1: Basic Orchestrator Usage
  */
 async function basicOrchestratorExample() {
-    log('info', '🚀 Starting Basic Orchestrator Example');
-    
-    try {
-        // Create orchestrator with custom configuration
-        const orchestrator = new SystemOrchestrator({
-            mode: 'development',
-            orchestrator: {
-                enable_parallel_initialization: true,
-                component_initialization_timeout: 10000
-            }
-        });
+	log('info', '🚀 Starting Basic Orchestrator Example');
 
-        // Register custom components
-        const exampleService = new ExampleService();
-        const exampleStorage = new ExampleStorage();
+	try {
+		// Create orchestrator with custom configuration
+		const orchestrator = new SystemOrchestrator({
+			mode: 'development',
+			orchestrator: {
+				enable_parallel_initialization: true,
+				component_initialization_timeout: 10000
+			}
+		});
 
-        orchestrator.registerComponent('exampleService', exampleService, {
-            priority: 10,
-            healthCheck: () => exampleService.getHealth()
-        });
+		// Register custom components
+		const exampleService = new ExampleService();
+		const exampleStorage = new ExampleStorage();
 
-        orchestrator.registerComponent('exampleStorage', exampleStorage, {
-            dependencies: ['exampleService'],
-            priority: 20,
-            healthCheck: () => exampleStorage.getHealth()
-        });
+		orchestrator.registerComponent('exampleService', exampleService, {
+			priority: 10,
+			healthCheck: () => exampleService.getHealth()
+		});
 
-        // Initialize the orchestrator
-        log('info', 'Initializing orchestrator...');
-        const initResults = await orchestrator.initialize();
-        log('info', `Orchestrator initialized: ${initResults.successful} components successful`);
+		orchestrator.registerComponent('exampleStorage', exampleStorage, {
+			dependencies: ['exampleService'],
+			priority: 20,
+			healthCheck: () => exampleStorage.getHealth()
+		});
 
-        // Get system health
-        const health = await orchestrator.getHealth();
-        log('info', `System health: ${health.status}`);
+		// Initialize the orchestrator
+		log('info', 'Initializing orchestrator...');
+		const initResults = await orchestrator.initialize();
+		log(
+			'info',
+			`Orchestrator initialized: ${initResults.successful} components successful`
+		);
 
-        // Use the components
-        const service = orchestrator.getComponent('exampleService');
-        const storage = orchestrator.getComponent('exampleStorage');
+		// Get system health
+		const health = await orchestrator.getHealth();
+		log('info', `System health: ${health.status}`);
 
-        // Process some tasks
-        const task1 = { id: 'task-1', title: 'Example Task 1' };
-        const task2 = { id: 'task-2', title: 'Example Task 2' };
+		// Use the components
+		const service = orchestrator.getComponent('exampleService');
+		const storage = orchestrator.getComponent('exampleStorage');
 
-        const result1 = await service.callEndpoint('processTask', task1);
-        const result2 = await service.callEndpoint('processTask', task2);
+		// Process some tasks
+		const task1 = { id: 'task-1', title: 'Example Task 1' };
+		const task2 = { id: 'task-2', title: 'Example Task 2' };
 
-        log('info', `Task 1 result: ${JSON.stringify(result1)}`);
-        log('info', `Task 2 result: ${JSON.stringify(result2)}`);
+		const result1 = await service.callEndpoint('processTask', task1);
+		const result2 = await service.callEndpoint('processTask', task2);
 
-        // Store results
-        await storage.store('task-1-result', result1);
-        await storage.store('task-2-result', result2);
+		log('info', `Task 1 result: ${JSON.stringify(result1)}`);
+		log('info', `Task 2 result: ${JSON.stringify(result2)}`);
 
-        // Get service stats
-        const stats = await service.callEndpoint('getStats');
-        log('info', `Service stats: ${JSON.stringify(stats)}`);
+		// Store results
+		await storage.store('task-1-result', result1);
+		await storage.store('task-2-result', result2);
 
-        // Get final health check
-        const finalHealth = await orchestrator.getHealth();
-        log('info', `Final system health: ${finalHealth.status}`);
+		// Get service stats
+		const stats = await service.callEndpoint('getStats');
+		log('info', `Service stats: ${JSON.stringify(stats)}`);
 
-        // Shutdown
-        await orchestrator.shutdown();
-        log('info', '✅ Basic Orchestrator Example completed successfully');
+		// Get final health check
+		const finalHealth = await orchestrator.getHealth();
+		log('info', `Final system health: ${finalHealth.status}`);
 
-    } catch (error) {
-        log('error', `❌ Basic Orchestrator Example failed: ${error.message}`);
-        throw error;
-    }
+		// Shutdown
+		await orchestrator.shutdown();
+		log('info', '✅ Basic Orchestrator Example completed successfully');
+	} catch (error) {
+		log('error', `❌ Basic Orchestrator Example failed: ${error.message}`);
+		throw error;
+	}
 }
 
 /**
  * Example 2: Unified System Usage
  */
 async function unifiedSystemExample() {
-    log('info', '🌟 Starting Unified System Example');
-    
-    try {
-        // Create unified system for development
-        const system = UnifiedSystem.forDevelopment({
-            orchestrator: {
-                enable_parallel_initialization: true
-            }
-        });
+	log('info', '🌟 Starting Unified System Example');
 
-        // Register custom components
-        const exampleService = new ExampleService();
-        system.registerComponent('exampleService', exampleService, {
-            healthCheck: () => exampleService.getHealth()
-        });
+	try {
+		// Create unified system for development
+		const system = UnifiedSystem.forDevelopment({
+			orchestrator: {
+				enable_parallel_initialization: true
+			}
+		});
 
-        // Start the system
-        log('info', 'Starting unified system...');
-        const startResults = await system.start();
-        log('info', `System started in ${startResults.startup_time_ms}ms`);
+		// Register custom components
+		const exampleService = new ExampleService();
+		system.registerComponent('exampleService', exampleService, {
+			healthCheck: () => exampleService.getHealth()
+		});
 
-        // Process tasks through the unified system
-        const tasks = [
-            { id: 'unified-task-1', title: 'Unified Task 1', description: 'First unified task' },
-            { id: 'unified-task-2', title: 'Unified Task 2', description: 'Second unified task' },
-            { id: 'unified-task-3', title: 'Unified Task 3', description: 'Third unified task' }
-        ];
+		// Start the system
+		log('info', 'Starting unified system...');
+		const startResults = await system.start();
+		log('info', `System started in ${startResults.startup_time_ms}ms`);
 
-        // Process tasks in batch
-        log('info', 'Processing batch of tasks...');
-        const batchResults = await system.processBatch(tasks, {
-            parallel: true,
-            continueOnError: true
-        });
+		// Process tasks through the unified system
+		const tasks = [
+			{
+				id: 'unified-task-1',
+				title: 'Unified Task 1',
+				description: 'First unified task'
+			},
+			{
+				id: 'unified-task-2',
+				title: 'Unified Task 2',
+				description: 'Second unified task'
+			},
+			{
+				id: 'unified-task-3',
+				title: 'Unified Task 3',
+				description: 'Third unified task'
+			}
+		];
 
-        log('info', `Batch processing completed: ${batchResults.successful} successful, ${batchResults.failed} failed`);
+		// Process tasks in batch
+		log('info', 'Processing batch of tasks...');
+		const batchResults = await system.processBatch(tasks, {
+			parallel: true,
+			continueOnError: true
+		});
 
-        // Get system statistics
-        const stats = await system.getStatistics();
-        log('info', `System processed ${stats.system_metrics.totalRequests} total requests`);
-        log('info', `Average response time: ${stats.system_metrics.averageResponseTime.toFixed(2)}ms`);
+		log(
+			'info',
+			`Batch processing completed: ${batchResults.successful} successful, ${batchResults.failed} failed`
+		);
 
-        // Stop the system
-        await system.stop();
-        log('info', '✅ Unified System Example completed successfully');
+		// Get system statistics
+		const stats = await system.getStatistics();
+		log(
+			'info',
+			`System processed ${stats.system_metrics.totalRequests} total requests`
+		);
+		log(
+			'info',
+			`Average response time: ${stats.system_metrics.averageResponseTime.toFixed(2)}ms`
+		);
 
-    } catch (error) {
-        log('error', `❌ Unified System Example failed: ${error.message}`);
-        throw error;
-    }
+		// Stop the system
+		await system.stop();
+		log('info', '✅ Unified System Example completed successfully');
+	} catch (error) {
+		log('error', `❌ Unified System Example failed: ${error.message}`);
+		throw error;
+	}
 }
 
 /**
  * Example 3: Error Handling and Recovery
  */
 async function errorHandlingExample() {
-    log('info', '🛠️ Starting Error Handling Example');
-    
-    try {
-        const orchestrator = new SystemOrchestrator({
-            mode: 'development'
-        });
+	log('info', '🛠️ Starting Error Handling Example');
 
-        // Create a component that will fail initially
-        class FlakeyComponent extends ComponentInterface {
-            constructor() {
-                super();
-                this.name = 'FlakeyComponent';
-                this.initAttempts = 0;
-            }
+	try {
+		const orchestrator = new SystemOrchestrator({
+			mode: 'development'
+		});
 
-            async initialize() {
-                this.initAttempts++;
-                if (this.initAttempts === 1) {
-                    throw new Error('Simulated initialization failure');
-                }
-                this.isInitialized = true;
-                log('info', 'FlakeyComponent initialized successfully on retry');
-            }
+		// Create a component that will fail initially
+		class FlakeyComponent extends ComponentInterface {
+			constructor() {
+				super();
+				this.name = 'FlakeyComponent';
+				this.initAttempts = 0;
+			}
 
-            async getHealth() {
-                return {
-                    status: this.isInitialized ? 'healthy' : 'unhealthy',
-                    name: this.name,
-                    init_attempts: this.initAttempts
-                };
-            }
-        }
+			async initialize() {
+				this.initAttempts++;
+				if (this.initAttempts === 1) {
+					throw new Error('Simulated initialization failure');
+				}
+				this.isInitialized = true;
+				log('info', 'FlakeyComponent initialized successfully on retry');
+			}
 
-        const flakeyComponent = new FlakeyComponent();
-        const goodComponent = new ExampleService();
+			async getHealth() {
+				return {
+					status: this.isInitialized ? 'healthy' : 'unhealthy',
+					name: this.name,
+					init_attempts: this.initAttempts
+				};
+			}
+		}
 
-        orchestrator.registerComponent('flakey', flakeyComponent);
-        orchestrator.registerComponent('good', goodComponent);
+		const flakeyComponent = new FlakeyComponent();
+		const goodComponent = new ExampleService();
 
-        // First initialization will fail
-        try {
-            await orchestrator.initialize();
-        } catch (error) {
-            log('warning', `Expected initialization failure: ${error.message}`);
-        }
+		orchestrator.registerComponent('flakey', flakeyComponent);
+		orchestrator.registerComponent('good', goodComponent);
 
-        // Restart the failed component
-        log('info', 'Attempting to restart failed component...');
-        await orchestrator.restartComponent('flakey');
+		// First initialization will fail
+		try {
+			await orchestrator.initialize();
+		} catch (error) {
+			log('warning', `Expected initialization failure: ${error.message}`);
+		}
 
-        // Check health after restart
-        const health = await orchestrator.getHealth();
-        log('info', `System health after restart: ${health.status}`);
+		// Restart the failed component
+		log('info', 'Attempting to restart failed component...');
+		await orchestrator.restartComponent('flakey');
 
-        await orchestrator.shutdown();
-        log('info', '✅ Error Handling Example completed successfully');
+		// Check health after restart
+		const health = await orchestrator.getHealth();
+		log('info', `System health after restart: ${health.status}`);
 
-    } catch (error) {
-        log('error', `❌ Error Handling Example failed: ${error.message}`);
-        throw error;
-    }
+		await orchestrator.shutdown();
+		log('info', '✅ Error Handling Example completed successfully');
+	} catch (error) {
+		log('error', `❌ Error Handling Example failed: ${error.message}`);
+		throw error;
+	}
 }
 
 /**
  * Example 4: Performance Monitoring
  */
 async function performanceExample() {
-    log('info', '📊 Starting Performance Example');
-    
-    try {
-        const system = UnifiedSystem.forTesting();
-        
-        // Add a performance monitoring component
-        class PerformanceMonitor extends ComponentInterface {
-            constructor() {
-                super();
-                this.name = 'PerformanceMonitor';
-                this.metrics = new Map();
-            }
+	log('info', '📊 Starting Performance Example');
 
-            async initialize() {
-                this.isInitialized = true;
-                this.startTime = Date.now();
-            }
+	try {
+		const system = UnifiedSystem.forTesting();
 
-            recordMetric(name, value) {
-                this.metrics.set(name, {
-                    value,
-                    timestamp: Date.now()
-                });
-            }
+		// Add a performance monitoring component
+		class PerformanceMonitor extends ComponentInterface {
+			constructor() {
+				super();
+				this.name = 'PerformanceMonitor';
+				this.metrics = new Map();
+			}
 
-            getMetrics() {
-                const result = {};
-                for (const [name, metric] of this.metrics) {
-                    result[name] = metric;
-                }
-                return result;
-            }
+			async initialize() {
+				this.isInitialized = true;
+				this.startTime = Date.now();
+			}
 
-            async getHealth() {
-                return {
-                    status: 'healthy',
-                    name: this.name,
-                    uptime_ms: Date.now() - this.startTime,
-                    metrics_count: this.metrics.size
-                };
-            }
-        }
+			recordMetric(name, value) {
+				this.metrics.set(name, {
+					value,
+					timestamp: Date.now()
+				});
+			}
 
-        const perfMonitor = new PerformanceMonitor();
-        system.registerComponent('perfMonitor', perfMonitor);
+			getMetrics() {
+				const result = {};
+				for (const [name, metric] of this.metrics) {
+					result[name] = metric;
+				}
+				return result;
+			}
 
-        await system.start();
+			async getHealth() {
+				return {
+					status: 'healthy',
+					name: this.name,
+					uptime_ms: Date.now() - this.startTime,
+					metrics_count: this.metrics.size
+				};
+			}
+		}
 
-        // Simulate load and measure performance
-        const taskCount = 20;
-        const tasks = Array.from({ length: taskCount }, (_, i) => ({
-            id: `perf-task-${i}`,
-            title: `Performance Task ${i}`
-        }));
+		const perfMonitor = new PerformanceMonitor();
+		system.registerComponent('perfMonitor', perfMonitor);
 
-        const startTime = Date.now();
-        const results = await system.processBatch(tasks, {
-            parallel: true,
-            maxConcurrency: 5
-        });
-        const duration = Date.now() - startTime;
+		await system.start();
 
-        // Record performance metrics
-        perfMonitor.recordMetric('batch_processing_time', duration);
-        perfMonitor.recordMetric('tasks_processed', results.successful);
-        perfMonitor.recordMetric('throughput_tasks_per_second', results.successful / (duration / 1000));
+		// Simulate load and measure performance
+		const taskCount = 20;
+		const tasks = Array.from({ length: taskCount }, (_, i) => ({
+			id: `perf-task-${i}`,
+			title: `Performance Task ${i}`
+		}));
 
-        const metrics = perfMonitor.getMetrics();
-        log('info', `Performance metrics: ${JSON.stringify(metrics, null, 2)}`);
+		const startTime = Date.now();
+		const results = await system.processBatch(tasks, {
+			parallel: true,
+			maxConcurrency: 5
+		});
+		const duration = Date.now() - startTime;
 
-        const finalStats = await system.getStatistics();
-        log('info', `Final system stats: Success rate: ${(finalStats.system_metrics.successfulRequests / finalStats.system_metrics.totalRequests * 100).toFixed(2)}%`);
+		// Record performance metrics
+		perfMonitor.recordMetric('batch_processing_time', duration);
+		perfMonitor.recordMetric('tasks_processed', results.successful);
+		perfMonitor.recordMetric(
+			'throughput_tasks_per_second',
+			results.successful / (duration / 1000)
+		);
 
-        await system.stop();
-        log('info', '✅ Performance Example completed successfully');
+		const metrics = perfMonitor.getMetrics();
+		log('info', `Performance metrics: ${JSON.stringify(metrics, null, 2)}`);
 
-    } catch (error) {
-        log('error', `❌ Performance Example failed: ${error.message}`);
-        throw error;
-    }
+		const finalStats = await system.getStatistics();
+		log(
+			'info',
+			`Final system stats: Success rate: ${((finalStats.system_metrics.successfulRequests / finalStats.system_metrics.totalRequests) * 100).toFixed(2)}%`
+		);
+
+		await system.stop();
+		log('info', '✅ Performance Example completed successfully');
+	} catch (error) {
+		log('error', `❌ Performance Example failed: ${error.message}`);
+		throw error;
+	}
 }
 
 /**
  * Run all examples
  */
 async function runAllExamples() {
-    log('info', '🎯 Running All Orchestrator Examples');
-    
-    try {
-        await basicOrchestratorExample();
-        await unifiedSystemExample();
-        await errorHandlingExample();
-        await performanceExample();
-        
-        log('info', '🎉 All examples completed successfully!');
-    } catch (error) {
-        log('error', `❌ Examples failed: ${error.message}`);
-        process.exit(1);
-    }
+	log('info', '🎯 Running All Orchestrator Examples');
+
+	try {
+		await basicOrchestratorExample();
+		await unifiedSystemExample();
+		await errorHandlingExample();
+		await performanceExample();
+
+		log('info', '🎉 All examples completed successfully!');
+	} catch (error) {
+		log('error', `❌ Examples failed: ${error.message}`);
+		process.exit(1);
+	}
 }
 
 // Export examples for use in other modules
 export {
-    basicOrchestratorExample,
-    unifiedSystemExample,
-    errorHandlingExample,
-    performanceExample,
-    runAllExamples,
-    ExampleService,
-    ExampleStorage
+	basicOrchestratorExample,
+	unifiedSystemExample,
+	errorHandlingExample,
+	performanceExample,
+	runAllExamples,
+	ExampleService,
+	ExampleStorage
 };
 
 // Run examples if this file is executed directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-    runAllExamples();
+	runAllExamples();
 }

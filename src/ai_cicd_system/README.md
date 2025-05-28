@@ -42,21 +42,21 @@ import { createAICICDSystem } from './src/ai_cicd_system/index.js';
 
 // Create system with custom configuration
 const system = await createAICICDSystem({
-    mode: 'production',
-    database: {
-        host: 'your-postgres-host',
-        database: 'codegen-taskmaster-db',
-        username: 'software_developer',
-        password: 'your-password'
-    },
-    codegen: {
-        api_key: 'your-codegen-api-key',
-        api_url: 'https://api.codegen.sh'
-    },
-    validation: {
-        api_key: 'your-claude-code-api-key',
-        agentapi_url: 'http://localhost:8000'
-    }
+	mode: 'production',
+	database: {
+		host: 'your-postgres-host',
+		database: 'codegen-taskmaster-db',
+		username: 'software_developer',
+		password: 'your-password'
+	},
+	codegen: {
+		api_key: 'your-codegen-api-key',
+		api_url: 'https://api.codegen.sh'
+	},
+	validation: {
+		api_key: 'your-claude-code-api-key',
+		agentapi_url: 'http://localhost:8000'
+	}
 });
 
 // Process requirement
@@ -120,61 +120,61 @@ ENABLE_CONTEXT_CACHING=true
 
 ```javascript
 const config = {
-    mode: 'production', // 'development', 'testing', 'production'
-    
-    // Database configuration
-    database: {
-        host: 'localhost',
-        port: 5432,
-        database: 'codegen-taskmaster-db',
-        username: 'software_developer',
-        password: 'password',
-        enable_mock: false
-    },
-    
-    // NLP and requirement processing
-    nlp: {
-        enable_entity_extraction: true,
-        enable_dependency_analysis: true,
-        max_tasks_per_requirement: 15
-    },
-    
-    // Codegen integration
-    codegen: {
-        api_key: 'your-api-key',
-        api_url: 'https://api.codegen.sh',
-        enable_tracking: true,
-        max_retries: 3
-    },
-    
-    // Validation engine
-    validation: {
-        api_key: 'your-claude-code-api-key',
-        agentapi_url: 'http://localhost:8000',
-        enable_security_analysis: true,
-        enable_performance_analysis: true
-    },
-    
-    // Workflow orchestration
-    workflow: {
-        max_concurrent_workflows: 10,
-        enable_parallel_execution: true,
-        enable_rollback: true
-    },
-    
-    // Context management
-    context: {
-        enable_context_caching: true,
-        enable_advanced_analytics: true,
-        max_context_size: 8000
-    },
-    
-    // System monitoring
-    monitoring: {
-        enable_metrics: true,
-        enable_real_time_updates: true,
-        health_check_interval: 30000
-    }
+	mode: 'production', // 'development', 'testing', 'production'
+
+	// Database configuration
+	database: {
+		host: 'localhost',
+		port: 5432,
+		database: 'codegen-taskmaster-db',
+		username: 'software_developer',
+		password: 'password',
+		enable_mock: false
+	},
+
+	// NLP and requirement processing
+	nlp: {
+		enable_entity_extraction: true,
+		enable_dependency_analysis: true,
+		max_tasks_per_requirement: 15
+	},
+
+	// Codegen integration
+	codegen: {
+		api_key: 'your-api-key',
+		api_url: 'https://api.codegen.sh',
+		enable_tracking: true,
+		max_retries: 3
+	},
+
+	// Validation engine
+	validation: {
+		api_key: 'your-claude-code-api-key',
+		agentapi_url: 'http://localhost:8000',
+		enable_security_analysis: true,
+		enable_performance_analysis: true
+	},
+
+	// Workflow orchestration
+	workflow: {
+		max_concurrent_workflows: 10,
+		enable_parallel_execution: true,
+		enable_rollback: true
+	},
+
+	// Context management
+	context: {
+		enable_context_caching: true,
+		enable_advanced_analytics: true,
+		max_context_size: 8000
+	},
+
+	// System monitoring
+	monitoring: {
+		enable_metrics: true,
+		enable_real_time_updates: true,
+		health_check_interval: 30000
+	}
 };
 ```
 
@@ -235,15 +235,15 @@ The system includes comprehensive mock implementations for all components:
 ```javascript
 // Automatic mock mode when credentials are missing
 const system = await createAICICDSystem({
-    mode: 'development'
-    // No API keys provided - automatically uses mock mode
+	mode: 'development'
+	// No API keys provided - automatically uses mock mode
 });
 
 // Explicit mock mode
 const system = await createAICICDSystem({
-    database: { enable_mock: true },
-    codegen: { enable_mock: true },
-    validation: { enable_mock: true }
+	database: { enable_mock: true },
+	codegen: { enable_mock: true },
+	validation: { enable_mock: true }
 });
 ```
 
@@ -292,8 +292,8 @@ console.log('Active alerts:', metrics.alerts.length);
 ```javascript
 // Get performance analytics
 const analytics = await monitor.getPerformanceAnalytics({
-    timeRange: '1h',
-    includeBreakdown: true
+	timeRange: '1h',
+	includeBreakdown: true
 });
 
 console.log('Average processing time:', analytics.avg_processing_time);
@@ -401,18 +401,18 @@ spec:
         app: ai-cicd-system
     spec:
       containers:
-      - name: ai-cicd-system
-        image: ai-cicd-system:latest
-        ports:
-        - containerPort: 8000
-        env:
-        - name: DB_HOST
-          value: "postgres-service"
-        - name: CODEGEN_API_KEY
-          valueFrom:
-            secretKeyRef:
-              name: api-keys
-              key: codegen-api-key
+        - name: ai-cicd-system
+          image: ai-cicd-system:latest
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DB_HOST
+              value: 'postgres-service'
+            - name: CODEGEN_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: api-keys
+                  key: codegen-api-key
 ```
 
 ## 🔧 Troubleshooting
@@ -420,6 +420,7 @@ spec:
 ### Common Issues
 
 1. **Database Connection Issues**
+
    ```javascript
    // Check database health
    const taskStorage = system.components.get('taskStorage');
@@ -428,13 +429,14 @@ spec:
    ```
 
 2. **API Key Issues**
+
    ```javascript
    // Verify API configuration
    const config = system.config;
    console.log('Mock mode:', config.isMockMode);
    console.log('API keys configured:', {
-       codegen: !!config.codegen.api_key,
-       validation: !!config.validation.api_key
+   	codegen: !!config.codegen.api_key,
+   	validation: !!config.validation.api_key
    });
    ```
 
@@ -451,10 +453,10 @@ spec:
 ```javascript
 // Enable debug logging
 const system = await createAICICDSystem({
-    logging: {
-        level: 'DEBUG',
-        enable_debug: true
-    }
+	logging: {
+		level: 'DEBUG',
+		enable_debug: true
+	}
 });
 ```
 
@@ -507,4 +509,3 @@ This project follows the same MIT License with Commons Clause as the parent clau
 ---
 
 **Built with ❤️ for maximum concurrency and autonomous development**
-

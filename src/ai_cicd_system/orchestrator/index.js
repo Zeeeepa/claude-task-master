@@ -8,8 +8,7 @@ export { ComponentRegistry } from './component_registry.js';
 export { LifecycleManager } from './lifecycle_manager.js';
 
 export default {
-    SystemOrchestrator,
-    ComponentRegistry,
-    LifecycleManager
+	SystemOrchestrator,
+	ComponentRegistry,
+	LifecycleManager
 };
-
