@@ -1,0 +1,234 @@
+{
+  "version": "1.0.0",
+  "description": "Codegen Natural Language Processing & PR Generation Configuration",
+  "
+": {
+    "api": {
+      "baseURL": "https://api.codegen.sh",
+      "timeout": 30000,
+      "retries": 3,
+      "rateLimit": {
+        "requestsPerMinute": 60,
+        "requestsPerHour": 1000
+      }
+    },
+    "authentication": {
+      "tokenRequired": true,
+      "orgIdRequired": true
+    }
+  },
+  "naturalLanguageProcessor": {
+    "maxTokens": 4000,
+    "confidenceThreshold": 0.7,
+    "supportedTaskTypes": [
+      "feature_implementation",
+      "bug_fix",
+      "code_refactor",
+      "documentation",
+      "testing",
+      "optimization",
+      "security_fix"
+    ],
+    "templates": {
+      "templatesDir": "./templates/prompt_instructions",
+      "cacheEnabled": true,
+      "maxCacheSize": 100
+    }
+  },
+  "branchManager": {
+    "baseBranch": "main",
+    "branchPrefix": "codegen",
+    "maxConcurrentBranches": 10,
+    "cleanupOldBranches": true,
+    "branchRetentionDays": 7,
+    "gitConfig": {
+      "userName": "Codegen Bot",
+      "userEmail": "codegen@example.com"
+    }
+  },
+  "codeQualityValidator": {
+    "qualityThreshold": 0.8,
+    "enableLinting": true,
+    "enableTesting": true,
+    "enableSecurity": true,
+    "enablePerformance": true,
+    "supportedLanguages": [
+      "javascript",
+      "typescript",
+      "python",
+      "java",
+      "go"
+    ],
+    "validationRules": {
+      "maxLineLength": 120,
+      "maxCyclomaticComplexity": 10,
+      "maxFunctionLength": 50,
+      "maxNestingDepth": 4,
+      "maxFileSize": 1000
+    },
+    "linters": {
+      "javascript": {
+        "command": "eslint {file} --format compact",
+        "configFile": ".eslintrc.js"
+      },
+      "typescript": {
+        "command": "eslint {file} --format compact",
+        "configFile": ".eslintrc.js"
+      },
+      "python": {
+        "command": "flake8 {file}",
+        "configFile": ".flake8"
+      }
+    }
+  },
+  "prGenerator": {
+    "maxRetries": 3,
+    "qualityThreshold": 0.8,
+    "enableQualityGates": true,
+    "enableAutoMerge": false,
+    "notificationChannels": [
+      "slack",
+      "email"
+    ],
+    "webhooks": {
+      "enabled": true,
+      "events": [
+        "pr_created",
+        "pr_merged",
+        "quality_failed"
+      ]
+    }
+  },
+  "database": {
+    "connectionString": "postgresql://localhost:5432/codegen-taskmaster-db",
+    "poolSize": 10,
+    "timeout": 30000,
+    "ssl": false
+  },
+  "monitoring": {
+    "enableMetrics": true,
+    "enableTracing": true,
+    "logLevel": "info",
+    "metricsPort": 9090,
+    "healthCheckInterval": 30000
+  },
+  "security": {
+    "enableSecurityScanning": true,
+    "secretDetection": {
+      "enabled": true,
+      "patterns": [
+        "password",
+        "api_key",
+        "secret",
+        "token"
+      ]
+    },
+    "vulnerabilityScanning": {
+      "enabled": true,
+      "tools": ["snyk", "npm-audit"]
+    }
+  },
+  "performance": {
+    "enablePerformanceMonitoring": true,
+    "maxExecutionTime": 300000,
+    "memoryLimit": "2GB",
+    "cpuLimit": "2"
+  },
+  "integrations": {
+    "github": {
+      "enabled": true,
+      "apiVersion": "v4",
+      "webhookSecret": "${GITHUB_WEBHOOK_SECRET}"
+    },
+    "linear": {
+      "enabled": true,
+      "updateTicketStatus": true
+    },
+    "slack": {
+      "enabled": true,
+      "webhookUrl": "${SLACK_WEBHOOK_URL}",
+      "channels": {
+        "notifications": "#codegen-notifications",
+        "alerts": "#codegen-alerts"
+      }
+    },
+    "agentapi": {
+      "enabled": true,
+      "baseURL": "http://localhost:8080",
+      "timeout": 60000
+    }
+  },
+  "features": {
+    "batchProcessing": {
+      "enabled": true,
+      "maxBatchSize": 10,
+      "batchTimeout": 600000
+    },
+    "parallelProcessing": {
+      "enabled": true,
+      "maxConcurrency": 5
+    },
+    "caching": {
+      "enabled": true,
+      "ttl": 3600000,
+      "maxSize": 1000
+    },
+    "retryMechanism": {
+      "enabled": true,
+      "maxRetries": 3,
+      "backoffStrategy": "exponential",
+      "baseDelay": 1000
+    }
+  },
+  "environments": {
+    "development": {
+      "codegen": {
+        "api": {
+          "baseURL": "https://api.codegen.sh",
+          "enableMock": true
+        }
+      },
+      "database": {
+        "connectionString": "postgresql://localhost:5432/codegen-taskmaster-dev"
+      },
+      "monitoring": {
+        "logLevel": "debug"
+      }
+    },
+    "staging": {
+      "codegen": {
+        "api": {
+          "baseURL": "https://api.codegen.sh",
+          "enableMock": false
+        }
+      },
+      "database": {
+        "connectionString": "postgresql://staging-db:5432/codegen-taskmaster-staging"
+      },
+      "monitoring": {
+        "logLevel": "info"
+      }
+    },
+    "production": {
+      "codegen": {
+        "api": {
+          "baseURL": "https://api.codegen.sh",
+          "enableMock": false
+        }
+      },
+      "database": {
+        "connectionString": "${DATABASE_URL}"
+      },
+      "monitoring": {
+        "logLevel": "warn"
+      },
+      "security": {
+        "enableSecurityScanning": true,
+        "vulnerabilityScanning": {
+          "enabled": true
+        }
+      }
+    }
+  }
+}
+
