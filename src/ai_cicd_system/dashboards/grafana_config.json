@@ -1,0 +1,473 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Claude Task Master AI CI/CD System - Performance Monitoring",
+    "tags": ["ai-cicd", "performance", "monitoring"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "System Overview",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "memory_usage",
+            "legendFormat": "Memory Usage %"
+          },
+          {
+            "expr": "cpu_usage",
+            "legendFormat": "CPU Usage"
+          },
+          {
+            "expr": "concurrent_workflows",
+            "legendFormat": "Active Workflows"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 70
+                },
+                {
+                  "color": "red",
+                  "value": 90
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 2,
+        "title": "API Response Times",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, api_response_time_bucket)",
+            "legendFormat": "50th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.95, api_response_time_bucket)",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.99, api_response_time_bucket)",
+            "legendFormat": "99th percentile"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 0
+        },
+        "yAxes": [
+          {
+            "unit": "ms",
+            "min": 0
+          }
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "query": {
+                "queryType": "",
+                "refId": "A"
+              },
+              "reducer": {
+                "type": "last",
+                "params": []
+              },
+              "evaluator": {
+                "params": [2000],
+                "type": "gt"
+              }
+            }
+          ],
+          "executionErrorState": "alerting",
+          "for": "5m",
+          "frequency": "10s",
+          "handler": 1,
+          "name": "High API Response Time",
+          "noDataState": "no_data",
+          "notifications": []
+        }
+      },
+      {
+        "id": 3,
+        "title": "Database Query Performance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(database_query_time_sum[5m]) / rate(database_query_time_count[5m])",
+            "legendFormat": "Average Query Time"
+          },
+          {
+            "expr": "histogram_quantile(0.95, database_query_time_bucket)",
+            "legendFormat": "95th percentile"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 8
+        },
+        "yAxes": [
+          {
+            "unit": "ms",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Codegen Request Performance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(codegen_request_time_sum[5m]) / rate(codegen_request_time_count[5m])",
+            "legendFormat": "Average Request Time"
+          },
+          {
+            "expr": "histogram_quantile(0.99, codegen_request_time_bucket)",
+            "legendFormat": "99th percentile"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 8
+        },
+        "yAxes": [
+          {
+            "unit": "ms",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Error Rates",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(error_rate[5m])",
+            "legendFormat": "Error Rate"
+          },
+          {
+            "expr": "rate(retry_count[5m])",
+            "legendFormat": "Retry Rate"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 16
+        },
+        "yAxes": [
+          {
+            "unit": "percent",
+            "min": 0,
+            "max": 100
+          }
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "query": {
+                "queryType": "",
+                "refId": "A"
+              },
+              "reducer": {
+                "type": "last",
+                "params": []
+              },
+              "evaluator": {
+                "params": [5],
+                "type": "gt"
+              }
+            }
+          ],
+          "executionErrorState": "alerting",
+          "for": "2m",
+          "frequency": "10s",
+          "handler": 1,
+          "name": "High Error Rate",
+          "noDataState": "no_data",
+          "notifications": []
+        }
+      },
+      {
+        "id": 6,
+        "title": "Throughput Metrics",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(requests_per_second[1m])",
+            "legendFormat": "Requests/sec"
+          },
+          {
+            "expr": "rate(tasks_processed_per_minute[1m]) * 60",
+            "legendFormat": "Tasks/min"
+          },
+          {
+            "expr": "rate(prs_created_per_hour[1m]) * 3600",
+            "legendFormat": "PRs/hour"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 16
+        },
+        "yAxes": [
+          {
+            "unit": "short",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Memory Usage Details",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "memory_heap_used",
+            "legendFormat": "Heap Used"
+          },
+          {
+            "expr": "memory_heap_total",
+            "legendFormat": "Heap Total"
+          },
+          {
+            "expr": "memory_external",
+            "legendFormat": "External Memory"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 24
+        },
+        "yAxes": [
+          {
+            "unit": "bytes",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Database Connections",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "database_connections",
+            "legendFormat": "Active Connections"
+          },
+          {
+            "expr": "database_pool_size",
+            "legendFormat": "Pool Size"
+          },
+          {
+            "expr": "database_idle_connections",
+            "legendFormat": "Idle Connections"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 24
+        },
+        "yAxes": [
+          {
+            "unit": "short",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Workflow Execution Times",
+        "type": "heatmap",
+        "targets": [
+          {
+            "expr": "increase(workflow_execution_time_bucket[5m])",
+            "legendFormat": "{{le}}"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 32
+        },
+        "heatmap": {
+          "xAxis": {
+            "show": true
+          },
+          "yAxis": {
+            "unit": "ms",
+            "min": 0
+          },
+          "colorMode": "spectrum"
+        }
+      },
+      {
+        "id": 10,
+        "title": "System Health Status",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "up",
+            "legendFormat": "Service: {{service}}"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 40
+        },
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "service": "Service Name",
+                "Value": "Status"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "Alert Summary",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "sum(active_alerts)",
+            "legendFormat": "Active Alerts"
+          },
+          {
+            "expr": "sum(rate(alerts_fired_total[1h]))",
+            "legendFormat": "Alerts/hour"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 40
+        },
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 1
+                },
+                {
+                  "color": "red",
+                  "value": 5
+                }
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {
+      "refresh_intervals": [
+        "5s",
+        "10s",
+        "30s",
+        "1m",
+        "5m",
+        "15m",
+        "30m",
+        "1h",
+        "2h",
+        "1d"
+      ]
+    },
+    "templating": {
+      "list": [
+        {
+          "name": "instance",
+          "type": "query",
+          "query": "label_values(up, instance)",
+          "refresh": 1,
+          "includeAll": true,
+          "multi": true
+        },
+        {
+          "name": "service",
+          "type": "query",
+          "query": "label_values(up, service)",
+          "refresh": 1,
+          "includeAll": true,
+          "multi": true
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Deployments",
+          "datasource": "prometheus",
+          "expr": "deployment_timestamp",
+          "titleFormat": "Deployment",
+          "textFormat": "{{version}}"
+        }
+      ]
+    },
+    "refresh": "30s",
+    "schemaVersion": 27,
+    "version": 1,
+    "links": [
+      {
+        "title": "System Documentation",
+        "url": "https://github.com/Zeeeepa/claude-task-master/blob/main/README.md",
+        "type": "link"
+      }
+    ]
+  }
+}
+

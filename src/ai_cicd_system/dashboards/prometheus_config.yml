@@ -1,0 +1,287 @@
+# Prometheus Configuration for Claude Task Master AI CI/CD System
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'claude-task-master'
+    environment: 'production'
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+# Load rules once and periodically evaluate them according to the global 'evaluation_interval'.
+rule_files:
+  - "alert_rules.yml"
+  - "recording_rules.yml"
+
+# Scrape configuration
+scrape_configs:
+  # Claude Task Master AI CI/CD System
+  - job_name: 'claude-task-master'
+    static_configs:
+      - targets: ['localhost:8000']
+    scrape_interval: 10s
+    metrics_path: /metrics
+    honor_labels: true
+    params:
+      format: ['prometheus']
+
+  # System metrics (node_exporter)
+  - job_name: 'node'
+    static_configs:
+      - targets: ['localhost:9100']
+    scrape_interval: 15s
+
+  # Database metrics (postgres_exporter)
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['localhost:9187']
+    scrape_interval: 30s
+
+  # Application-specific metrics
+  - job_name: 'ai-cicd-performance'
+    static_configs:
+      - targets: ['localhost:8001']
+    scrape_interval: 5s
+    metrics_path: /performance-metrics
+    scrape_timeout: 10s
+
+  # Health check endpoints
+  - job_name: 'health-checks'
+    static_configs:
+      - targets: ['localhost:8002']
+    scrape_interval: 30s
+    metrics_path: /health
+    scrape_timeout: 5s
+
+# Remote write configuration (optional - for long-term storage)
+remote_write:
+  - url: "http://prometheus-remote-storage:9201/write"
+    queue_config:
+      max_samples_per_send: 1000
+      max_shards: 200
+      capacity: 2500
+
+# Remote read configuration (optional)
+remote_read:
+  - url: "http://prometheus-remote-storage:9201/read"
+
+# Storage configuration
+storage:
+  tsdb:
+    path: /prometheus/data
+    retention.time: 30d
+    retention.size: 50GB
+    wal-compression: true
+
+# Recording rules for performance optimization
+recording_rules:
+  - name: ai_cicd_performance
+    interval: 30s
+    rules:
+      # API response time percentiles
+      - record: ai_cicd:api_response_time:p50
+        expr: histogram_quantile(0.50, rate(api_response_time_bucket[5m]))
+      
+      - record: ai_cicd:api_response_time:p95
+        expr: histogram_quantile(0.95, rate(api_response_time_bucket[5m]))
+      
+      - record: ai_cicd:api_response_time:p99
+        expr: histogram_quantile(0.99, rate(api_response_time_bucket[5m]))
+
+      # Database query performance
+      - record: ai_cicd:database_query_time:avg
+        expr: rate(database_query_time_sum[5m]) / rate(database_query_time_count[5m])
+      
+      - record: ai_cicd:database_query_time:p95
+        expr: histogram_quantile(0.95, rate(database_query_time_bucket[5m]))
+
+      # Codegen request performance
+      - record: ai_cicd:codegen_request_time:avg
+        expr: rate(codegen_request_time_sum[5m]) / rate(codegen_request_time_count[5m])
+      
+      - record: ai_cicd:codegen_request_time:p99
+        expr: histogram_quantile(0.99, rate(codegen_request_time_bucket[5m]))
+
+      # Error rates
+      - record: ai_cicd:error_rate:5m
+        expr: rate(error_rate[5m]) * 100
+      
+      - record: ai_cicd:retry_rate:5m
+        expr: rate(retry_count[5m])
+
+      # Throughput metrics
+      - record: ai_cicd:requests_per_second:1m
+        expr: rate(requests_per_second[1m])
+      
+      - record: ai_cicd:tasks_per_minute:1m
+        expr: rate(tasks_processed_per_minute[1m]) * 60
+      
+      - record: ai_cicd:prs_per_hour:1m
+        expr: rate(prs_created_per_hour[1m]) * 3600
+
+      # Resource utilization
+      - record: ai_cicd:memory_usage:percent
+        expr: (memory_heap_used / memory_heap_total) * 100
+      
+      - record: ai_cicd:cpu_usage:percent
+        expr: rate(cpu_usage[5m]) / 1000000 * 100
+
+      # Workflow metrics
+      - record: ai_cicd:workflow_execution_time:avg
+        expr: rate(workflow_execution_time_sum[5m]) / rate(workflow_execution_time_count[5m])
+      
+      - record: ai_cicd:concurrent_workflows:avg
+        expr: avg_over_time(concurrent_workflows[5m])
+
+# Alert rules
+alert_rules:
+  - name: ai_cicd_alerts
+    rules:
+      # High API response time
+      - alert: HighAPIResponseTime
+        expr: ai_cicd:api_response_time:p95 > 2000
+        for: 5m
+        labels:
+          severity: warning
+          service: ai-cicd
+        annotations:
+          summary: "High API response time detected"
+          description: "95th percentile API response time is {{ $value }}ms, which exceeds the 2000ms threshold"
+
+      # Critical API response time
+      - alert: CriticalAPIResponseTime
+        expr: ai_cicd:api_response_time:p99 > 5000
+        for: 2m
+        labels:
+          severity: critical
+          service: ai-cicd
+        annotations:
+          summary: "Critical API response time detected"
+          description: "99th percentile API response time is {{ $value }}ms, which exceeds the 5000ms threshold"
+
+      # High error rate
+      - alert: HighErrorRate
+        expr: ai_cicd:error_rate:5m > 5
+        for: 2m
+        labels:
+          severity: warning
+          service: ai-cicd
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value }}%, which exceeds the 5% threshold"
+
+      # Critical error rate
+      - alert: CriticalErrorRate
+        expr: ai_cicd:error_rate:5m > 10
+        for: 1m
+        labels:
+          severity: critical
+          service: ai-cicd
+        annotations:
+          summary: "Critical error rate detected"
+          description: "Error rate is {{ $value }}%, which exceeds the 10% threshold"
+
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: ai_cicd:memory_usage:percent > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: ai-cicd
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is {{ $value }}%, which exceeds the 80% threshold"
+
+      # Critical memory usage
+      - alert: CriticalMemoryUsage
+        expr: ai_cicd:memory_usage:percent > 90
+        for: 2m
+        labels:
+          severity: critical
+          service: ai-cicd
+        annotations:
+          summary: "Critical memory usage detected"
+          description: "Memory usage is {{ $value }}%, which exceeds the 90% threshold"
+
+      # Database query performance
+      - alert: SlowDatabaseQueries
+        expr: ai_cicd:database_query_time:p95 > 1000
+        for: 5m
+        labels:
+          severity: warning
+          service: database
+        annotations:
+          summary: "Slow database queries detected"
+          description: "95th percentile database query time is {{ $value }}ms, which exceeds the 1000ms threshold"
+
+      # Codegen request performance
+      - alert: SlowCodegenRequests
+        expr: ai_cicd:codegen_request_time:p99 > 10000
+        for: 3m
+        labels:
+          severity: warning
+          service: codegen
+        annotations:
+          summary: "Slow Codegen requests detected"
+          description: "99th percentile Codegen request time is {{ $value }}ms, which exceeds the 10000ms threshold"
+
+      # Service down
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: "{{ $labels.job }}"
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "Service {{ $labels.job }} has been down for more than 1 minute"
+
+      # High concurrent workflows
+      - alert: HighConcurrentWorkflows
+        expr: ai_cicd:concurrent_workflows:avg > 50
+        for: 5m
+        labels:
+          severity: warning
+          service: workflow
+        annotations:
+          summary: "High number of concurrent workflows"
+          description: "Average concurrent workflows is {{ $value }}, which exceeds the 50 threshold"
+
+      # Low throughput
+      - alert: LowThroughput
+        expr: ai_cicd:requests_per_second:1m < 0.1
+        for: 10m
+        labels:
+          severity: warning
+          service: ai-cicd
+        annotations:
+          summary: "Low request throughput detected"
+          description: "Request rate is {{ $value }} requests/second, which is below the 0.1 threshold"
+
+# Metric relabeling for better organization
+metric_relabel_configs:
+  - source_labels: [__name__]
+    regex: 'ai_cicd_(.*)'
+    target_label: 'metric_type'
+    replacement: '${1}'
+  
+  - source_labels: [__name__]
+    regex: '(api_response_time|database_query_time|codegen_request_time|workflow_execution_time).*'
+    target_label: 'metric_category'
+    replacement: 'performance'
+  
+  - source_labels: [__name__]
+    regex: '(error_rate|retry_count|circuit_breaker_trips).*'
+    target_label: 'metric_category'
+    replacement: 'reliability'
+  
+  - source_labels: [__name__]
+    regex: '(memory_usage|cpu_usage|database_connections|concurrent_workflows).*'
+    target_label: 'metric_category'
+    replacement: 'resource'
+

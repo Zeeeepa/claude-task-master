@@ -1,12 +1,17 @@
 /**
  * @fileoverview System Monitor
- * @description Comprehensive system monitoring and metrics collection
+ * @description Comprehensive system monitoring and metrics collection with enhanced performance monitoring
  */
 
 import { log } from '../../scripts/modules/utils.js';
+import { PerformanceMonitor } from './performance_monitor.js';
+import { MetricsCollector, ConsoleExporter, FileExporter } from './metrics_collector.js';
+import { HealthChecker, HealthCheckFunctions } from './health_checker.js';
+import { AlertManager, EmailNotificationChannel, SlackNotificationChannel } from '../alerts/alert_manager.js';
+import { MetricTypes, AlertSeverity } from '../metrics/metric_types.js';
 
 /**
- * System monitor for comprehensive health tracking and metrics
+ * Enhanced System monitor for comprehensive health tracking and metrics
  */
 export class SystemMonitor {
     constructor(config = {}) {
@@ -17,6 +22,7 @@ export class SystemMonitor {
             health_check_interval: config.health_check_interval || 30000, // 30 seconds
             metrics_collection_interval: config.metrics_collection_interval || 60000, // 1 minute
             enable_performance_tracking: config.enable_performance_tracking !== false,
+            enable_advanced_monitoring: config.enable_advanced_monitoring !== false,
             ...config
         };
         
@@ -25,8 +31,19 @@ export class SystemMonitor {
         this.metricsInterval = null;
         this.systemMetrics = new Map();
         this.componentHealth = new Map();
-        this.performanceMetrics = new PerformanceTracker(this.config);
-        this.alertManager = new AlertManager(this.config);
+        
+        // Enhanced monitoring components
+        if (this.config.enable_advanced_monitoring) {
+            this.performanceMonitor = new PerformanceMonitor(this.config);
+            this.metricsCollector = new MetricsCollector(this.config);
+            this.healthChecker = new HealthChecker(this.config);
+            this.alertManager = new AlertManager(this.config);
+            this._setupAdvancedMonitoring();
+        } else {
+            // Legacy components for backward compatibility
+            this.performanceMetrics = new PerformanceTracker(this.config);
+            this.alertManager = new AlertManager(this.config);
+        }
     }
 
     /**
@@ -40,8 +57,22 @@ export class SystemMonitor {
             return;
         }
         
-        await this.performanceMetrics.initialize();
-        await this.alertManager.initialize();
+        if (this.config.enable_advanced_monitoring) {
+            await this.performanceMonitor.initialize();
+            await this.metricsCollector.initialize();
+            await this.healthChecker.initialize();
+            await this.alertManager.initialize();
+            
+            // Register default health checks
+            this._registerDefaultHealthChecks();
+            
+            log('info', 'Advanced monitoring initialized');
+        } else {
+            await this.performanceMetrics.initialize();
+            await this.alertManager.initialize();
+            
+            log('info', 'Basic monitoring initialized');
+        }
         
         log('debug', 'System monitor initialized');
     }
@@ -101,7 +132,7 @@ export class SystemMonitor {
     }
 
     /**
-     * Record system event
+     * Record system event with enhanced tracking
      * @param {string} eventType - Type of event
      * @param {Object} eventData - Event data
      */
@@ -117,7 +148,7 @@ export class SystemMonitor {
             id: `event_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
         };
         
-        // Store event
+        // Store event in legacy format
         if (!this.systemMetrics.has('events')) {
             this.systemMetrics.set('events', []);
         }
@@ -130,14 +161,26 @@ export class SystemMonitor {
             events.splice(0, events.length - 1000);
         }
         
-        // Check for alerts
-        await this.alertManager.checkEvent(event);
+        // Enhanced event tracking
+        if (this.config.enable_advanced_monitoring) {
+            // Record as metric for advanced analysis
+            this.performanceMonitor.incrementCounter(`event_${eventType}`, {
+                ...eventData,
+                timestamp: event.timestamp.toISOString()
+            });
+            
+            // Check for event-based alerts
+            await this.alertManager.checkEvent?.(event);
+        } else {
+            // Legacy alert checking
+            await this.alertManager.checkEvent(event);
+        }
         
         log('debug', `Recorded system event: ${eventType}`);
     }
 
     /**
-     * Record performance metric
+     * Record performance metric with enhanced capabilities
      * @param {string} metricName - Metric name
      * @param {number} value - Metric value
      * @param {string} unit - Metric unit
@@ -148,65 +191,152 @@ export class SystemMonitor {
             return;
         }
         
-        await this.performanceMetrics.recordMetric(metricName, value, unit, tags);
+        if (this.config.enable_advanced_monitoring) {
+            // Use enhanced performance monitor
+            this.performanceMonitor.recordMetric(metricName, value, tags);
+        } else {
+            // Use legacy performance tracker
+            await this.performanceMetrics.recordMetric(metricName, value, unit, tags);
+        }
     }
 
     /**
-     * Get system health status
+     * Start a performance timer
+     * @param {string} operation - Operation name
+     * @param {Object} metadata - Additional metadata
+     * @returns {string} Timer ID
+     */
+    startTimer(operation, metadata = {}) {
+        if (this.config.enable_advanced_monitoring) {
+            return this.performanceMonitor.startTimer(operation, metadata);
+        } else {
+            // Legacy timer implementation
+            const timerId = `${operation}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            this.systemMetrics.set(`timer_${timerId}`, {
+                operation,
+                startTime: Date.now(),
+                metadata
+            });
+            return timerId;
+        }
+    }
+
+    /**
+     * End a performance timer
+     * @param {string} timerId - Timer ID
+     * @returns {number|null} Duration in milliseconds
+     */
+    endTimer(timerId) {
+        if (this.config.enable_advanced_monitoring) {
+            return this.performanceMonitor.endTimer(timerId);
+        } else {
+            // Legacy timer implementation
+            const timerData = this.systemMetrics.get(`timer_${timerId}`);
+            if (!timerData) {
+                return null;
+            }
+            
+            const duration = Date.now() - timerData.startTime;
+            this.systemMetrics.delete(`timer_${timerId}`);
+            
+            // Record the timing metric
+            this.recordMetric(`${timerData.operation}_time`, duration, 'ms', timerData.metadata);
+            
+            return duration;
+        }
+    }
+
+    /**
+     * Get system health status with enhanced details
      * @returns {Promise<Object>} System health
      */
     async getSystemHealth() {
-        const overallHealth = {
-            status: 'healthy',
-            timestamp: new Date(),
-            components: {},
-            summary: {
-                total_components: 0,
-                healthy_components: 0,
-                degraded_components: 0,
-                unhealthy_components: 0
-            }
-        };
-        
-        // Aggregate component health
-        for (const [componentName, health] of this.componentHealth) {
-            overallHealth.components[componentName] = health;
-            overallHealth.summary.total_components++;
+        if (this.config.enable_advanced_monitoring) {
+            // Use enhanced health checker
+            const health = await this.healthChecker.checkHealth();
             
-            switch (health.status) {
-                case 'healthy':
-                    overallHealth.summary.healthy_components++;
-                    break;
-                case 'degraded':
-                    overallHealth.summary.degraded_components++;
-                    if (overallHealth.status === 'healthy') {
-                        overallHealth.status = 'degraded';
-                    }
-                    break;
-                case 'unhealthy':
-                    overallHealth.summary.unhealthy_components++;
-                    overallHealth.status = 'unhealthy';
-                    break;
+            // Add legacy component health for compatibility
+            const legacyHealth = {
+                status: health.status,
+                timestamp: new Date(health.timestamp),
+                components: {},
+                summary: health.summary,
+                enhanced: {
+                    services: health.services,
+                    dependencies: health.dependencies
+                }
+            };
+            
+            // Convert component health to legacy format
+            for (const [componentName, componentHealth] of this.componentHealth) {
+                legacyHealth.components[componentName] = componentHealth;
             }
+            
+            return legacyHealth;
+        } else {
+            // Legacy health implementation
+            const overallHealth = {
+                status: 'healthy',
+                timestamp: new Date(),
+                components: {},
+                summary: {
+                    total_components: 0,
+                    healthy_components: 0,
+                    degraded_components: 0,
+                    unhealthy_components: 0
+                }
+            };
+            
+            // Aggregate component health
+            for (const [componentName, health] of this.componentHealth) {
+                overallHealth.components[componentName] = health;
+                overallHealth.summary.total_components++;
+                
+                switch (health.status) {
+                    case 'healthy':
+                        overallHealth.summary.healthy_components++;
+                        break;
+                    case 'degraded':
+                        overallHealth.summary.degraded_components++;
+                        if (overallHealth.status === 'healthy') {
+                            overallHealth.status = 'degraded';
+                        }
+                        break;
+                    case 'unhealthy':
+                        overallHealth.summary.unhealthy_components++;
+                        overallHealth.status = 'unhealthy';
+                        break;
+                }
+            }
+            
+            return overallHealth;
         }
-        
-        return overallHealth;
     }
 
     /**
-     * Get system metrics
+     * Get system metrics with enhanced data
      * @returns {Promise<Object>} System metrics
      */
     async getSystemMetrics() {
         const metrics = {
             timestamp: new Date(),
             system_metrics: {},
-            performance_metrics: await this.performanceMetrics.getMetrics(),
             events: this.systemMetrics.get('events') || [],
             alerts: await this.alertManager.getActiveAlerts()
         };
         
-        // Convert Map to object
+        if (this.config.enable_advanced_monitoring) {
+            // Enhanced metrics
+            metrics.performance_metrics = await this.performanceMonitor.getStatistics();
+            metrics.metrics_collector = await this.metricsCollector.getStatistics();
+            metrics.health_checker = await this.healthChecker.getStatistics();
+            metrics.alert_manager = await this.alertManager.getStatistics();
+        } else {
+            // Legacy metrics
+            metrics.performance_metrics = await this.performanceMetrics.getMetrics();
+        }
+        
+        // Convert Map to object for legacy compatibility
         for (const [key, value] of this.systemMetrics) {
             metrics.system_metrics[key] = value;
         }
@@ -215,12 +345,16 @@ export class SystemMonitor {
     }
 
     /**
-     * Get performance analytics
+     * Get performance analytics with enhanced insights
      * @param {Object} options - Analytics options
      * @returns {Promise<Object>} Performance analytics
      */
     async getPerformanceAnalytics(options = {}) {
-        return await this.performanceMetrics.getAnalytics(options);
+        if (this.config.enable_advanced_monitoring) {
+            return await this.performanceMonitor.getStatistics();
+        } else {
+            return await this.performanceMetrics.getAnalytics(options);
+        }
     }
 
     /**
@@ -237,9 +371,21 @@ export class SystemMonitor {
         
         this.componentHealth.set(componentName, health);
         
+        // Enhanced health tracking
+        if (this.config.enable_advanced_monitoring) {
+            // Register with health checker if not already registered
+            if (!this.healthChecker.services.has(componentName)) {
+                this.healthChecker.registerService(
+                    componentName,
+                    async () => healthData,
+                    { critical: healthData.critical !== false }
+                );
+            }
+        }
+        
         // Check for health-based alerts
         if (health.status !== 'healthy') {
-            await this.alertManager.checkComponentHealth(componentName, health);
+            await this.alertManager.checkComponentHealth?.(componentName, health);
         }
     }
 
@@ -258,7 +404,7 @@ export class SystemMonitor {
             performance_tracking_enabled: this.config.enable_performance_tracking,
             health_check_interval_ms: this.config.health_check_interval,
             metrics_collection_interval_ms: this.config.metrics_collection_interval,
-            performance_stats: await this.performanceMetrics.getStatistics(),
+            performance_stats: await this.performanceMonitor.getStatistics(),
             alert_stats: await this.alertManager.getStatistics()
         };
     }
@@ -275,7 +421,7 @@ export class SystemMonitor {
             is_monitoring: stats.is_monitoring,
             components_tracked: stats.components_tracked,
             events_recorded: stats.events_recorded,
-            performance_tracker: await this.performanceMetrics.getHealth(),
+            performance_tracker: await this.performanceMonitor.getHealth(),
             alert_manager: await this.alertManager.getHealth()
         };
     }
@@ -287,7 +433,7 @@ export class SystemMonitor {
         log('debug', 'Shutting down system monitor...');
         
         await this.stopMonitoring();
-        await this.performanceMetrics.shutdown();
+        await this.performanceMonitor.shutdown();
         await this.alertManager.shutdown();
         
         // Clear all data
@@ -351,12 +497,35 @@ export class SystemMonitor {
             log('error', `Metrics collection failed: ${error.message}`);
         }
     }
+
+    /**
+     * Setup advanced monitoring components
+     * @private
+     */
+    _setupAdvancedMonitoring() {
+        // Register default health checks
+        this._registerDefaultHealthChecks();
+    }
+
+    /**
+     * Register default health checks
+     * @private
+     */
+    _registerDefaultHealthChecks() {
+        // Example: Register a simple health check function
+        this.healthChecker.registerCheck('simple_check', async () => {
+            return {
+                status: 'healthy',
+                message: 'All systems are operational'
+            };
+        });
+    }
 }
 
 /**
- * Performance Tracker
+ * Performance Monitor
  */
-class PerformanceTracker {
+class PerformanceMonitor {
     constructor(config) {
         this.config = config;
         this.metrics = new Map();
@@ -364,14 +533,13 @@ class PerformanceTracker {
     }
 
     async initialize() {
-        log('debug', 'Initializing performance tracker...');
+        log('debug', 'Initializing performance monitor...');
     }
 
-    async recordMetric(metricName, value, unit, tags) {
+    async recordMetric(metricName, value, tags) {
         const metric = {
             name: metricName,
             value: value,
-            unit: unit,
             tags: tags,
             timestamp: new Date()
         };
@@ -393,7 +561,7 @@ class PerformanceTracker {
         }
     }
 
-    async getMetrics() {
+    async getStatistics() {
         const result = {};
         
         for (const [name, metric] of this.metrics) {
@@ -455,6 +623,137 @@ class PerformanceTracker {
     async shutdown() {
         this.metrics.clear();
         this.timeSeries.clear();
+    }
+}
+
+/**
+ * Metrics Collector
+ */
+class MetricsCollector {
+    constructor(config) {
+        this.config = config;
+        this.exporters = [];
+    }
+
+    async initialize() {
+        log('debug', 'Initializing metrics collector...');
+        
+        // Register default exporters
+        this.registerExporter(new ConsoleExporter());
+        this.registerExporter(new FileExporter());
+    }
+
+    registerExporter(exporter) {
+        this.exporters.push(exporter);
+    }
+
+    async getStatistics() {
+        const stats = {
+            exporters: this.exporters.map(e => e.getStatistics())
+        };
+        
+        return stats;
+    }
+
+    async getMetrics() {
+        const metrics = {};
+        
+        for (const exporter of this.exporters) {
+            metrics[exporter.name] = exporter.getMetrics();
+        }
+        
+        return metrics;
+    }
+}
+
+/**
+ * Health Checker
+ */
+class HealthChecker {
+    constructor(config) {
+        this.config = config;
+        this.services = new Map();
+        this.dependencies = new Map();
+    }
+
+    async initialize() {
+        log('debug', 'Initializing health checker...');
+    }
+
+    registerService(name, checkFunction, options = {}) {
+        this.services.set(name, {
+            check: checkFunction,
+            critical: options.critical !== false
+        });
+    }
+
+    registerCheck(name, checkFunction) {
+        this.dependencies.set(name, checkFunction);
+    }
+
+    async checkHealth() {
+        const health = {
+            status: 'healthy',
+            timestamp: new Date(),
+            summary: {
+                total_services: 0,
+                healthy_services: 0,
+                degraded_services: 0,
+                unhealthy_services: 0
+            }
+        };
+        
+        // Check services
+        for (const [name, service] of this.services) {
+            const result = await service.check();
+            health.summary.total_services++;
+            
+            switch (result.status) {
+                case 'healthy':
+                    health.summary.healthy_services++;
+                    break;
+                case 'degraded':
+                    health.summary.degraded_services++;
+                    if (health.status === 'healthy') {
+                        health.status = 'degraded';
+                    }
+                    break;
+                case 'unhealthy':
+                    health.summary.unhealthy_services++;
+                    health.status = 'unhealthy';
+                    break;
+            }
+        }
+        
+        // Check dependencies
+        for (const [name, check] of this.dependencies) {
+            const result = await check();
+            if (result.status === 'unhealthy') {
+                health.status = 'unhealthy';
+                break;
+            }
+        }
+        
+        return health;
+    }
+
+    async getStatistics() {
+        return {
+            services: this.services.size,
+            dependencies: this.dependencies.size
+        };
+    }
+
+    async getHealth() {
+        return {
+            status: 'healthy',
+            services: this.services.size
+        };
+    }
+
+    async shutdown() {
+        this.services.clear();
+        this.dependencies.clear();
     }
 }
 
@@ -638,4 +937,3 @@ class AlertManager {
 }
 
 export default SystemMonitor;
-
