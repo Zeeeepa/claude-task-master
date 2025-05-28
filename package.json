@@ -22,7 +22,8 @@
 		"inspector": "npx @modelcontextprotocol/inspector node mcp-server/server.js",
 		"mcp-server": "node mcp-server/server.js",
 		"format-check": "prettier --check .",
-		"format": "prettier --write ."
+		"format": "prettier --write .",
+		"workflow-demo": "node src/workflow_orchestrator/demo.js"
 	},
 	"keywords": [
 		"claude",
