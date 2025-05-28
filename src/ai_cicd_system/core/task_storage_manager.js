@@ -3,7 +3,7 @@
  * @description Unified task storage with comprehensive context preservation
  */
 
-import { log } from '../../scripts/modules/utils.js';
+import { log } from '../../../scripts/modules/utils.js';
 
 /**
  * Task storage manager with PostgreSQL backend and mock support

@@ -25,11 +25,11 @@ graph TB
     E -->|No| G[Escalation Engine]
     G --> H[Alert System]
     H --> I[Human Intervention]
-    
+
     D --> J[Retry Strategy Manager]
     J --> K[Circuit Breaker]
     K --> D
-    
+
     B --> L[Pattern Detection]
     L --> G
 ```
@@ -37,6 +37,7 @@ graph TB
 ## 📦 Components
 
 ### 1. Error Analyzer (`error_analyzer.js`)
+
 - **Advanced error categorization** (syntax, runtime, network, etc.)
 - **Root cause analysis** with confidence scoring
 - **Pattern detection** for recurring issues
@@ -44,6 +45,7 @@ graph TB
 - **Context extraction** from stack traces and environment
 
 ### 2. Recovery Manager (`recovery_manager.js`)
+
 - **Intelligent recovery strategies** (retry, rollback, fallback, repair)
 - **State management** with checkpoint creation
 - **Resource cleanup** after failed attempts
@@ -51,6 +53,7 @@ graph TB
 - **Performance tracking** and optimization
 
 ### 3. Escalation Engine (`escalation_engine.js`)
+
 - **Multi-level escalation** (Low, Medium, High, Critical, Emergency)
 - **SLA tracking** and breach detection
 - **Automated notifications** to appropriate teams
@@ -58,6 +61,7 @@ graph TB
 - **Human intervention** request mechanisms
 
 ### 4. Retry Strategy Manager (`retry_strategies.js`)
+
 - **Multiple retry strategies** (fixed, linear, exponential backoff)
 - **Circuit breaker** pattern implementation
 - **Adaptive strategies** based on historical performance
@@ -65,6 +69,7 @@ graph TB
 - **Bulkhead isolation** for different operation types
 
 ### 5. Context Manager (`context_manager.js`)
+
 - **Context preservation** across retry attempts
 - **Intelligent data compression** and storage
 - **Selective preservation** based on usage patterns
@@ -72,6 +77,7 @@ graph TB
 - **Memory management** with automatic cleanup
 
 ### 6. Alert System (`alert_system.js`)
+
 - **Multi-channel notifications** (Email, Slack, SMS, Webhook)
 - **Rate limiting** to prevent alert spam
 - **Deduplication** of similar alerts
@@ -87,26 +93,26 @@ import IntelligentErrorHandlingSystem from './src/ai_cicd_system/error_handling/
 
 // Initialize the system
 const errorSystem = new IntelligentErrorHandlingSystem({
-    enableAnalysis: true,
-    enableRecovery: true,
-    enableEscalation: true,
-    enableRetry: true,
-    enableContext: true,
-    enableAlerts: true
+	enableAnalysis: true,
+	enableRecovery: true,
+	enableEscalation: true,
+	enableRetry: true,
+	enableContext: true,
+	enableAlerts: true
 });
 
 // Handle an error
 try {
-    // Your operation that might fail
-    await riskyOperation();
+	// Your operation that might fail
+	await riskyOperation();
 } catch (error) {
-    const result = await errorSystem.handleError(error, {
-        operation: 'riskyOperation',
-        userId: 'user123',
-        requestId: 'req456'
-    });
-    
-    console.log('Error handling result:', result);
+	const result = await errorSystem.handleError(error, {
+		operation: 'riskyOperation',
+		userId: 'user123',
+		requestId: 'req456'
+	});
+
+	console.log('Error handling result:', result);
 }
 ```
 
@@ -115,16 +121,16 @@ try {
 ```javascript
 // Execute operation with automatic retry and recovery
 const result = await errorSystem.executeWithErrorHandling(
-    async () => {
-        // Your operation
-        return await apiCall();
-    },
-    {
-        maxRetries: 3,
-        retryStrategy: 'EXPONENTIAL_BACKOFF',
-        errorCategory: 'NETWORK_ERROR',
-        operationKey: 'api_call'
-    }
+	async () => {
+		// Your operation
+		return await apiCall();
+	},
+	{
+		maxRetries: 3,
+		retryStrategy: 'EXPONENTIAL_BACKOFF',
+		errorCategory: 'NETWORK_ERROR',
+		operationKey: 'api_call'
+	}
 );
 ```
 
@@ -134,67 +140,67 @@ const result = await errorSystem.executeWithErrorHandling(
 
 ```javascript
 const config = {
-    // System-wide settings
-    enableSystem: true,
-    maxConcurrentOperations: 10,
-    systemTimeout: 300000,
+	// System-wide settings
+	enableSystem: true,
+	maxConcurrentOperations: 10,
+	systemTimeout: 300000,
 
-    // Component configurations
-    errorAnalyzer: {
-        enablePatternLearning: true,
-        enableContextExtraction: true,
-        enableRootCauseAnalysis: true,
-        maxStackTraceDepth: 10
-    },
+	// Component configurations
+	errorAnalyzer: {
+		enablePatternLearning: true,
+		enableContextExtraction: true,
+		enableRootCauseAnalysis: true,
+		maxStackTraceDepth: 10
+	},
 
-    recoveryManager: {
-        enableAutoRecovery: true,
-        maxRecoveryAttempts: 3,
-        enableRollback: true,
-        enableFallback: true,
-        recoveryTimeout: 300000
-    },
+	recoveryManager: {
+		enableAutoRecovery: true,
+		maxRecoveryAttempts: 3,
+		enableRollback: true,
+		enableFallback: true,
+		recoveryTimeout: 300000
+	},
 
-    escalationEngine: {
-        enableEscalation: true,
-        escalationThresholds: {
-            errorFrequency: 10,
-            criticalErrorCount: 3,
-            recoveryFailureCount: 5
-        },
-        notificationChannels: ['email', 'slack']
-    },
+	escalationEngine: {
+		enableEscalation: true,
+		escalationThresholds: {
+			errorFrequency: 10,
+			criticalErrorCount: 3,
+			recoveryFailureCount: 5
+		},
+		notificationChannels: ['email', 'slack']
+	},
 
-    retryManager: {
-        enableRetry: true,
-        defaultMaxRetries: 3,
-        defaultBaseDelay: 1000,
-        defaultMaxDelay: 30000,
-        enableAdaptive: true,
-        enableCircuitBreaker: true
-    },
+	retryManager: {
+		enableRetry: true,
+		defaultMaxRetries: 3,
+		defaultBaseDelay: 1000,
+		defaultMaxDelay: 30000,
+		enableAdaptive: true,
+		enableCircuitBreaker: true
+	},
 
-    contextManager: {
-        enableContextPreservation: true,
-        defaultStrategy: 'SELECTIVE',
-        maxContextSize: 1048576,
-        maxContextAge: 3600000,
-        enableCompression: true
-    },
+	contextManager: {
+		enableContextPreservation: true,
+		defaultStrategy: 'SELECTIVE',
+		maxContextSize: 1048576,
+		maxContextAge: 3600000,
+		enableCompression: true
+	},
 
-    alertSystem: {
-        enableAlerts: true,
-        defaultChannels: ['console', 'slack'],
-        rateLimiting: {
-            enabled: true,
-            maxAlertsPerMinute: 10,
-            maxAlertsPerHour: 100
-        },
-        deduplication: {
-            enabled: true,
-            windowMs: 300000
-        }
-    }
+	alertSystem: {
+		enableAlerts: true,
+		defaultChannels: ['console', 'slack'],
+		rateLimiting: {
+			enabled: true,
+			maxAlertsPerMinute: 10,
+			maxAlertsPerHour: 100
+		},
+		deduplication: {
+			enabled: true,
+			windowMs: 300000
+		}
+	}
 };
 ```
 
@@ -204,23 +210,23 @@ The system uses a comprehensive configuration file at `config/error_handling/rec
 
 ```json
 {
-  "errorCategories": {
-    "NETWORK_ERROR": {
-      "retryable": true,
-      "maxRetries": 5,
-      "recoveryStrategy": "RETRY",
-      "escalationThreshold": 10,
-      "priority": "MEDIUM"
-    }
-  },
-  "retryStrategies": {
-    "EXPONENTIAL_BACKOFF": {
-      "baseDelay": 1000,
-      "maxDelay": 30000,
-      "multiplier": 2,
-      "jitterFactor": 0.1
-    }
-  }
+	"errorCategories": {
+		"NETWORK_ERROR": {
+			"retryable": true,
+			"maxRetries": 5,
+			"recoveryStrategy": "RETRY",
+			"escalationThreshold": 10,
+			"priority": "MEDIUM"
+		}
+	},
+	"retryStrategies": {
+		"EXPONENTIAL_BACKOFF": {
+			"baseDelay": 1000,
+			"maxDelay": 30000,
+			"multiplier": 2,
+			"jitterFactor": 0.1
+		}
+	}
 }
 ```
 
@@ -271,16 +277,16 @@ console.log('Active Escalations:', escalationStats.activeEscalations);
 ```javascript
 // Define custom error handling for specific error types
 const customConfig = {
-    errorAnalyzer: {
-        customCategories: {
-            'CUSTOM_API_ERROR': {
-                patterns: [/API_RATE_LIMIT/, /API_QUOTA_EXCEEDED/],
-                retryable: true,
-                recoveryStrategy: 'RETRY',
-                escalationThreshold: 5
-            }
-        }
-    }
+	errorAnalyzer: {
+		customCategories: {
+			CUSTOM_API_ERROR: {
+				patterns: [/API_RATE_LIMIT/, /API_QUOTA_EXCEEDED/],
+				retryable: true,
+				recoveryStrategy: 'RETRY',
+				escalationThreshold: 5
+			}
+		}
+	}
 };
 ```
 
@@ -289,9 +295,9 @@ const customConfig = {
 ```javascript
 // The system learns from historical performance
 const retryConfig = {
-    strategy: 'ADAPTIVE',
-    enableAdaptive: true,
-    // System automatically adjusts based on success rates
+	strategy: 'ADAPTIVE',
+	enableAdaptive: true
+	// System automatically adjusts based on success rates
 };
 ```
 
@@ -299,9 +305,9 @@ const retryConfig = {
 
 ```javascript
 const circuitBreakerConfig = {
-    threshold: 5,           // Failures before opening
-    timeout: 60000,         // Time before half-open
-    monitoringPeriod: 10000 // Monitoring window
+	threshold: 5, // Failures before opening
+	timeout: 60000, // Time before half-open
+	monitoringPeriod: 10000 // Monitoring window
 };
 ```
 
@@ -310,10 +316,10 @@ const circuitBreakerConfig = {
 ```javascript
 // Different strategies for different scenarios
 const contextStrategies = {
-    'FULL': 'Preserve all context data',
-    'SELECTIVE': 'Preserve only relevant fields',
-    'MINIMAL': 'Preserve essential data only',
-    'ADAPTIVE': 'Learn from usage patterns'
+	FULL: 'Preserve all context data',
+	SELECTIVE: 'Preserve only relevant fields',
+	MINIMAL: 'Preserve essential data only',
+	ADAPTIVE: 'Learn from usage patterns'
 };
 ```
 
@@ -323,23 +329,23 @@ const contextStrategies = {
 
 ```javascript
 const alertConfig = {
-    channels: {
-        email: {
-            recipients: ['team@company.com'],
-            templates: {
-                subject: '[{{priority}}] {{title}}',
-                body: '{{message}}\n\nDetails: {{data}}'
-            }
-        },
-        slack: {
-            webhook: 'https://hooks.slack.com/...',
-            channel: '#alerts'
-        },
-        sms: {
-            provider: 'twilio',
-            recipients: ['+1234567890']
-        }
-    }
+	channels: {
+		email: {
+			recipients: ['team@company.com'],
+			templates: {
+				subject: '[{{priority}}] {{title}}',
+				body: '{{message}}\n\nDetails: {{data}}'
+			}
+		},
+		slack: {
+			webhook: 'https://hooks.slack.com/...',
+			channel: '#alerts'
+		},
+		sms: {
+			provider: 'twilio',
+			recipients: ['+1234567890']
+		}
+	}
 };
 ```
 
@@ -347,11 +353,11 @@ const alertConfig = {
 
 ```javascript
 const escalationMatrix = {
-    'EMERGENCY': ['oncall-engineer', 'team-lead', 'manager'],
-    'CRITICAL': ['oncall-engineer', 'team-lead'],
-    'HIGH': ['oncall-engineer'],
-    'MEDIUM': ['team-notifications'],
-    'LOW': ['team-notifications']
+	EMERGENCY: ['oncall-engineer', 'team-lead', 'manager'],
+	CRITICAL: ['oncall-engineer', 'team-lead'],
+	HIGH: ['oncall-engineer'],
+	MEDIUM: ['team-notifications'],
+	LOW: ['team-notifications']
 };
 ```
 
@@ -397,8 +403,8 @@ The system includes an automated cleanup script:
 ```javascript
 // Reset the entire system
 await errorSystem.reset({
-    force: true,        // Force reset even with active operations
-    timeout: 30000      // Wait timeout for graceful shutdown
+	force: true, // Force reset even with active operations
+	timeout: 30000 // Wait timeout for graceful shutdown
 });
 ```
 
@@ -430,26 +436,31 @@ await errorSystem.reset({
 ## 🤝 Integration Points
 
 ### Claude Code Validation
+
 - Receives validation results and error reports
 - Triggers recovery for failed validations
 - Escalates persistent validation failures
 
 ### Codegen API
+
 - Sends fix requests with detailed error context
 - Receives generated fixes and applies them
 - Tracks fix success rates for learning
 
 ### PostgreSQL Database
+
 - Stores error logs and recovery history
 - Maintains escalation records and SLA data
 - Provides analytics and reporting data
 
 ### AgentAPI
+
 - Sends status updates during error handling
 - Receives external error notifications
 - Coordinates with other system components
 
 ### Notification Systems
+
 - Integrates with Slack, email, SMS providers
 - Supports webhook notifications
 - Provides delivery tracking and retry
@@ -481,9 +492,9 @@ Each component provides its own API for direct interaction when needed. See indi
 
 ```javascript
 const debugConfig = {
-    verbose: true,
-    enableDebugLogs: true,
-    preserveAllContext: true
+	verbose: true,
+	enableDebugLogs: true,
+	preserveAllContext: true
 };
 ```
 
@@ -506,4 +517,3 @@ Contributions are welcome! Please see the main project's contributing guidelines
 ---
 
 For more information, see the main [Claude Task Master documentation](../../../README.md).
-

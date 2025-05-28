@@ -18,10 +18,10 @@ export { IntegrationFramework as default } from './integration-framework.js';
  * @returns {Promise<IntegrationFramework>} Initialized framework
  */
 export async function createIntegrationFramework(config = {}) {
-    const { IntegrationFramework } = await import('./integration-framework.js');
-    const framework = new IntegrationFramework(config);
-    await framework.initialize();
-    return framework;
+	const { IntegrationFramework } = await import('./integration-framework.js');
+	const framework = new IntegrationFramework(config);
+	await framework.initialize();
+	return framework;
 }
 
 /**
@@ -33,20 +33,20 @@ export const VERSION = '1.0.0';
  * Framework metadata
  */
 export const METADATA = {
-    name: 'Component Integration Framework',
-    version: VERSION,
-    description: 'Comprehensive component integration framework for AI CI/CD systems',
-    features: [
-        'Service Discovery',
-        'Health Monitoring', 
-        'Configuration Management',
-        'Event-Driven Communication',
-        'Circuit Breaker Pattern',
-        'Rate Limiting',
-        'Load Balancing',
-        'Hot Configuration Reloading'
-    ],
-    author: 'AI CI/CD Development Team',
-    license: 'MIT'
+	name: 'Component Integration Framework',
+	version: VERSION,
+	description:
+		'Comprehensive component integration framework for AI CI/CD systems',
+	features: [
+		'Service Discovery',
+		'Health Monitoring',
+		'Configuration Management',
+		'Event-Driven Communication',
+		'Circuit Breaker Pattern',
+		'Rate Limiting',
+		'Load Balancing',
+		'Hot Configuration Reloading'
+	],
+	author: 'AI CI/CD Development Team',
+	license: 'MIT'
 };
-

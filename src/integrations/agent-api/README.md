@@ -37,9 +37,9 @@ import { MiddlewareServer } from './src/integrations/agent-api/index.js';
 
 // Create and start the middleware server
 const server = new MiddlewareServer({
-  port: 3001,
-  enableWebSocket: true,
-  logLevel: 'info'
+	port: 3001,
+	enableWebSocket: true,
+	logLevel: 'info'
 });
 
 await server.start();
@@ -49,29 +49,32 @@ console.log('AgentAPI Middleware started on port 3001');
 ### Advanced Configuration
 
 ```javascript
-import { MiddlewareServer, getEnvironmentConfig } from './src/integrations/agent-api/index.js';
+import {
+	MiddlewareServer,
+	getEnvironmentConfig
+} from './src/integrations/agent-api/index.js';
 
 // Get environment-specific configuration
 const config = getEnvironmentConfig('production');
 
 // Override specific settings
 const customConfig = {
-  ...config,
-  server: {
-    ...config.server,
-    port: 3001,
-    enableWebSocket: true
-  },
-  auth: {
-    ...config.auth,
-    jwtSecret: process.env.JWT_SECRET,
-    jwtExpiresIn: '2h'
-  },
-  rateLimit: {
-    ...config.rateLimit,
-    maxRequests: 200,
-    apiMaxRequests: 120
-  }
+	...config,
+	server: {
+		...config.server,
+		port: 3001,
+		enableWebSocket: true
+	},
+	auth: {
+		...config.auth,
+		jwtSecret: process.env.JWT_SECRET,
+		jwtExpiresIn: '2h'
+	},
+	rateLimit: {
+		...config.rateLimit,
+		maxRequests: 200,
+		apiMaxRequests: 120
+	}
 };
 
 const server = new MiddlewareServer(customConfig);
@@ -171,19 +174,19 @@ REDIS_PASSWORD=your-redis-password
 import { getConfig } from './src/integrations/agent-api/config.js';
 
 const config = getConfig({
-  server: {
-    port: 3001,
-    enableWebSocket: true,
-    logLevel: 'debug'
-  },
-  auth: {
-    jwtExpiresIn: '2h',
-    maxLoginAttempts: 3
-  },
-  rateLimit: {
-    maxRequests: 200,
-    apiMaxRequests: 120
-  }
+	server: {
+		port: 3001,
+		enableWebSocket: true,
+		logLevel: 'debug'
+	},
+	auth: {
+		jwtExpiresIn: '2h',
+		maxLoginAttempts: 3
+	},
+	rateLimit: {
+		maxRequests: 200,
+		apiMaxRequests: 120
+	}
 });
 ```
 
@@ -228,21 +231,25 @@ The middleware supports WebSocket connections for real-time communication:
 const ws = new WebSocket('ws://localhost:3001/ws');
 
 // Authenticate
-ws.send(JSON.stringify({
-  type: 'auth',
-  token: 'your-jwt-token'
-}));
+ws.send(
+	JSON.stringify({
+		type: 'auth',
+		token: 'your-jwt-token'
+	})
+);
 
 // Subscribe to events
-ws.send(JSON.stringify({
-  type: 'subscribe',
-  channel: 'workflow-updates'
-}));
+ws.send(
+	JSON.stringify({
+		type: 'subscribe',
+		channel: 'workflow-updates'
+	})
+);
 
 // Handle messages
 ws.onmessage = (event) => {
-  const message = JSON.parse(event.data);
-  console.log('Received:', message);
+	const message = JSON.parse(event.data);
+	console.log('Received:', message);
 };
 ```
 
@@ -302,16 +309,19 @@ The middleware implements multiple layers of rate limiting:
 import { RateLimiter } from './src/integrations/agent-api/index.js';
 
 const rateLimiter = new RateLimiter({
-  maxRequests: 200,
-  windowMs: 15 * 60 * 1000
+	maxRequests: 200,
+	windowMs: 15 * 60 * 1000
 });
 
 // Use custom rate limiting middleware
-app.use('/api/premium', rateLimiter.customRateLimit({
-  maxRequests: 500,
-  windowMs: 15 * 60 * 1000,
-  condition: (req) => req.user?.role === 'premium'
-}));
+app.use(
+	'/api/premium',
+	rateLimiter.customRateLimit({
+		maxRequests: 500,
+		windowMs: 15 * 60 * 1000,
+		condition: (req) => req.user?.role === 'premium'
+	})
+);
 ```
 
 ## 📈 Monitoring
@@ -323,13 +333,14 @@ curl http://localhost:3001/health
 ```
 
 Response:
+
 ```json
 {
-  "status": "healthy",
-  "timestamp": "2025-05-28T15:13:32.000Z",
-  "uptime": 3600,
-  "version": "1.0.0",
-  "environment": "production"
+	"status": "healthy",
+	"timestamp": "2025-05-28T15:13:32.000Z",
+	"uptime": 3600,
+	"version": "1.0.0",
+	"environment": "production"
 }
 ```
 
@@ -400,7 +411,7 @@ services:
   agent-api:
     build: .
     ports:
-      - "3001:3001"
+      - '3001:3001'
     environment:
       - NODE_ENV=production
       - JWT_SECRET=your-secret-key
@@ -476,12 +487,12 @@ import { MiddlewareServer } from './agent-api/index.js';
 
 const orchestrator = new WorkflowOrchestrator();
 const middleware = new MiddlewareServer({
-  integrations: {
-    orchestrator: {
-      baseUrl: 'http://localhost:3000',
-      apiKey: process.env.ORCHESTRATOR_API_KEY
-    }
-  }
+	integrations: {
+		orchestrator: {
+			baseUrl: 'http://localhost:3000',
+			apiKey: process.env.ORCHESTRATOR_API_KEY
+		}
+	}
 });
 
 await middleware.start();
@@ -495,12 +506,12 @@ import { MiddlewareServer } from './agent-api/index.js';
 
 const claudeCode = new ClaudeCodeIntegration();
 const middleware = new MiddlewareServer({
-  integrations: {
-    claudeCode: {
-      baseUrl: 'http://localhost:3002',
-      apiKey: process.env.CLAUDE_CODE_API_KEY
-    }
-  }
+	integrations: {
+		claudeCode: {
+			baseUrl: 'http://localhost:3002',
+			apiKey: process.env.CLAUDE_CODE_API_KEY
+		}
+	}
 });
 
 await middleware.start();
@@ -529,11 +540,13 @@ await middleware.start();
 ### Common Issues
 
 1. **Server won't start**
+
    - Check if port is already in use
    - Verify JWT_SECRET is set
    - Check file permissions
 
 2. **Authentication fails**
+
    - Verify JWT_SECRET matches
    - Check token expiration
    - Validate user credentials
@@ -564,4 +577,3 @@ For detailed API documentation, see the [API Reference](./docs/api-reference.md)
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](../../../LICENSE) file for details.
-

@@ -10,9 +10,9 @@
 		"task-master-ai": "mcp-server/server.js"
 	},
 	"scripts": {
-		"test": "jest",
-		"test:watch": "jest --watch",
-		"test:coverage": "jest --coverage",
+		"test": "node --experimental-vm-modules node_modules/.bin/jest",
+		"test:watch": "node --experimental-vm-modules node_modules/.bin/jest --watch",
+		"test:coverage": "node --experimental-vm-modules node_modules/.bin/jest --coverage",
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
 		"format": "prettier --write .",

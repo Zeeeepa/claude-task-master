@@ -1,361 +1,372 @@
 {
-  "version": "1.0.0",
-  "description": "Error handling and recovery rules configuration",
-  "lastUpdated": "2025-05-28T16:33:00.000Z",
-  
-  "errorCategories": {
-    "SYNTAX_ERROR": {
-      "retryable": false,
-      "maxRetries": 0,
-      "recoveryStrategy": "REPAIR",
-      "escalationThreshold": 1,
-      "priority": "HIGH",
-      "autoFix": true,
-      "fixStrategies": [
-        "syntax_validation",
-        "code_formatting",
-        "linting_fixes"
-      ]
-    },
-    "RUNTIME_ERROR": {
-      "retryable": false,
-      "maxRetries": 1,
-      "recoveryStrategy": "REPAIR",
-      "escalationThreshold": 3,
-      "priority": "HIGH",
-      "autoFix": false,
-      "fixStrategies": [
-        "variable_validation",
-        "null_checks",
-        "type_validation"
-      ]
-    },
-    "TEST_FAILURE": {
-      "retryable": true,
-      "maxRetries": 2,
-      "recoveryStrategy": "FALLBACK",
-      "escalationThreshold": 5,
-      "priority": "MEDIUM",
-      "autoFix": false,
-      "fixStrategies": [
-        "test_data_refresh",
-        "environment_reset",
-        "dependency_update"
-      ]
-    },
-    "VALIDATION_ERROR": {
-      "retryable": false,
-      "maxRetries": 0,
-      "recoveryStrategy": "REPAIR",
-      "escalationThreshold": 2,
-      "priority": "MEDIUM",
-      "autoFix": true,
-      "fixStrategies": [
-        "input_sanitization",
-        "schema_validation",
-        "format_correction"
-      ]
-    },
-    "NETWORK_ERROR": {
-      "retryable": true,
-      "maxRetries": 5,
-      "recoveryStrategy": "RETRY",
-      "escalationThreshold": 10,
-      "priority": "MEDIUM",
-      "autoFix": true,
-      "fixStrategies": [
-        "exponential_backoff",
-        "circuit_breaker",
-        "fallback_endpoint"
-      ]
-    },
-    "AUTHENTICATION_ERROR": {
-      "retryable": false,
-      "maxRetries": 0,
-      "recoveryStrategy": "ESCALATE",
-      "escalationThreshold": 1,
-      "priority": "CRITICAL",
-      "autoFix": false,
-      "fixStrategies": [
-        "credential_refresh",
-        "token_renewal",
-        "manual_intervention"
-      ]
-    },
-    "RATE_LIMIT_ERROR": {
-      "retryable": true,
-      "maxRetries": 3,
-      "recoveryStrategy": "RETRY",
-      "escalationThreshold": 5,
-      "priority": "MEDIUM",
-      "autoFix": true,
-      "fixStrategies": [
-        "exponential_backoff",
-        "request_throttling",
-        "quota_management"
-      ]
-    },
-    "RESOURCE_ERROR": {
-      "retryable": true,
-      "maxRetries": 3,
-      "recoveryStrategy": "RETRY",
-      "escalationThreshold": 3,
-      "priority": "HIGH",
-      "autoFix": true,
-      "fixStrategies": [
-        "resource_cleanup",
-        "memory_optimization",
-        "scaling_up"
-      ]
-    },
-    "CONFIGURATION_ERROR": {
-      "retryable": false,
-      "maxRetries": 0,
-      "recoveryStrategy": "REPAIR",
-      "escalationThreshold": 1,
-      "priority": "HIGH",
-      "autoFix": false,
-      "fixStrategies": [
-        "config_validation",
-        "default_fallback",
-        "environment_check"
-      ]
-    },
-    "DEPENDENCY_ERROR": {
-      "retryable": false,
-      "maxRetries": 1,
-      "recoveryStrategy": "REPAIR",
-      "escalationThreshold": 2,
-      "priority": "HIGH",
-      "autoFix": true,
-      "fixStrategies": [
-        "dependency_install",
-        "version_resolution",
-        "package_update"
-      ]
-    },
-    "TIMEOUT_ERROR": {
-      "retryable": true,
-      "maxRetries": 3,
-      "recoveryStrategy": "RETRY",
-      "escalationThreshold": 5,
-      "priority": "MEDIUM",
-      "autoFix": true,
-      "fixStrategies": [
-        "timeout_increase",
-        "request_optimization",
-        "parallel_processing"
-      ]
-    }
-  },
+	"version": "1.0.0",
+	"description": "Error handling and recovery rules configuration",
+	"lastUpdated": "2025-05-28T16:33:00.000Z",
 
-  "retryStrategies": {
-    "FIXED_DELAY": {
-      "baseDelay": 1000,
-      "maxDelay": 30000,
-      "multiplier": 1,
-      "jitterFactor": 0.1,
-      "applicableCategories": ["TEST_FAILURE"]
-    },
-    "LINEAR_BACKOFF": {
-      "baseDelay": 1000,
-      "maxDelay": 30000,
-      "multiplier": 1,
-      "jitterFactor": 0.1,
-      "applicableCategories": ["RATE_LIMIT_ERROR"]
-    },
-    "EXPONENTIAL_BACKOFF": {
-      "baseDelay": 1000,
-      "maxDelay": 30000,
-      "multiplier": 2,
-      "jitterFactor": 0.1,
-      "applicableCategories": ["NETWORK_ERROR", "TIMEOUT_ERROR", "RESOURCE_ERROR"]
-    },
-    "EXPONENTIAL_BACKOFF_WITH_JITTER": {
-      "baseDelay": 1000,
-      "maxDelay": 30000,
-      "multiplier": 2,
-      "jitterFactor": 0.3,
-      "applicableCategories": ["NETWORK_ERROR", "RESOURCE_ERROR"]
-    }
-  },
+	"errorCategories": {
+		"SYNTAX_ERROR": {
+			"retryable": false,
+			"maxRetries": 0,
+			"recoveryStrategy": "REPAIR",
+			"escalationThreshold": 1,
+			"priority": "HIGH",
+			"autoFix": true,
+			"fixStrategies": ["syntax_validation", "code_formatting", "linting_fixes"]
+		},
+		"RUNTIME_ERROR": {
+			"retryable": false,
+			"maxRetries": 1,
+			"recoveryStrategy": "REPAIR",
+			"escalationThreshold": 3,
+			"priority": "HIGH",
+			"autoFix": false,
+			"fixStrategies": ["variable_validation", "null_checks", "type_validation"]
+		},
+		"TEST_FAILURE": {
+			"retryable": true,
+			"maxRetries": 2,
+			"recoveryStrategy": "FALLBACK",
+			"escalationThreshold": 5,
+			"priority": "MEDIUM",
+			"autoFix": false,
+			"fixStrategies": [
+				"test_data_refresh",
+				"environment_reset",
+				"dependency_update"
+			]
+		},
+		"VALIDATION_ERROR": {
+			"retryable": false,
+			"maxRetries": 0,
+			"recoveryStrategy": "REPAIR",
+			"escalationThreshold": 2,
+			"priority": "MEDIUM",
+			"autoFix": true,
+			"fixStrategies": [
+				"input_sanitization",
+				"schema_validation",
+				"format_correction"
+			]
+		},
+		"NETWORK_ERROR": {
+			"retryable": true,
+			"maxRetries": 5,
+			"recoveryStrategy": "RETRY",
+			"escalationThreshold": 10,
+			"priority": "MEDIUM",
+			"autoFix": true,
+			"fixStrategies": [
+				"exponential_backoff",
+				"circuit_breaker",
+				"fallback_endpoint"
+			]
+		},
+		"AUTHENTICATION_ERROR": {
+			"retryable": false,
+			"maxRetries": 0,
+			"recoveryStrategy": "ESCALATE",
+			"escalationThreshold": 1,
+			"priority": "CRITICAL",
+			"autoFix": false,
+			"fixStrategies": [
+				"credential_refresh",
+				"token_renewal",
+				"manual_intervention"
+			]
+		},
+		"RATE_LIMIT_ERROR": {
+			"retryable": true,
+			"maxRetries": 3,
+			"recoveryStrategy": "RETRY",
+			"escalationThreshold": 5,
+			"priority": "MEDIUM",
+			"autoFix": true,
+			"fixStrategies": [
+				"exponential_backoff",
+				"request_throttling",
+				"quota_management"
+			]
+		},
+		"RESOURCE_ERROR": {
+			"retryable": true,
+			"maxRetries": 3,
+			"recoveryStrategy": "RETRY",
+			"escalationThreshold": 3,
+			"priority": "HIGH",
+			"autoFix": true,
+			"fixStrategies": ["resource_cleanup", "memory_optimization", "scaling_up"]
+		},
+		"CONFIGURATION_ERROR": {
+			"retryable": false,
+			"maxRetries": 0,
+			"recoveryStrategy": "REPAIR",
+			"escalationThreshold": 1,
+			"priority": "HIGH",
+			"autoFix": false,
+			"fixStrategies": [
+				"config_validation",
+				"default_fallback",
+				"environment_check"
+			]
+		},
+		"DEPENDENCY_ERROR": {
+			"retryable": false,
+			"maxRetries": 1,
+			"recoveryStrategy": "REPAIR",
+			"escalationThreshold": 2,
+			"priority": "HIGH",
+			"autoFix": true,
+			"fixStrategies": [
+				"dependency_install",
+				"version_resolution",
+				"package_update"
+			]
+		},
+		"TIMEOUT_ERROR": {
+			"retryable": true,
+			"maxRetries": 3,
+			"recoveryStrategy": "RETRY",
+			"escalationThreshold": 5,
+			"priority": "MEDIUM",
+			"autoFix": true,
+			"fixStrategies": [
+				"timeout_increase",
+				"request_optimization",
+				"parallel_processing"
+			]
+		}
+	},
 
-  "escalationRules": {
-    "frequency": {
-      "threshold": 10,
-      "timeWindow": 3600000,
-      "action": "ESCALATE",
-      "level": "HIGH"
-    },
-    "severity": {
-      "CRITICAL": {
-        "immediateEscalation": true,
-        "level": "CRITICAL",
-        "notificationChannels": ["email", "slack", "sms"]
-      },
-      "HIGH": {
-        "threshold": 3,
-        "timeWindow": 1800000,
-        "level": "HIGH",
-        "notificationChannels": ["email", "slack"]
-      },
-      "MEDIUM": {
-        "threshold": 5,
-        "timeWindow": 3600000,
-        "level": "MEDIUM",
-        "notificationChannels": ["slack"]
-      }
-    },
-    "patterns": {
-      "recurringError": {
-        "threshold": 5,
-        "timeWindow": 3600000,
-        "action": "ESCALATE",
-        "level": "MEDIUM"
-      },
-      "cascadingFailure": {
-        "threshold": 3,
-        "timeWindow": 300000,
-        "action": "ESCALATE",
-        "level": "HIGH"
-      }
-    }
-  },
+	"retryStrategies": {
+		"FIXED_DELAY": {
+			"baseDelay": 1000,
+			"maxDelay": 30000,
+			"multiplier": 1,
+			"jitterFactor": 0.1,
+			"applicableCategories": ["TEST_FAILURE"]
+		},
+		"LINEAR_BACKOFF": {
+			"baseDelay": 1000,
+			"maxDelay": 30000,
+			"multiplier": 1,
+			"jitterFactor": 0.1,
+			"applicableCategories": ["RATE_LIMIT_ERROR"]
+		},
+		"EXPONENTIAL_BACKOFF": {
+			"baseDelay": 1000,
+			"maxDelay": 30000,
+			"multiplier": 2,
+			"jitterFactor": 0.1,
+			"applicableCategories": [
+				"NETWORK_ERROR",
+				"TIMEOUT_ERROR",
+				"RESOURCE_ERROR"
+			]
+		},
+		"EXPONENTIAL_BACKOFF_WITH_JITTER": {
+			"baseDelay": 1000,
+			"maxDelay": 30000,
+			"multiplier": 2,
+			"jitterFactor": 0.3,
+			"applicableCategories": ["NETWORK_ERROR", "RESOURCE_ERROR"]
+		}
+	},
 
-  "recoveryStrategies": {
-    "RETRY": {
-      "description": "Retry operation with backoff strategy",
-      "applicableCategories": ["NETWORK_ERROR", "TIMEOUT_ERROR", "RATE_LIMIT_ERROR", "RESOURCE_ERROR"],
-      "maxAttempts": 5,
-      "backoffStrategy": "EXPONENTIAL_BACKOFF",
-      "circuitBreakerEnabled": true
-    },
-    "ROLLBACK": {
-      "description": "Rollback to previous working state",
-      "applicableCategories": ["CONFIGURATION_ERROR", "DEPENDENCY_ERROR"],
-      "checkpointRequired": true,
-      "maxRollbackDepth": 3,
-      "verificationRequired": true
-    },
-    "FALLBACK": {
-      "description": "Use alternative approach or degraded functionality",
-      "applicableCategories": ["TEST_FAILURE", "NETWORK_ERROR"],
-      "fallbackOptions": [
-        "alternative_endpoint",
-        "cached_response",
-        "simplified_operation"
-      ]
-    },
-    "REPAIR": {
-      "description": "Attempt automatic repair of the issue",
-      "applicableCategories": ["SYNTAX_ERROR", "VALIDATION_ERROR", "DEPENDENCY_ERROR"],
-      "repairStrategies": [
-        "auto_fix",
-        "dependency_resolution",
-        "configuration_repair"
-      ]
-    },
-    "ESCALATE": {
-      "description": "Escalate to human intervention",
-      "applicableCategories": ["AUTHENTICATION_ERROR", "CONFIGURATION_ERROR"],
-      "escalationLevel": "HIGH",
-      "requiresImmediate": true
-    }
-  },
+	"escalationRules": {
+		"frequency": {
+			"threshold": 10,
+			"timeWindow": 3600000,
+			"action": "ESCALATE",
+			"level": "HIGH"
+		},
+		"severity": {
+			"CRITICAL": {
+				"immediateEscalation": true,
+				"level": "CRITICAL",
+				"notificationChannels": ["email", "slack", "sms"]
+			},
+			"HIGH": {
+				"threshold": 3,
+				"timeWindow": 1800000,
+				"level": "HIGH",
+				"notificationChannels": ["email", "slack"]
+			},
+			"MEDIUM": {
+				"threshold": 5,
+				"timeWindow": 3600000,
+				"level": "MEDIUM",
+				"notificationChannels": ["slack"]
+			}
+		},
+		"patterns": {
+			"recurringError": {
+				"threshold": 5,
+				"timeWindow": 3600000,
+				"action": "ESCALATE",
+				"level": "MEDIUM"
+			},
+			"cascadingFailure": {
+				"threshold": 3,
+				"timeWindow": 300000,
+				"action": "ESCALATE",
+				"level": "HIGH"
+			}
+		}
+	},
 
-  "circuitBreaker": {
-    "enabled": true,
-    "failureThreshold": 5,
-    "recoveryTimeout": 60000,
-    "halfOpenMaxCalls": 3,
-    "monitoringWindow": 10000
-  },
+	"recoveryStrategies": {
+		"RETRY": {
+			"description": "Retry operation with backoff strategy",
+			"applicableCategories": [
+				"NETWORK_ERROR",
+				"TIMEOUT_ERROR",
+				"RATE_LIMIT_ERROR",
+				"RESOURCE_ERROR"
+			],
+			"maxAttempts": 5,
+			"backoffStrategy": "EXPONENTIAL_BACKOFF",
+			"circuitBreakerEnabled": true
+		},
+		"ROLLBACK": {
+			"description": "Rollback to previous working state",
+			"applicableCategories": ["CONFIGURATION_ERROR", "DEPENDENCY_ERROR"],
+			"checkpointRequired": true,
+			"maxRollbackDepth": 3,
+			"verificationRequired": true
+		},
+		"FALLBACK": {
+			"description": "Use alternative approach or degraded functionality",
+			"applicableCategories": ["TEST_FAILURE", "NETWORK_ERROR"],
+			"fallbackOptions": [
+				"alternative_endpoint",
+				"cached_response",
+				"simplified_operation"
+			]
+		},
+		"REPAIR": {
+			"description": "Attempt automatic repair of the issue",
+			"applicableCategories": [
+				"SYNTAX_ERROR",
+				"VALIDATION_ERROR",
+				"DEPENDENCY_ERROR"
+			],
+			"repairStrategies": [
+				"auto_fix",
+				"dependency_resolution",
+				"configuration_repair"
+			]
+		},
+		"ESCALATE": {
+			"description": "Escalate to human intervention",
+			"applicableCategories": ["AUTHENTICATION_ERROR", "CONFIGURATION_ERROR"],
+			"escalationLevel": "HIGH",
+			"requiresImmediate": true
+		}
+	},
 
-  "contextPreservation": {
-    "enabled": true,
-    "strategy": "SELECTIVE",
-    "maxContextSize": 1048576,
-    "maxContextAge": 3600000,
-    "compressionEnabled": true,
-    "encryptionEnabled": false,
-    "preservationRules": {
-      "ERROR": {
-        "preserveFields": ["error", "stackTrace", "environment", "timestamp", "operation"],
-        "maxSize": 102400
-      },
-      "RECOVERY": {
-        "preserveFields": ["errorContext", "recoveryAttempts", "strategy", "checkpoint"],
-        "maxSize": 51200
-      },
-      "RETRY": {
-        "preserveFields": ["attempts", "delays", "strategy", "lastError"],
-        "maxSize": 25600
-      }
-    }
-  },
+	"circuitBreaker": {
+		"enabled": true,
+		"failureThreshold": 5,
+		"recoveryTimeout": 60000,
+		"halfOpenMaxCalls": 3,
+		"monitoringWindow": 10000
+	},
 
-  "notifications": {
-    "enabled": true,
-    "channels": ["console", "slack", "email"],
-    "rateLimiting": {
-      "enabled": true,
-      "maxAlertsPerMinute": 10,
-      "maxAlertsPerHour": 100
-    },
-    "deduplication": {
-      "enabled": true,
-      "windowMs": 300000
-    },
-    "templates": {
-      "ERROR": {
-        "subject": "[ERROR] {{category}} - {{message}}",
-        "body": "Error detected in {{source}}\n\nCategory: {{category}}\nSeverity: {{severity}}\nMessage: {{message}}\nTime: {{timestamp}}\n\nFix suggestions:\n{{fixSuggestions}}"
-      },
-      "ESCALATION": {
-        "subject": "[ESCALATION] {{level}} - {{reason}}",
-        "body": "Escalation required\n\nLevel: {{level}}\nReason: {{reason}}\nTriggers: {{triggers}}\nRecommendations: {{recommendations}}\nSLA Deadline: {{slaDeadline}}"
-      }
-    }
-  },
+	"contextPreservation": {
+		"enabled": true,
+		"strategy": "SELECTIVE",
+		"maxContextSize": 1048576,
+		"maxContextAge": 3600000,
+		"compressionEnabled": true,
+		"encryptionEnabled": false,
+		"preservationRules": {
+			"ERROR": {
+				"preserveFields": [
+					"error",
+					"stackTrace",
+					"environment",
+					"timestamp",
+					"operation"
+				],
+				"maxSize": 102400
+			},
+			"RECOVERY": {
+				"preserveFields": [
+					"errorContext",
+					"recoveryAttempts",
+					"strategy",
+					"checkpoint"
+				],
+				"maxSize": 51200
+			},
+			"RETRY": {
+				"preserveFields": ["attempts", "delays", "strategy", "lastError"],
+				"maxSize": 25600
+			}
+		}
+	},
 
-  "slaThresholds": {
-    "errorResponse": {
-      "target": 300000,
-      "warning": 240000,
-      "critical": 360000
-    },
-    "recoveryTime": {
-      "target": 1800000,
-      "warning": 1440000,
-      "critical": 2160000
-    },
-    "escalationResponse": {
-      "EMERGENCY": 900000,
-      "CRITICAL": 1800000,
-      "HIGH": 3600000,
-      "MEDIUM": 14400000,
-      "LOW": 28800000
-    }
-  },
+	"notifications": {
+		"enabled": true,
+		"channels": ["console", "slack", "email"],
+		"rateLimiting": {
+			"enabled": true,
+			"maxAlertsPerMinute": 10,
+			"maxAlertsPerHour": 100
+		},
+		"deduplication": {
+			"enabled": true,
+			"windowMs": 300000
+		},
+		"templates": {
+			"ERROR": {
+				"subject": "[ERROR] {{category}} - {{message}}",
+				"body": "Error detected in {{source}}\n\nCategory: {{category}}\nSeverity: {{severity}}\nMessage: {{message}}\nTime: {{timestamp}}\n\nFix suggestions:\n{{fixSuggestions}}"
+			},
+			"ESCALATION": {
+				"subject": "[ESCALATION] {{level}} - {{reason}}",
+				"body": "Escalation required\n\nLevel: {{level}}\nReason: {{reason}}\nTriggers: {{triggers}}\nRecommendations: {{recommendations}}\nSLA Deadline: {{slaDeadline}}"
+			}
+		}
+	},
 
-  "monitoring": {
-    "enabled": true,
-    "metricsCollection": true,
-    "performanceTracking": true,
-    "patternDetection": true,
-    "anomalyDetection": {
-      "enabled": true,
-      "sensitivity": 0.8,
-      "learningPeriod": 604800000
-    }
-  },
+	"slaThresholds": {
+		"errorResponse": {
+			"target": 300000,
+			"warning": 240000,
+			"critical": 360000
+		},
+		"recoveryTime": {
+			"target": 1800000,
+			"warning": 1440000,
+			"critical": 2160000
+		},
+		"escalationResponse": {
+			"EMERGENCY": 900000,
+			"CRITICAL": 1800000,
+			"HIGH": 3600000,
+			"MEDIUM": 14400000,
+			"LOW": 28800000
+		}
+	},
 
-  "cleanup": {
-    "enabled": true,
-    "maxHistorySize": 10000,
-    "maxHistoryAge": 2592000000,
-    "cleanupInterval": 86400000,
-    "archiveOldData": true
-  }
+	"monitoring": {
+		"enabled": true,
+		"metricsCollection": true,
+		"performanceTracking": true,
+		"patternDetection": true,
+		"anomalyDetection": {
+			"enabled": true,
+			"sensitivity": 0.8,
+			"learningPeriod": 604800000
+		}
+	},
+
+	"cleanup": {
+		"enabled": true,
+		"maxHistorySize": 10000,
+		"maxHistoryAge": 2592000000,
+		"cleanupInterval": 86400000,
+		"archiveOldData": true
+	}
 }
-
