@@ -1,9 +1,11 @@
 /**
  * @fileoverview Validation Engine
- * @description Unified validation engine with Claude Code integration
+ * @description Unified validation engine with Claude Code integration via AgentAPI
  */
 
 import { log } from '../../scripts/modules/utils.js';
+import { ClaudeCodeManager } from './claude_code_manager.js';
+import { mergeAgentAPIConfig } from '../config/agentapi_config.js';
 
 /**
  * Validation engine that integrates with Claude Code for comprehensive PR validation
@@ -11,13 +13,13 @@ import { log } from '../../scripts/modules/utils.js';
 export class ValidationEngine {
     constructor(config = {}) {
         this.config = {
-            agentapi_url: config.agentapi_url || 'http://localhost:8000',
+            agentapi_url: config.agentapi_url || 'http://localhost:3284',
             api_key: config.api_key,
             timeout: config.timeout || 300000, // 5 minutes
             enable_security_analysis: config.enable_security_analysis !== false,
             enable_performance_analysis: config.enable_performance_analysis !== false,
             max_validation_time: config.max_validation_time || 300000,
-            enable_mock: config.enable_mock || !config.api_key,
+            enable_mock: config.enable_mock || false, // Default to real implementation
             scoring_criteria: {
                 code_quality: { weight: 0.3 },
                 functionality: { weight: 0.4 },
@@ -28,7 +30,8 @@ export class ValidationEngine {
             ...config
         };
         
-        this.claudeCodeClient = new ClaudeCodeClient(this.config);
+        // Initialize Claude Code Manager with AgentAPI integration
+        this.claudeCodeManager = new ClaudeCodeManager(mergeAgentAPIConfig(this.config));
         this.deploymentManager = new DeploymentManager(this.config);
         this.codeAnalyzer = new CodeAnalyzer(this.config);
         this.feedbackGenerator = new FeedbackGenerator(this.config);
@@ -36,6 +39,33 @@ export class ValidationEngine {
         
         this.activeValidations = new Map();
         this.validationHistory = [];
+        
+        // Setup event handlers
+        this.setupEventHandlers();
+    }
+
+    /**
+     * Setup event handlers for Claude Code Manager
+     */
+    setupEventHandlers() {
+        this.claudeCodeManager.on('validationCompleted', (data) => {
+            log('info', 'Claude Code validation completed', {
+                operationId: data.operationId,
+                score: data.result.score
+            });
+        });
+        
+        this.claudeCodeManager.on('validationFailed', (data) => {
+            log('error', 'Claude Code validation failed', {
+                operationId: data.operationId,
+                error: data.error
+            });
+        });
+        
+        this.claudeCodeManager.on('agentAPIUnavailable', () => {
+            log('warn', 'AgentAPI unavailable, falling back to mock validation');
+            this.config.enable_mock = true;
+        });
     }
 
     /**
@@ -47,11 +77,24 @@ export class ValidationEngine {
         if (this.config.enable_mock) {
             log('info', 'Using mock validation engine');
         } else {
-            // Validate AgentAPI connection
-            await this.claudeCodeClient.validateConnection();
+            try {
+                // Check AgentAPI health
+                const status = this.claudeCodeManager.getStatus();
+                if (!status.agentAPIStatus.isHealthy) {
+                    log('warn', 'AgentAPI health check failed, enabling mock mode');
+                    this.config.enable_mock = true;
+                }
+            } catch (error) {
+                log('warn', 'Failed to check AgentAPI status, enabling mock mode', {
+                    error: error.message
+                });
+                this.config.enable_mock = true;
+            }
         }
         
-        log('debug', 'Validation engine initialized');
+        log('debug', 'Validation engine initialized', {
+            mockMode: this.config.enable_mock
+        });
     }
 
     /**
@@ -62,7 +105,9 @@ export class ValidationEngine {
      */
     async validatePR(prInfo, taskContext) {
         const validationId = `val_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        log('info', `Starting PR validation ${validationId} for PR #${prInfo.number}`);
+        log('info', `Starting PR validation ${validationId} for PR #${prInfo.number}`, {
+            mockMode: this.config.enable_mock
+        });
 
         try {
             // Track active validation
@@ -73,138 +118,209 @@ export class ValidationEngine {
                 status: 'running'
             });
 
-            // Step 1: Deploy PR branch
-            log('debug', 'Step 1: Deploying PR branch');
-            const deploymentResult = await this.deploymentManager.deployPRBranch(
-                prInfo.url, 
-                prInfo.branch_name
-            );
-
-            // Step 2: Run comprehensive analysis
-            log('debug', 'Step 2: Running code analysis');
-            const analysisResult = await this.codeAnalyzer.analyzeCode(
-                deploymentResult.deployment_path,
-                {
-                    enable_security: this.config.enable_security_analysis,
-                    enable_performance: this.config.enable_performance_analysis,
-                    task_context: taskContext
-                }
-            );
-
-            // Step 3: Execute tests
-            log('debug', 'Step 3: Executing test suite');
-            const testResult = await this.codeAnalyzer.executeTests(
-                deploymentResult.deployment_path
-            );
-
-            // Step 4: Check requirements compliance
-            log('debug', 'Step 4: Checking requirements compliance');
-            const complianceResult = await this.codeAnalyzer.checkCompliance(
-                analysisResult,
-                taskContext
-            );
-
-            // Step 5: Calculate scores
-            log('debug', 'Step 5: Calculating validation scores');
-            const scores = await this.scoreCalculator.calculateScores({
-                analysis: analysisResult,
-                tests: testResult,
-                compliance: complianceResult
-            });
-
-            // Step 6: Generate feedback
-            log('debug', 'Step 6: Generating feedback');
-            const feedback = await this.feedbackGenerator.generateFeedback({
-                analysis: analysisResult,
-                tests: testResult,
-                compliance: complianceResult,
-                scores: scores
-            }, taskContext);
-
-            // Step 7: Determine overall status
-            const status = this._determineValidationStatus(scores);
-
-            // Step 8: Compile final result
-            const validationResult = {
-                validation_id: validationId,
-                task_id: taskContext.task_id,
-                pr_number: prInfo.number,
-                status: status,
-                score: scores,
-                feedback: feedback.items,
-                suggestions: feedback.suggestions,
-                metrics: {
-                    validation_duration_ms: Date.now() - this.activeValidations.get(validationId).started_at.getTime(),
-                    deployment_duration_ms: deploymentResult.duration_ms,
-                    analysis_duration_ms: analysisResult.duration_ms,
-                    test_duration_ms: testResult.duration_ms,
-                    files_analyzed: analysisResult.files_analyzed,
-                    lines_of_code: analysisResult.total_lines,
-                    test_coverage: testResult.coverage_percentage
-                },
-                raw_results: {
-                    deployment: deploymentResult,
-                    analysis: analysisResult,
-                    tests: testResult,
-                    compliance: complianceResult
-                },
-                validated_at: new Date()
-            };
-
-            // Step 9: Cleanup deployment
-            try {
-                await this.deploymentManager.cleanup(deploymentResult.deployment_id);
-            } catch (cleanupError) {
-                log('warning', `Cleanup failed: ${cleanupError.message}`);
+            let validationResult;
+            
+            if (this.config.enable_mock) {
+                // Use mock validation
+                validationResult = await this.performMockValidation(prInfo, taskContext, validationId);
+            } else {
+                // Use real Claude Code validation via AgentAPI
+                validationResult = await this.performRealValidation(prInfo, taskContext, validationId);
             }
 
-            // Update tracking
-            this.activeValidations.get(validationId).status = 'completed';
-            this.activeValidations.get(validationId).result = validationResult;
-            
-            // Move to history
-            this.validationHistory.push(this.activeValidations.get(validationId));
-            this.activeValidations.delete(validationId);
+            // Update validation tracking
+            this.activeValidations.set(validationId, {
+                ...this.activeValidations.get(validationId),
+                status: 'completed',
+                completed_at: new Date(),
+                result: validationResult
+            });
 
-            log('info', `PR validation ${validationId} completed with status: ${status} (score: ${scores.overall_score})`);
+            // Store in history
+            this.validationHistory.push({
+                validation_id: validationId,
+                pr_info: prInfo,
+                task_context: taskContext,
+                result: validationResult,
+                timestamp: new Date()
+            });
+
+            log('info', `PR validation ${validationId} completed`, {
+                score: validationResult.overall_score,
+                status: validationResult.status
+            });
+
             return validationResult;
 
         } catch (error) {
-            log('error', `PR validation ${validationId} failed: ${error.message}`);
-            
-            // Update tracking
-            if (this.activeValidations.has(validationId)) {
-                this.activeValidations.get(validationId).status = 'failed';
-                this.activeValidations.get(validationId).error = error.message;
-                
-                // Move to history
-                this.validationHistory.push(this.activeValidations.get(validationId));
+            log('error', `PR validation ${validationId} failed`, {
+                error: error.message
+            });
+
+            // Update validation tracking
+            this.activeValidations.set(validationId, {
+                ...this.activeValidations.get(validationId),
+                status: 'failed',
+                error: error.message,
+                completed_at: new Date()
+            });
+
+            throw error;
+        } finally {
+            // Cleanup after delay
+            setTimeout(() => {
                 this.activeValidations.delete(validationId);
-            }
-            
-            // Return error result
-            return {
-                validation_id: validationId,
-                task_id: taskContext.task_id,
-                pr_number: prInfo.number,
-                status: 'error',
-                score: { overall_score: 0, grade: 'F' },
-                feedback: [{
-                    id: `error_${Date.now()}`,
-                    type: 'error',
-                    category: 'system',
-                    title: 'Validation System Error',
-                    message: `Validation failed: ${error.message}`,
-                    severity: 'critical'
-                }],
-                suggestions: [],
-                metrics: {
-                    validation_duration_ms: Date.now() - (this.activeValidations.get(validationId)?.started_at?.getTime() || Date.now()),
-                    error: error.message
-                },
-                validated_at: new Date()
-            };
+            }, 300000); // Keep for 5 minutes
         }
+    }
+
+    /**
+     * Perform real validation using Claude Code via AgentAPI
+     */
+    async performRealValidation(prInfo, taskContext, validationId) {
+        log('debug', 'Performing real validation via Claude Code', { validationId });
+        
+        try {
+            // Use Claude Code Manager for validation
+            const claudeValidationResult = await this.claudeCodeManager.validatePR({
+                url: prInfo.url,
+                branch: prInfo.branch_name,
+                number: prInfo.number
+            }, {
+                enableSecurity: this.config.enable_security_analysis,
+                enablePerformance: this.config.enable_performance_analysis,
+                taskContext
+            });
+            
+            // Enhance with additional analysis
+            const enhancedResult = await this.enhanceValidationResult(
+                claudeValidationResult, 
+                prInfo, 
+                taskContext
+            );
+            
+            return enhancedResult;
+            
+        } catch (error) {
+            log('error', 'Real validation failed, falling back to mock', {
+                validationId,
+                error: error.message
+            });
+            
+            // Fallback to mock validation
+            return await this.performMockValidation(prInfo, taskContext, validationId);
+        }
+    }
+
+    /**
+     * Enhance Claude Code validation result with additional analysis
+     */
+    async enhanceValidationResult(claudeResult, prInfo, taskContext) {
+        // Generate comprehensive feedback
+        const feedback = await this.feedbackGenerator.generateFeedback(claudeResult, {
+            pr_info: prInfo,
+            task_context: taskContext
+        });
+        
+        // Calculate final scores
+        const scores = this.scoreCalculator.calculateScores(claudeResult, this.config.scoring_criteria);
+        
+        return {
+            validation_id: claudeResult.operationId,
+            pr_info: prInfo,
+            task_context: taskContext,
+            overall_score: claudeResult.score,
+            status: claudeResult.summary.status,
+            claude_code_result: claudeResult,
+            detailed_scores: scores,
+            feedback: feedback,
+            recommendations: claudeResult.recommendations,
+            execution_time: Date.now() - new Date(claudeResult.timestamp).getTime(),
+            timestamp: new Date(),
+            validation_method: 'claude_code_agentapi'
+        };
+    }
+
+    /**
+     * Perform mock validation (fallback)
+     */
+    async performMockValidation(prInfo, taskContext, validationId) {
+        log('debug', 'Performing mock validation', { validationId });
+
+        // Step 1: Deploy PR branch (mock)
+        log('debug', 'Step 1: Deploying PR branch (mock)');
+        const deploymentResult = await this.deploymentManager.deployPRBranch(
+            prInfo.url, 
+            prInfo.branch_name
+        );
+
+        // Step 2: Run comprehensive analysis (mock)
+        log('debug', 'Step 2: Running code analysis (mock)');
+        const analysisResult = await this.codeAnalyzer.analyzeCode(
+            deploymentResult.deployment_path,
+            {
+                enable_security: this.config.enable_security_analysis,
+                enable_performance: this.config.enable_performance_analysis,
+                task_context: taskContext
+            }
+        );
+
+        // Step 3: Execute tests (mock)
+        log('debug', 'Step 3: Executing test suite (mock)');
+        const testResult = await this.codeAnalyzer.executeTests(
+            deploymentResult.deployment_path
+        );
+
+        // Step 4: Check requirements compliance
+        log('debug', 'Step 4: Checking requirements compliance');
+        const requirementsResult = await this.codeAnalyzer.checkRequirementsCompliance(
+            analysisResult,
+            taskContext
+        );
+
+        // Step 5: Generate feedback
+        log('debug', 'Step 5: Generating feedback');
+        const feedback = await this.feedbackGenerator.generateFeedback({
+            analysis: analysisResult,
+            tests: testResult,
+            requirements: requirementsResult,
+            deployment: deploymentResult
+        }, {
+            pr_info: prInfo,
+            task_context: taskContext
+        });
+
+        // Step 6: Calculate scores
+        log('debug', 'Step 6: Calculating scores');
+        const scores = this.scoreCalculator.calculateScores({
+            analysis: analysisResult,
+            tests: testResult,
+            requirements: requirementsResult
+        }, this.config.scoring_criteria);
+
+        // Step 7: Cleanup deployment
+        log('debug', 'Step 7: Cleaning up deployment');
+        await this.deploymentManager.cleanup(deploymentResult.deployment_id);
+
+        return {
+            validation_id: validationId,
+            pr_info: prInfo,
+            task_context: taskContext,
+            overall_score: scores.overall_score,
+            status: scores.overall_score >= 0.7 ? 'passed' : 'failed',
+            detailed_scores: scores,
+            analysis_result: analysisResult,
+            test_result: testResult,
+            requirements_result: requirementsResult,
+            feedback: feedback,
+            deployment_info: {
+                deployment_id: deploymentResult.deployment_id,
+                duration: deploymentResult.duration_ms
+            },
+            execution_time: deploymentResult.duration_ms,
+            timestamp: new Date(),
+            validation_method: 'mock'
+        };
     }
 
     /**
@@ -228,11 +344,19 @@ export class ValidationEngine {
     }
 
     /**
-     * Get health status
-     * @returns {Promise<Object>} Health status
+     * Get validation engine health status
      */
     async getHealth() {
-        const stats = await this.getValidationStatistics();
+        const stats = this.getValidationStats();
+        
+        let claudeCodeHealth;
+        try {
+            claudeCodeHealth = this.config.enable_mock ? 
+                { status: 'mock', mode: 'mock' } : 
+                this.claudeCodeManager.getStatus();
+        } catch (error) {
+            claudeCodeHealth = { status: 'error', error: error.message };
+        }
         
         return {
             status: 'healthy',
@@ -240,25 +364,27 @@ export class ValidationEngine {
             agentapi_url: this.config.agentapi_url,
             active_validations: stats.active_validations,
             success_rate: stats.success_rate,
-            claude_code_client: await this.claudeCodeClient.getHealth(),
+            claude_code_manager: claudeCodeHealth,
             deployment_manager: this.deploymentManager.getHealth(),
             code_analyzer: this.codeAnalyzer.getHealth()
         };
     }
 
     /**
-     * Shutdown the validation engine
+     * Shutdown validation engine
      */
     async shutdown() {
-        log('debug', 'Shutting down validation engine...');
+        log('info', 'Shutting down validation engine...');
         
         // Cancel active validations
-        for (const [validationId, validation] of this.activeValidations) {
-            log('warning', `Cancelling active validation: ${validationId}`);
+        for (const [validationId, validation] of this.activeValidations.entries()) {
             validation.status = 'cancelled';
         }
         
-        await this.claudeCodeClient.shutdown();
+        // Shutdown components
+        if (!this.config.enable_mock) {
+            await this.claudeCodeManager.shutdown();
+        }
         await this.deploymentManager.shutdown();
     }
 
@@ -472,7 +598,7 @@ class CodeAnalyzer {
         };
     }
 
-    async checkCompliance(analysisResult, taskContext) {
+    async checkRequirementsCompliance(analysisResult, taskContext) {
         log('debug', 'Checking requirements compliance');
         
         // Mock compliance check
@@ -712,4 +838,3 @@ class FeedbackGenerator {
 }
 
 export default ValidationEngine;
-
