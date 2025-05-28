@@ -3,7 +3,7 @@
  * @description Unified configuration for all AI-CICD system components
  */
 
-import { log } from '../../scripts/modules/utils.js';
+import { log } from '../../../scripts/modules/utils.js';
 
 /**
  * System configuration with environment-based defaults
@@ -61,6 +61,13 @@ export class SystemConfig {
      */
     get workflow() {
         return this.config.workflow;
+    }
+
+    /**
+     * Get orchestrator configuration
+     */
+    get orchestrator() {
+        return this.config.orchestrator;
     }
 
     /**
@@ -157,6 +164,19 @@ export class SystemConfig {
                 enable_state_persistence: true,
                 enable_rollback: true,
                 max_history_entries: 1000
+            },
+
+            // Orchestrator configuration
+            orchestrator: {
+                enable_parallel_initialization: true,
+                component_initialization_timeout: 30000, // 30 seconds
+                enable_health_monitoring: true,
+                health_check_interval: 60000, // 1 minute
+                enable_component_restart: true,
+                max_restart_attempts: 3,
+                restart_delay: 5000, // 5 seconds
+                enable_dependency_validation: true,
+                enable_lifecycle_events: true
             },
 
             // Context management
@@ -349,7 +369,24 @@ export class SystemConfig {
 
         return new SystemConfig(envConfigs[environment] || {});
     }
+
+    /**
+     * Initialize the configuration (for component interface compatibility)
+     */
+    async initialize() {
+        // Configuration doesn't need async initialization
+        // This method exists for component interface compatibility
+        return true;
+    }
+
+    /**
+     * Shutdown the configuration (for component interface compatibility)
+     */
+    async shutdown() {
+        // Configuration doesn't need shutdown
+        // This method exists for component interface compatibility
+        return true;
+    }
 }
 
 export default SystemConfig;
-

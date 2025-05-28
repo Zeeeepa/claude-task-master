@@ -3,7 +3,7 @@
  * @description Unified workflow orchestration and state management
  */
 
-import { log } from '../../scripts/modules/utils.js';
+import { log } from '../../../scripts/modules/utils.js';
 
 /**
  * Workflow orchestrator that manages complex development workflows
@@ -718,4 +718,3 @@ class StepCoordinator {
 }
 
 export default WorkflowOrchestrator;
-
