@@ -16,6 +16,14 @@
 		"test:coverage": "node --experimental-vm-modules node_modules/.bin/jest --coverage",
 		"test:e2e": "./tests/e2e/run_e2e.sh",
 		"test:e2e-report": "./tests/e2e/run_e2e.sh --analyze-log",
+		"test:unit": "node --experimental-vm-modules node_modules/.bin/jest --testPathPattern=unit",
+		"test:integration": "node --experimental-vm-modules node_modules/.bin/jest --testPathPattern=integration",
+		"test:performance": "node --experimental-vm-modules node_modules/.bin/jest --testPathPattern=performance",
+		"test:security": "node --experimental-vm-modules node_modules/.bin/jest --testPathPattern=security",
+		"test:chaos": "node --experimental-vm-modules node_modules/.bin/jest --testPathPattern=chaos",
+		"test:all": "node tests/automation/test-runner.js",
+		"test:all-coverage": "node tests/automation/test-runner.js --coverage",
+		"test:ci": "node tests/automation/test-runner.js --coverage --fail-fast",
 		"prepare": "chmod +x bin/task-master.js mcp-server/server.js",
 		"changeset": "changeset",
 		"release": "changeset publish",
@@ -96,18 +104,12 @@
 		"whatwg-url": "^11.0.0"
 	},
 	"devDependencies": {
-		"@changesets/changelog-github": "^0.5.1",
-		"@changesets/cli": "^2.28.1",
+		"@changesets/cli": "^2.27.9",
 		"@types/jest": "^29.5.14",
-		"execa": "^8.0.1",
-		"ink": "^5.0.1",
+		"@types/node": "^22.10.2",
 		"jest": "^29.7.0",
 		"jest-environment-node": "^29.7.0",
-		"mock-fs": "^5.5.0",
-		"node-fetch": "^3.3.2",
-		"prettier": "^3.5.3",
-		"react": "^18.3.1",
-		"supertest": "^7.1.0",
-		"tsx": "^4.16.2"
+		"jest-html-reporters": "^3.1.7",
+		"prettier": "^3.4.2"
 	}
 }
