@@ -3,7 +3,7 @@
  * @description Unified requirement analysis and task decomposition
  */
 
-import { log } from '../../scripts/modules/utils.js';
+import { log } from '../../../scripts/modules/utils.js';
 
 /**
  * Requirement processor that combines NLP analysis with task decomposition
@@ -44,11 +44,12 @@ export class RequirementProcessor {
      */
     async analyzeRequirement(requirement, options = {}) {
         const startTime = Date.now();
-        log('info', `Analyzing requirement: ${requirement.substring(0, 100)}...`);
+        log('info', `Analyzing requirement: ${requirement.title || requirement.description?.substring(0, 100) || 'Untitled'}...`);
 
         try {
             // Step 1: NLP Analysis
-            const nlpAnalysis = await this.nlpProcessor.analyze(requirement);
+            const requirementText = requirement.description || requirement.title || JSON.stringify(requirement);
+            const nlpAnalysis = await this.nlpProcessor.analyze(requirementText);
             
             // Step 2: Parse and structure requirement
             const parsedRequirement = await this._parseRequirement(nlpAnalysis);
@@ -657,4 +658,3 @@ class DependencyAnalyzer {
 }
 
 export default RequirementProcessor;
-

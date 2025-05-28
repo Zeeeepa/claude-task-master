@@ -12,7 +12,7 @@ import { ValidationEngine } from './core/validation_engine.js';
 import { WorkflowOrchestrator } from './core/workflow_orchestrator.js';
 import { ContextManager } from './core/context_manager.js';
 import { SystemMonitor } from './monitoring/system_monitor.js';
-import { log } from '../scripts/modules/utils.js';
+import { log } from '../../scripts/modules/utils.js';
 
 /**
  * Main AI-Driven CI/CD System
@@ -407,4 +407,3 @@ export async function processRequirement(requirement, config = {}) {
 }
 
 export default AICICDSystem;
-
