@@ -32,7 +32,18 @@
 		"mcp-server": "node mcp-server/server.js",
 		"format-check": "prettier --check .",
 		"format": "prettier --write .",
-		"workflow-demo": "node src/workflow_orchestrator/demo.js"
+		"workflow-demo": "node src/workflow_orchestrator/demo.js",
+		"db:migrate": "node scripts/migrate.js up",
+		"db:migrate:status": "node scripts/migrate.js status",
+		"db:migrate:validate": "node scripts/migrate.js validate",
+		"db:migrate:create": "node scripts/migrate.js create",
+		"db:migrate:health": "node scripts/migrate.js health",
+		"db:rollback": "node scripts/rollback.js safe",
+		"db:rollback:emergency": "node scripts/rollback.js emergency",
+		"db:rollback:dry-run": "node scripts/rollback.js dry-run",
+		"db:rollback:to-version": "node scripts/rollback.js to-version",
+		"db:backup:list": "node scripts/rollback.js list-backups",
+		"db:backup:restore": "node scripts/rollback.js restore"
 	},
 	"keywords": [
 		"claude",
