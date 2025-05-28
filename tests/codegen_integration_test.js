@@ -216,9 +216,23 @@ async function testPythonCodegenAgent() {
         // Simulate refresh by checking result status
         console.log(`Status: ${result.status}`);
         
-        if (result.status === "completed") {
-            console.log('Result:', JSON.stringify(result, null, 2));
-        }
+        // Automated assertions for result object
+        import assert from 'assert';
+
+        // Assert that the result status is 'completed'
+        assert.strictEqual(result.status, "completed", "Result status should be 'completed'");
+
+        // Assert that result has a tasks array and at least one task
+        assert.ok(Array.isArray(result.tasks), "Result should have a 'tasks' array");
+        assert.ok(result.tasks.length > 0, "Result should contain at least one task");
+
+        // Assert that PR info exists and has expected properties
+        assert.ok(result.pr, "Result should have a 'pr' property");
+        assert.ok(result.pr.url, "PR info should include a 'url'");
+        assert.ok(result.pr.number, "PR info should include a 'number'");
+
+        // Optionally, log the result for debugging
+        console.log('Result:', JSON.stringify(result, null, 2));
 
         await system.shutdown();
         
