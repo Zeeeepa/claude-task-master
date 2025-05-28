@@ -1,0 +1,311 @@
+# Cloudflare Proxy Configuration for TaskMaster Database
+# This file configures Cloudflare Tunnel for secure database access
+
+# Tunnel Configuration
+tunnel: ${CLOUDFLARE_TUNNEL_ID}
+credentials-file: /etc/cloudflared/credentials.json
+
+# Ingress Rules
+ingress:
+  # Database proxy endpoint
+  - hostname: ${CLOUDFLARE_PROXY_HOSTNAME}
+    service: tcp://localhost:5432
+    originRequest:
+      # TCP keep-alive settings
+      tcpKeepAlive: 30s
+      # Disable TLS verification for internal connections
+      noTLSVerify: false
+      # Connection timeout
+      connectTimeout: 30s
+      # TLS timeout
+      tlsTimeout: 10s
+      # TCP nodelay
+      tcpNodelay: true
+      # HTTP2 origin
+      http2Origin: false
+
+  # Health check endpoint
+  - hostname: ${CLOUDFLARE_PROXY_HOSTNAME}
+    path: /health
+    service: http://localhost:8080/health
+    originRequest:
+      httpHostHeader: ${CLOUDFLARE_PROXY_HOSTNAME}
+
+  # Metrics endpoint (internal)
+  - hostname: ${CLOUDFLARE_PROXY_HOSTNAME}
+    path: /metrics
+    service: http://localhost:8080/metrics
+    originRequest:
+      httpHostHeader: ${CLOUDFLARE_PROXY_HOSTNAME}
+
+  # Catch-all rule (required)
+  - service: http_status:404
+
+# Logging Configuration
+log-level: ${CLOUDFLARE_LOG_LEVEL:-info}
+log-file: /var/log/cloudflared/tunnel.log
+
+# Metrics Configuration
+metrics: 0.0.0.0:8080
+
+# Auto-update Configuration
+autoupdate-freq: 24h
+
+# Protocol Configuration
+protocol: quic
+
+# Edge Configuration
+edge-ip-version: auto
+
+# Retry Configuration
+retries: 5
+
+# Grace period for shutdown
+grace-period: 30s
+
+# Post-quantum encryption
+post-quantum: true
+
+# Regional configuration
+region: auto
+
+---
+# Cloudflare Access Application Configuration
+# This section defines the Access application for database security
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflare-access-config
+  namespace: taskmaster
+data:
+  # Access Application Settings
+  application_domain: ${CLOUDFLARE_PROXY_HOSTNAME}
+  team_domain: ${CLOUDFLARE_TEAM_DOMAIN}
+  application_aud: ${CLOUDFLARE_APPLICATION_AUD}
+  
+  # Session Settings
+  session_duration: "24h"
+  auto_redirect_to_identity: "true"
+  
+  # CORS Settings
+  cors_allow_all_origins: "false"
+  cors_allowed_origins: |
+    - https://taskmaster.${CLOUDFLARE_TEAM_DOMAIN}.com
+    - https://api.taskmaster.${CLOUDFLARE_TEAM_DOMAIN}.com
+  
+  # Security Headers
+  security_headers: |
+    X-Frame-Options: DENY
+    X-Content-Type-Options: nosniff
+    X-XSS-Protection: 1; mode=block
+    Strict-Transport-Security: max-age=31536000; includeSubDomains
+    Content-Security-Policy: default-src 'self'
+
+---
+# Cloudflare WAF Rules Configuration
+# Custom WAF rules for database protection
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflare-waf-rules
+  namespace: taskmaster
+data:
+  # SQL Injection Protection
+  sql_injection_rule: |
+    (http.request.uri.query contains "union" or 
+     http.request.uri.query contains "select" or 
+     http.request.uri.query contains "drop" or 
+     http.request.uri.query contains "delete" or 
+     http.request.body contains "union" or 
+     http.request.body contains "select" or 
+     http.request.body contains "drop" or 
+     http.request.body contains "delete") and 
+    not cf.threat_score le 10
+  
+  # Rate Limiting Rule
+  rate_limiting_rule: |
+    (http.request.uri.path eq "/api/database" and 
+     rate(1m) > 100)
+  
+  # Geographic Restrictions (if needed)
+  geo_restriction_rule: |
+    ip.geoip.country ne "US" and 
+    ip.geoip.country ne "CA" and 
+    ip.geoip.country ne "GB"
+  
+  # Bot Protection
+  bot_protection_rule: |
+    cf.bot_management.score lt 30 and 
+    not cf.bot_management.verified_bot
+
+---
+# Cloudflare Load Balancer Configuration
+# For high availability database access
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflare-load-balancer
+  namespace: taskmaster
+data:
+  # Load Balancer Pool Configuration
+  pool_config: |
+    name: taskmaster-db-pool
+    description: TaskMaster Database Pool
+    enabled: true
+    minimum_origins: 1
+    monitor: taskmaster-db-monitor
+    notification_email: admin@taskmaster.com
+    
+    origins:
+      - name: primary-db
+        address: ${DB_HOST_PRIMARY}
+        enabled: true
+        weight: 1
+        header:
+          Host: ${CLOUDFLARE_PROXY_HOSTNAME}
+      
+      - name: secondary-db
+        address: ${DB_HOST_SECONDARY}
+        enabled: true
+        weight: 0.5
+        header:
+          Host: ${CLOUDFLARE_PROXY_HOSTNAME}
+  
+  # Health Monitor Configuration
+  monitor_config: |
+    type: tcp
+    port: 5432
+    interval: 60
+    retries: 2
+    timeout: 5
+    method: connection_established
+    expected_codes: ""
+    expected_body: ""
+    follow_redirects: false
+    allow_insecure: false
+    probe_zone: auto
+
+---
+# Cloudflare Page Rules Configuration
+# Performance and security optimizations
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflare-page-rules
+  namespace: taskmaster
+data:
+  # Database API Caching Rules
+  cache_rules: |
+    # Cache read-only queries
+    - url: "${CLOUDFLARE_PROXY_HOSTNAME}/api/tasks*"
+      settings:
+        cache_level: standard
+        edge_cache_ttl: 300
+        browser_cache_ttl: 60
+        always_online: false
+    
+    # Bypass cache for write operations
+    - url: "${CLOUDFLARE_PROXY_HOSTNAME}/api/tasks"
+      settings:
+        cache_level: bypass
+        disable_performance: false
+        disable_security: false
+  
+  # Security Rules
+  security_rules: |
+    # Force HTTPS
+    - url: "http://${CLOUDFLARE_PROXY_HOSTNAME}/*"
+      settings:
+        always_use_https: true
+    
+    # Security headers
+    - url: "${CLOUDFLARE_PROXY_HOSTNAME}/*"
+      settings:
+        security_level: medium
+        browser_integrity_check: true
+        challenge_ttl: 1800
+
+---
+# Environment Variables Template
+# Copy to .env and fill in actual values
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflare-env-template
+  namespace: taskmaster
+data:
+  env_template: |
+    # Cloudflare API Configuration
+    CLOUDFLARE_API_TOKEN=your_api_token_here
+    CLOUDFLARE_EMAIL=your_email@domain.com
+    CLOUDFLARE_ZONE_ID=your_zone_id_here
+    CLOUDFLARE_ACCOUNT_ID=your_account_id_here
+    
+    # Tunnel Configuration
+    CLOUDFLARE_TUNNEL_ENABLED=true
+    CLOUDFLARE_TUNNEL_ID=your_tunnel_id_here
+    CLOUDFLARE_TUNNEL_NAME=taskmaster-db-tunnel
+    CLOUDFLARE_TUNNEL_SECRET=your_tunnel_secret_here
+    CLOUDFLARE_CONNECTOR_ID=your_connector_id_here
+    
+    # Proxy Configuration
+    CLOUDFLARE_PROXY_ENABLED=true
+    CLOUDFLARE_PROXY_HOSTNAME=db.taskmaster.yourdomain.com
+    CLOUDFLARE_PROXY_PORT=5432
+    CLOUDFLARE_PROXY_SSL_MODE=require
+    CLOUDFLARE_PROXY_TIMEOUT=30000
+    CLOUDFLARE_PROXY_MAX_CONNECTIONS=100
+    
+    # Access Configuration
+    CLOUDFLARE_ACCESS_ENABLED=true
+    CLOUDFLARE_TEAM_DOMAIN=your_team_domain
+    CLOUDFLARE_APPLICATION_AUD=your_application_audience_tag
+    CLOUDFLARE_SERVICE_TOKEN_ID=your_service_token_id
+    CLOUDFLARE_SERVICE_TOKEN_SECRET=your_service_token_secret
+    CLOUDFLARE_POLICY_ID=your_policy_id
+    
+    # Security Configuration
+    CLOUDFLARE_IP_WHITELIST=192.168.1.0/24,10.0.0.0/8
+    CLOUDFLARE_RATE_LIMITING_ENABLED=true
+    CLOUDFLARE_RATE_LIMIT_RPM=1000
+    CLOUDFLARE_RATE_LIMIT_BURST=100
+    CLOUDFLARE_DDOS_PROTECTION_ENABLED=true
+    CLOUDFLARE_DDOS_SENSITIVITY=medium
+    CLOUDFLARE_WAF_ENABLED=true
+    CLOUDFLARE_WAF_MODE=block
+    
+    # Monitoring Configuration
+    CLOUDFLARE_MONITORING_ENABLED=true
+    CLOUDFLARE_ANALYTICS_ENABLED=true
+    CLOUDFLARE_LOG_LEVEL=info
+    CLOUDFLARE_METRICS_ENDPOINT=http://localhost:8080/metrics
+    CLOUDFLARE_ALERT_WEBHOOK=https://your-webhook-url.com/alerts
+    
+    # Cache Configuration
+    CLOUDFLARE_CACHE_ENABLED=false
+    CLOUDFLARE_CACHE_TTL=300
+    CLOUDFLARE_CACHE_PREFIX=taskmaster:
+    CLOUDFLARE_CACHE_BYPASS=INSERT,UPDATE,DELETE,CREATE,DROP,ALTER
+    
+    # Load Balancing Configuration
+    CLOUDFLARE_LB_ENABLED=false
+    CLOUDFLARE_LB_POOL_ID=your_pool_id_here
+    CLOUDFLARE_LB_HEALTH_CHECK_ENABLED=true
+    CLOUDFLARE_LB_HEALTH_CHECK_INTERVAL=60
+    CLOUDFLARE_LB_FAILOVER_ENABLED=true
+    
+    # Database Configuration (for reference)
+    DB_HOST=localhost
+    DB_HOST_PRIMARY=primary-db.internal
+    DB_HOST_SECONDARY=secondary-db.internal
+    DB_PORT=5432
+    DB_NAME=codegen-taskmaster-db
+    DB_USER=software_developer
+    DB_PASSWORD=your_secure_password_here
+    DB_SSL_MODE=require
+
