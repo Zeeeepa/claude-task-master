@@ -1,32 +1,34 @@
 /**
  * @fileoverview Codegen Integrator
- * @description Unified codegen integration with intelligent prompt generation
+ * @description Unified codegen integration with real Python SDK implementation
  */
 
 import { log } from '../../scripts/modules/utils.js';
+import { CodegenClient } from './codegen_client.js';
+import { PromptOptimizer } from '../utils/prompt_optimizer.js';
+import { RetryManager } from '../utils/retry_manager.js';
+import { createCodegenConfig } from '../config/codegen_config.js';
 
 /**
- * Codegen integrator that handles prompt generation and PR creation
+ * Codegen integrator that handles prompt generation and PR creation using real SDK
  */
 export class CodegenIntegrator {
     constructor(config = {}) {
-        this.config = {
-            api_url: config.api_url || 'https://api.codegen.sh',
-            api_key: config.api_key,
-            timeout: config.timeout || 60000,
-            retry_attempts: config.retry_attempts || 3,
-            retry_delay: config.retry_delay || 2000,
-            enable_tracking: config.enable_tracking !== false,
-            max_retries: config.max_retries || 3,
-            enable_mock: config.enable_mock || !config.api_key,
-            ...config
-        };
+        // Create comprehensive configuration
+        this.codegenConfig = createCodegenConfig(config, config.environment || 'development');
+        this.config = this.codegenConfig.getAll();
         
-        this.promptGenerator = new PromptGenerator(this.config);
-        this.codegenClient = new CodegenClient(this.config);
+        // Initialize components with real implementations
+        this.promptOptimizer = new PromptOptimizer(this.codegenConfig.getPromptConfig());
+        this.codegenClient = new CodegenClient(this.codegenConfig.getSDKConfig());
+        this.retryManager = new RetryManager(this.codegenConfig.getRetryConfig());
         this.prTracker = new PRTracker(this.config);
+        
+        // Request tracking
         this.activeRequests = new Map();
         this.requestHistory = [];
+        
+        log('info', `CodegenIntegrator initialized in ${this.codegenConfig.isMockMode() ? 'mock' : 'production'} mode`);
     }
 
     /**
@@ -35,18 +37,31 @@ export class CodegenIntegrator {
     async initialize() {
         log('debug', 'Initializing codegen integrator...');
         
-        if (this.config.enable_mock) {
-            log('info', 'Using mock codegen integration');
-        } else {
-            // Validate API connection
-            await this.codegenClient.validateConnection();
+        try {
+            // Initialize the real Codegen client
+            await this.codegenClient.initialize();
+            
+            // Test connection if not in mock mode
+            if (!this.codegenConfig.isMockMode()) {
+                const isConnected = await this.codegenClient.validateConnection();
+                if (!isConnected) {
+                    throw new Error('Failed to connect to Codegen API');
+                }
+                log('info', 'Real Codegen API connection established');
+            } else {
+                log('info', 'Using mock codegen integration');
+            }
+            
+            log('debug', 'Codegen integrator initialized successfully');
+            
+        } catch (error) {
+            log('error', `Failed to initialize codegen integrator: ${error.message}`);
+            throw error;
         }
-        
-        log('debug', 'Codegen integrator initialized');
     }
 
     /**
-     * Process task with codegen
+     * Process task with codegen using real SDK
      * @param {Object} task - Task to process
      * @param {Object} taskContext - Task context
      * @returns {Promise<Object>} Codegen result
@@ -59,39 +74,45 @@ export class CodegenIntegrator {
             // Track active request
             this.activeRequests.set(requestId, {
                 task_id: task.id,
+                request_id: requestId,
                 started_at: new Date(),
                 status: 'processing'
             });
 
-            // Step 1: Generate intelligent prompt
-            const prompt = await this.promptGenerator.generatePrompt(task, taskContext);
+            // Step 1: Optimize prompt for Codegen API
+            const optimizedPrompt = await this.promptOptimizer.enhance(task, taskContext);
+            log('debug', `Prompt optimized for task ${task.id}: ${optimizedPrompt.content.length} characters`);
             
-            // Step 2: Send to codegen API
-            const codegenResponse = await this.codegenClient.sendCodegenRequest(prompt, task.id);
+            // Step 2: Execute real Codegen API call
+            const codegenResponse = await this.codegenClient.sendCodegenRequest(optimizedPrompt, task.id);
             
             // Step 3: Parse response and extract PR info
             const prInfo = await this._parseCodegenResponse(codegenResponse);
             
             // Step 4: Track PR creation
-            if (prInfo && this.config.enable_tracking) {
+            if (prInfo && this.codegenConfig.isFeatureEnabled('tracking')) {
                 await this.prTracker.trackPRCreation(task.id, prInfo);
             }
             
-            // Step 5: Compile result
+            // Step 5: Compile comprehensive result
             const result = {
                 request_id: requestId,
                 task_id: task.id,
                 status: codegenResponse.success ? 'completed' : 'failed',
-                prompt: prompt,
+                prompt: optimizedPrompt,
                 codegen_response: codegenResponse,
                 pr_info: prInfo,
                 task_context: taskContext,
                 metrics: {
-                    prompt_length: prompt.content.length,
+                    prompt_length: optimizedPrompt.content.length,
                     processing_time_ms: Date.now() - this.activeRequests.get(requestId).started_at.getTime(),
-                    api_response_time_ms: codegenResponse.response_time_ms
+                    api_response_time_ms: codegenResponse.response_time_ms,
+                    optimization_level: optimizedPrompt.metadata.optimization_level,
+                    complexity_score: optimizedPrompt.metadata.complexity
                 },
-                completed_at: new Date()
+                completed_at: new Date(),
+                sdk_version: 'real', // Indicate this used real SDK
+                environment: this.codegenConfig.environment
             };
 
             // Update request tracking
@@ -102,7 +123,7 @@ export class CodegenIntegrator {
             this.requestHistory.push(this.activeRequests.get(requestId));
             this.activeRequests.delete(requestId);
 
-            log('info', `Task ${task.id} processed successfully (${result.status})`);
+            log('info', `Task ${task.id} processed successfully with real SDK (${result.status})`);
             return result;
 
         } catch (error) {
@@ -123,17 +144,17 @@ export class CodegenIntegrator {
     }
 
     /**
-     * Generate prompt for task
+     * Generate optimized prompt for task
      * @param {Object} task - Task object
      * @param {Object} context - Task context
      * @returns {Promise<Object>} Generated prompt
      */
     async generatePrompt(task, context) {
-        return await this.promptGenerator.generatePrompt(task, context);
+        return await this.promptOptimizer.enhance(task, context);
     }
 
     /**
-     * Send codegen request
+     * Send codegen request using real SDK
      * @param {Object} prompt - Generated prompt
      * @param {string} taskId - Task identifier
      * @returns {Promise<Object>} Codegen response
@@ -143,12 +164,20 @@ export class CodegenIntegrator {
     }
 
     /**
+     * Validate connection to Codegen API
+     * @returns {Promise<boolean>} Connection status
+     */
+    async validateConnection() {
+        return await this.codegenClient.validateConnection();
+    }
+
+    /**
      * Track PR creation
      * @param {string} taskId - Task identifier
      * @param {Object} prInfo - PR information
      */
     async trackPRCreation(taskId, prInfo) {
-        if (this.config.enable_tracking) {
+        if (this.codegenConfig.isFeatureEnabled('tracking')) {
             await this.prTracker.trackPRCreation(taskId, prInfo);
         }
     }
@@ -177,7 +206,10 @@ export class CodegenIntegrator {
             failed_requests: failedRequests,
             total_requests: totalRequests,
             success_rate: totalRequests > 0 ? (completedRequests / totalRequests) * 100 : 0,
-            pr_stats: await this.prTracker.getPRStatistics()
+            pr_stats: await this.prTracker.getPRStatistics(),
+            sdk_stats: await this.codegenClient.getHealth(),
+            retry_stats: this.retryManager.getStatistics(),
+            prompt_stats: this.promptOptimizer.getHealth()
         };
     }
 
@@ -187,16 +219,23 @@ export class CodegenIntegrator {
      */
     async getHealth() {
         const stats = await this.getStatistics();
+        const clientHealth = await this.codegenClient.getHealth();
         
         return {
-            status: 'healthy',
-            mode: this.config.enable_mock ? 'mock' : 'production',
+            status: clientHealth.connected ? 'healthy' : 'unhealthy',
+            mode: this.codegenConfig.isMockMode() ? 'mock' : 'production',
+            environment: this.codegenConfig.environment,
             api_url: this.config.api_url,
+            connected: clientHealth.connected,
             active_requests: stats.active_requests,
             success_rate: stats.success_rate,
-            prompt_generator: this.promptGenerator.getHealth(),
-            codegen_client: await this.codegenClient.getHealth(),
-            pr_tracker: this.prTracker.getHealth()
+            components: {
+                prompt_optimizer: this.promptOptimizer.getHealth(),
+                codegen_client: clientHealth,
+                pr_tracker: this.prTracker.getHealth(),
+                retry_manager: this.retryManager.getHealth(),
+                config: this.codegenConfig.getHealth()
+            }
         };
     }
 
@@ -213,6 +252,7 @@ export class CodegenIntegrator {
         }
         
         await this.codegenClient.shutdown();
+        log('debug', 'Codegen integrator shutdown complete');
     }
 
     // Private methods
@@ -238,7 +278,8 @@ export class CodegenIntegrator {
             created_at: response.data.created_at || new Date(),
             modified_files: response.data.modified_files || response.data.changed_files || [],
             commits: response.data.commits || [],
-            repository: response.data.repository || response.data.repo
+            repository: response.data.repository || response.data.repo,
+            task_id: response.data.task_id
         };
 
         // Validate required fields
@@ -261,278 +302,6 @@ export class CodegenIntegrator {
         
         const match = prUrl.match(/\/pull\/(\d+)/);
         return match ? parseInt(match[1]) : null;
-    }
-}
-
-/**
- * Prompt Generator
- */
-class PromptGenerator {
-    constructor(config) {
-        this.config = config;
-        this.templates = new PromptTemplates();
-    }
-
-    async generatePrompt(task, context) {
-        const template = this.templates.getTemplate(task.type || 'implementation');
-        
-        const prompt = {
-            task_id: task.id,
-            task_type: task.type || 'implementation',
-            content: this._buildPromptContent(task, context, template),
-            metadata: {
-                estimated_complexity: task.complexityScore,
-                priority: task.priority,
-                affected_files: task.affectedFiles,
-                generated_at: new Date(),
-                template_version: template.version
-            }
-        };
-
-        return prompt;
-    }
-
-    getHealth() {
-        return { status: 'healthy', templates_loaded: this.templates.getTemplateCount() };
-    }
-
-    _buildPromptContent(task, context, template) {
-        let content = template.base;
-        
-        // Replace placeholders
-        content = content.replace('{{TASK_TITLE}}', task.title);
-        content = content.replace('{{TASK_DESCRIPTION}}', task.description);
-        content = content.replace('{{REQUIREMENTS}}', this._formatRequirements(task.requirements));
-        content = content.replace('{{ACCEPTANCE_CRITERIA}}', this._formatAcceptanceCriteria(task.acceptanceCriteria));
-        content = content.replace('{{AFFECTED_FILES}}', task.affectedFiles.join(', '));
-        content = content.replace('{{COMPLEXITY}}', task.complexityScore);
-        content = content.replace('{{PRIORITY}}', task.priority);
-        
-        // Add context if available
-        if (context && context.codebase_context) {
-            content += `\n\nCodebase Context:\n${JSON.stringify(context.codebase_context, null, 2)}`;
-        }
-        
-        return content;
-    }
-
-    _formatRequirements(requirements) {
-        if (!requirements || requirements.length === 0) {
-            return 'No specific requirements provided.';
-        }
-        
-        return requirements.map((req, index) => `${index + 1}. ${req}`).join('\n');
-    }
-
-    _formatAcceptanceCriteria(criteria) {
-        if (!criteria || criteria.length === 0) {
-            return 'No specific acceptance criteria provided.';
-        }
-        
-        return criteria.map((criterion, index) => `${index + 1}. ${criterion}`).join('\n');
-    }
-}
-
-/**
- * Prompt Templates
- */
-class PromptTemplates {
-    constructor() {
-        this.templates = {
-            implementation: {
-                version: '1.0.0',
-                base: `# Implementation Task: {{TASK_TITLE}}
-
-## Description
-{{TASK_DESCRIPTION}}
-
-## Requirements
-{{REQUIREMENTS}}
-
-## Acceptance Criteria
-{{ACCEPTANCE_CRITERIA}}
-
-## Technical Details
-- Complexity: {{COMPLEXITY}}/10
-- Priority: {{PRIORITY}}
-- Affected Files: {{AFFECTED_FILES}}
-
-## Instructions
-Please implement the above requirements following best practices and ensuring all acceptance criteria are met.`
-            },
-            
-            bug_fix: {
-                version: '1.0.0',
-                base: `# Bug Fix: {{TASK_TITLE}}
-
-## Bug Description
-{{TASK_DESCRIPTION}}
-
-## Requirements
-{{REQUIREMENTS}}
-
-## Acceptance Criteria
-{{ACCEPTANCE_CRITERIA}}
-
-## Technical Details
-- Complexity: {{COMPLEXITY}}/10
-- Priority: {{PRIORITY}}
-- Affected Files: {{AFFECTED_FILES}}
-
-## Instructions
-Please fix the described bug, ensuring the solution addresses the root cause and includes appropriate tests.`
-            },
-            
-            feature: {
-                version: '1.0.0',
-                base: `# Feature Development: {{TASK_TITLE}}
-
-## Feature Description
-{{TASK_DESCRIPTION}}
-
-## Requirements
-{{REQUIREMENTS}}
-
-## Acceptance Criteria
-async sendCodegenRequest(prompt, taskId) {
-    if (this.config.enable_mock) {
-        return this._createMockResponse(prompt, taskId);
-    }
-    
-    // Real API call would go here
-    const startTime = Date.now();
-    
-    try {
-        // Mock API call
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API delay
-        
-        return {
-            success: true,
-            data: {
-                pr_url: `https://github.com/example/repo/pull/${Math.floor(Math.random() * 1000)}`,
-                pr_number: Math.floor(Math.random() * 1000),
-                branch_name: `feature/task-${taskId}`,
-                title: prompt.content.split('\n')[0].replace('# ', ''),
-                status: 'open',
-                created_at: new Date(),
-                modified_files: ['src/main.js', 'tests/main.test.js'],
-                repository: 'example/repo'
-            },
-            response_time_ms: Date.now() - startTime
-        };
-        
-    } catch (error) {
-        // Enhanced error handling based on error type
-        let errorMessage = error.message;
-        let errorType = 'unknown';
-        
-        // Check for common API errors
-        if (error.response) {
-            const status = error.response.status;
-            
-            if (status === 401 || status === 403) {
-                errorType = 'authentication';
-                errorMessage = 'API authentication failed. Please check your API key.';
-            } else if (status === 429) {
-                errorType = 'rate_limit';
-                errorMessage = 'API rate limit exceeded. Please try again later.';
-            } else if (status >= 500) {
-                errorType = 'server_error';
-                errorMessage = 'API server error. The service may be experiencing issues.';
-            }
-        } else if (error.code === 'ECONNREFUSED' || error.code === 'ECONNABORTED') {
-            errorType = 'connection';
-            errorMessage = 'Could not connect to the API. Please check your network connection.';
-        } else if (error.code === 'ETIMEDOUT') {
-            errorType = 'timeout';
-            errorMessage = 'API request timed out. The service may be experiencing high load.';
-        }
-        
-        log('error', `Codegen API error (${errorType}): ${errorMessage}`);
-        
-        return {
-            success: false,
-            error: errorMessage,
-            error_type: errorType,
-            response_time_ms: Date.now() - startTime
-        };
-    }
-}
-    }
-
-    async validateConnection() {
-        if (this.config.enable_mock) {
-            return true;
-        }
-        
-        // Real API validation would go here
-        log('debug', 'Validating codegen API connection...');
-        return true;
-    }
-
-    async sendCodegenRequest(prompt, taskId) {
-        if (this.config.enable_mock) {
-            return this._createMockResponse(prompt, taskId);
-        }
-        
-        // Real API call would go here
-        const startTime = Date.now();
-        
-        try {
-            // Mock API call
-            await new Promise(resolve => setTimeout(resolve, 2000)); // Simulate API delay
-            
-            return {
-                success: true,
-                data: {
-                    pr_url: `https://github.com/example/repo/pull/${Math.floor(Math.random() * 1000)}`,
-                    pr_number: Math.floor(Math.random() * 1000),
-                    branch_name: `feature/task-${taskId}`,
-                    title: prompt.content.split('\n')[0].replace('# ', ''),
-                    status: 'open',
-                    created_at: new Date(),
-                    modified_files: ['src/main.js', 'tests/main.test.js'],
-                    repository: 'example/repo'
-                },
-                response_time_ms: Date.now() - startTime
-            };
-            
-        } catch (error) {
-            return {
-                success: false,
-                error: error.message,
-                response_time_ms: Date.now() - startTime
-            };
-        }
-    }
-
-    async getHealth() {
-        return {
-            status: 'healthy',
-            mode: this.config.enable_mock ? 'mock' : 'production',
-            api_url: this.config.api_url
-        };
-    }
-
-    async shutdown() {
-        // Cleanup connections
-    }
-
-    _createMockResponse(prompt, taskId) {
-        return {
-            success: true,
-            data: {
-                pr_url: `https://github.com/mock/repo/pull/${Math.floor(Math.random() * 1000)}`,
-                pr_number: Math.floor(Math.random() * 1000),
-                branch_name: `feature/task-${taskId}`,
-                title: `Mock PR for ${prompt.task_id}`,
-                status: 'open',
-                created_at: new Date(),
-                modified_files: ['src/mock.js', 'tests/mock.test.js'],
-                repository: 'mock/repo'
-            },
-            response_time_ms: 1500 + Math.random() * 1000
-        };
     }
 }
 
