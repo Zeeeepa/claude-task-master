@@ -59,6 +59,8 @@
 		"@anthropic-ai/sdk": "^0.39.0",
 		"@openrouter/ai-sdk-provider": "^0.4.5",
 		"ai": "^4.3.10",
+		"axios": "^1.6.0",
+		"bottleneck": "^2.19.5",
 		"boxen": "^8.0.1",
 		"chalk": "^5.4.1",
 		"cli-table3": "^0.6.5",
@@ -77,6 +79,7 @@
 		"ollama-ai-provider": "^1.2.0",
 		"openai": "^4.89.0",
 		"ora": "^8.2.0",
+		"retry": "^0.13.1",
 		"uuid": "^11.1.0",
 		"zod": "^3.23.8"
 	},
