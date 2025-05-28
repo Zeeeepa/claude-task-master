@@ -12,6 +12,7 @@ import { ValidationEngine } from './core/validation_engine.js';
 import { WorkflowOrchestrator } from './core/workflow_orchestrator.js';
 import { ContextManager } from './core/context_manager.js';
 import { SystemMonitor } from './monitoring/system_monitor.js';
+import { AgentAPIMiddleware } from './middleware/index.js';
 import { log } from '../scripts/modules/utils.js';
 
 /**
@@ -49,7 +50,8 @@ export class AICICDSystem {
                 'codegenIntegrator',
                 'validationEngine',
                 'workflowOrchestrator',
-                'systemMonitor'
+                'systemMonitor',
+                'agentAPIMiddleware'
             ]);
 
             this.isInitialized = true;
@@ -177,20 +179,17 @@ export class AICICDSystem {
     }
 
     /**
-     * Get system health and status
-     * @returns {Promise<SystemHealth>} System health information
+     * Get system health status
+     * @returns {Promise<Object>} System health information
      */
     async getSystemHealth() {
-        if (!this.isInitialized) {
-            return { status: 'not_initialized', components: {} };
-        }
-
         const health = {
-            status: 'healthy',
-            components: {},
-            active_workflows: this.activeWorkflows.size,
-            system_uptime: Date.now() - this.config.startTime,
-            last_check: new Date()
+            system: {
+                initialized: this.isInitialized,
+                activeWorkflows: this.activeWorkflows.size,
+                uptime: new Date().getTime() - this.startTime
+            },
+            components: {}
         };
 
         // Check each component health
@@ -206,11 +205,47 @@ export class AICICDSystem {
                     status: 'error', 
                     error: error.message 
                 };
-                health.status = 'degraded';
             }
         }
 
         return health;
+    }
+
+    /**
+     * Get AgentAPI middleware instance
+     * @returns {AgentAPIMiddleware} Middleware instance
+     */
+    getAgentAPIMiddleware() {
+        return this.components.get('agentAPIMiddleware');
+    }
+
+    /**
+     * Deploy and validate PR using AgentAPI middleware
+     * @param {Object} prData - PR data from GitHub webhook
+     * @param {Object} options - Deployment options
+     * @returns {Promise<Object>} Deployment result
+     */
+    async deployAndValidatePR(prData, options = {}) {
+        if (!this.isInitialized) {
+            throw new Error('System not initialized');
+        }
+
+        const middleware = this.getAgentAPIMiddleware();
+        if (!middleware) {
+            throw new Error('AgentAPI middleware not available');
+        }
+
+        log('info', `Starting PR deployment and validation: ${prData.number}`);
+        
+        try {
+            const result = await middleware.deployAndValidatePR(prData, options);
+            
+            log('info', `PR deployment completed: ${result.id}`);
+            return result;
+        } catch (error) {
+            log('error', `PR deployment failed: ${error.message}`);
+            throw error;
+        }
     }
 
     /**
@@ -262,7 +297,8 @@ export class AICICDSystem {
                 'codegenIntegrator',
                 'requirementProcessor',
                 'taskStorage',
-                'contextManager'
+                'contextManager',
+                'agentAPIMiddleware'
             ];
 
             for (const componentName of shutdownOrder) {
@@ -295,6 +331,7 @@ export class AICICDSystem {
         this.components.set('validationEngine', new ValidationEngine(this.config.validation));
         this.components.set('workflowOrchestrator', new WorkflowOrchestrator(this.config.workflow));
         this.components.set('systemMonitor', new SystemMonitor(this.config.monitoring));
+        this.components.set('agentAPIMiddleware', new AgentAPIMiddleware(this.config.agentapi));
     }
 
     /**
@@ -408,3 +445,11 @@ export async function processRequirement(requirement, config = {}) {
 
 export default AICICDSystem;
 
+// Export middleware components for direct access
+export { 
+    AgentAPIClient,
+    WSL2Manager, 
+    ClaudeCodeIntegration,
+    AgentSessionManager,
+    AgentAPIMiddleware
+} from './middleware/index.js';
