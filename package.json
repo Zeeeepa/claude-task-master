@@ -7,7 +7,8 @@
 	"bin": {
 		"task-master": "bin/task-master.js",
 		"task-master-mcp": "mcp-server/server.js",
-		"task-master-ai": "mcp-server/server.js"
+		"task-master-ai": "mcp-server/server.js",
+		"linear-test": "bin/linear-test.js"
 	},
 	"scripts": {
 		"test": "node --experimental-vm-modules node_modules/.bin/jest",
@@ -89,7 +90,12 @@
 		"index.js",
 		"bin/**",
 		"mcp-server/**",
-		"src/**"
+		"src/**",
+		"integrations/**",
+		"utils/**",
+		"sync/**",
+		"examples/**",
+		"docs/**"
 	],
 	"overrides": {
 		"node-fetch": "^3.3.2",
