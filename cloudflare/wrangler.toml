@@ -1,0 +1,50 @@
+# Cloudflare Worker Configuration for Database Proxy
+name = "claude-task-master-db-proxy"
+main = "database-proxy-worker.js"
+compatibility_date = "2024-05-28"
+compatibility_flags = ["nodejs_compat"]
+
+# Worker settings
+[build]
+command = ""
+
+# Environment variables (set these in Cloudflare dashboard or via wrangler secret)
+[env.production]
+name = "claude-task-master-db-proxy"
+
+[env.staging]
+name = "claude-task-master-db-proxy-staging"
+
+# KV Namespaces for rate limiting and audit logging
+[[kv_namespaces]]
+binding = "RATE_LIMIT_KV"
+id = "your-rate-limit-kv-namespace-id"
+preview_id = "your-rate-limit-kv-preview-id"
+
+[[kv_namespaces]]
+binding = "AUDIT_LOG_KV"
+id = "your-audit-log-kv-namespace-id"
+preview_id = "your-audit-log-kv-preview-id"
+
+# Environment variables that need to be set via wrangler secret:
+# wrangler secret put DB_HOST
+# wrangler secret put DB_PORT
+# wrangler secret put DB_NAME
+# wrangler secret put DB_USER
+# wrangler secret put DB_PASSWORD
+# wrangler secret put VALID_API_TOKENS
+
+# Custom domains (configure after deployment)
+# routes = [
+#   { pattern = "db-proxy.yourdomain.com/*", zone_name = "yourdomain.com" }
+# ]
+
+# Resource limits
+[limits]
+cpu_ms = 50000  # 50 seconds CPU time limit
+
+# Cron triggers for cleanup tasks (optional)
+# [[triggers.crons]]
+# cron = "0 0 * * *"  # Daily at midnight
+# name = "cleanup-expired-logs"
+
