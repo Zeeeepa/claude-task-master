@@ -30,6 +30,9 @@
 		"docs": "jsdoc -c jsdoc.conf.json",
 		"inspector": "npx @modelcontextprotocol/inspector node mcp-server/server.js",
 		"mcp-server": "node mcp-server/server.js",
+		"monitoring": "node scripts/monitoring.js",
+		"monitoring:start": "node scripts/monitoring.js start",
+		"monitoring:demo": "node scripts/monitoring.js demo",
 		"format-check": "prettier --check .",
 		"format": "prettier --write .",
 		"workflow-demo": "node src/workflow_orchestrator/demo.js"
@@ -78,6 +81,7 @@
 		"ollama-ai-provider": "^1.2.0",
 		"openai": "^4.89.0",
 		"ora": "^8.2.0",
+		"socket.io": "^4.7.5",
 		"uuid": "^11.1.0",
 		"ws": "^8.18.2",
 		"zod": "^3.23.8"
