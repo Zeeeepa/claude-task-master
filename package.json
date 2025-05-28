@@ -22,7 +22,10 @@
 		"inspector": "npx @modelcontextprotocol/inspector node mcp-server/server.js",
 		"mcp-server": "node mcp-server/server.js",
 		"format-check": "prettier --check .",
-		"format": "prettier --write ."
+		"format": "prettier --write .",
+		"orchestration:demo": "node examples/orchestration-demo.js",
+		"orchestration:demo:nlp": "node examples/orchestration-demo.js nlp",
+		"orchestration:demo:all": "node examples/orchestration-demo.js all"
 	},
 	"keywords": [
 		"claude",
