@@ -1,0 +1,209 @@
+{
+  "agentapi": {
+    "baseURL": "http://localhost:8000",
+    "timeout": 60000,
+    "retryAttempts": 3,
+    "retryDelay": 1000,
+    "circuitBreakerThreshold": 5,
+    "circuitBreakerTimeout": 60000,
+    "healthCheckInterval": 30000,
+    "maxConcurrentRequests": 10,
+    "logLevel": "info"
+  },
+  "wsl2": {
+    "maxInstances": 5,
+    "instanceTimeout": 3600000,
+    "resourceLimits": {
+      "memory": "8GB",
+      "cpu": 4,
+      "disk": "50GB"
+    },
+    "networkConfig": {
+      "isolateNetworking": true,
+      "allowedPorts": [22, 80, 443, 3000, 8000, 8080, 9000],
+      "dnsServers": ["8.8.8.8", "1.1.1.1"]
+    },
+    "baseDistribution": "Ubuntu-22.04",
+    "workspaceDir": "/tmp/claude-task-master-workspaces",
+    "cleanupInterval": 300000,
+    "logLevel": "info"
+  },
+  "claudeCode": {
+    "model": "claude-3-sonnet-20240229",
+    "maxTokens": 4096,
+    "temperature": 0.1,
+    "systemPrompt": "You are Claude Code, an AI assistant specialized in code review, testing, and validation for CI/CD pipelines.",
+    "logLevel": "info"
+  },
+  "sessionManager": {
+    "maxSessions": 10,
+    "sessionTimeout": 3600000,
+    "heartbeatInterval": 30000,
+    "cleanupInterval": 300000,
+    "persistenceDir": "./data/sessions",
+    "resourceLimits": {
+      "maxMemoryPerSession": "2GB",
+      "maxCpuPerSession": 50,
+      "maxDiskPerSession": "10GB"
+    },
+    "agentTypes": {
+      "claude": {
+        "maxSessions": 5,
+        "defaultModel": "claude-3-sonnet-20240229",
+        "timeout": 60000
+      },
+      "goose": {
+        "maxSessions": 3,
+        "timeout": 45000
+      },
+      "aider": {
+        "maxSessions": 3,
+        "timeout": 45000
+      },
+      "codex": {
+        "maxSessions": 2,
+        "timeout": 30000
+      }
+    },
+    "logLevel": "info"
+  },
+  "validation": {
+    "runTests": true,
+    "runLinting": true,
+    "runSecurity": true,
+    "testTimeout": 300000,
+    "lintingTimeout": 120000,
+    "securityTimeout": 180000,
+    "codeReviewTimeout": 240000,
+    "performanceTimeout": 180000
+  },
+  "monitoring": {
+    "enableMetrics": true,
+    "metricsInterval": 60000,
+    "enableHealthChecks": true,
+    "healthCheckInterval": 30000,
+    "enableAlerts": true,
+    "alertThresholds": {
+      "errorRate": 0.1,
+      "responseTime": 10000,
+      "memoryUsage": 0.8,
+      "cpuUsage": 0.8
+    }
+  },
+  "security": {
+    "enableAuthentication": true,
+    "enableAuthorization": true,
+    "enableRateLimiting": true,
+    "rateLimitRequests": 100,
+    "rateLimitWindow": 60000,
+    "enableCors": true,
+    "corsOrigins": ["http://localhost:3000", "http://localhost:3001"],
+    "enableHelmet": true,
+    "enableCompression": true
+  },
+  "database": {
+    "host": "localhost",
+    "port": 5432,
+    "database": "claude_task_master",
+    "username": "postgres",
+    "password": "",
+    "ssl": false,
+    "poolSize": 10,
+    "connectionTimeout": 30000,
+    "queryTimeout": 60000,
+    "enableLogging": false
+  },
+  "redis": {
+    "host": "localhost",
+    "port": 6379,
+    "password": "",
+    "database": 0,
+    "keyPrefix": "claude-task-master:",
+    "enableCluster": false,
+    "connectionTimeout": 5000,
+    "commandTimeout": 5000
+  },
+  "logging": {
+    "level": "info",
+    "format": "json",
+    "enableConsole": true,
+    "enableFile": true,
+    "fileConfig": {
+      "filename": "./logs/agentapi-middleware.log",
+      "maxSize": "100MB",
+      "maxFiles": 10,
+      "compress": true
+    },
+    "enableSyslog": false,
+    "enableElasticsearch": false
+  },
+  "performance": {
+    "enableCaching": true,
+    "cacheTimeout": 300000,
+    "enableCompression": true,
+    "compressionLevel": 6,
+    "enableKeepAlive": true,
+    "keepAliveTimeout": 30000,
+    "maxSockets": 50,
+    "enablePipelining": false
+  },
+  "deployment": {
+    "environment": "development",
+    "enableHotReload": true,
+    "enableDebugMode": true,
+    "enableProfiling": false,
+    "enableTracing": false,
+    "gracefulShutdownTimeout": 30000,
+    "startupTimeout": 60000
+  },
+  "webhooks": {
+    "github": {
+      "enabled": true,
+      "secret": "",
+      "events": ["pull_request", "push", "issues"],
+      "endpoint": "/webhooks/github"
+    },
+    "linear": {
+      "enabled": true,
+      "secret": "",
+      "events": ["issue", "comment"],
+      "endpoint": "/webhooks/linear"
+    }
+  },
+  "integrations": {
+    "github": {
+      "apiUrl": "https://api.github.com",
+      "token": "",
+      "timeout": 30000,
+      "retryAttempts": 3
+    },
+    "linear": {
+      "apiUrl": "https://api.linear.app",
+      "token": "",
+      "timeout": 30000,
+      "retryAttempts": 3
+    },
+    "slack": {
+      "enabled": false,
+      "webhookUrl": "",
+      "channel": "#ci-cd",
+      "username": "Claude Task Master"
+    },
+    "discord": {
+      "enabled": false,
+      "webhookUrl": "",
+      "username": "Claude Task Master"
+    }
+  },
+  "features": {
+    "enableParallelDeployments": true,
+    "enableAutoScaling": false,
+    "enableLoadBalancing": false,
+    "enableFailover": false,
+    "enableBackup": true,
+    "backupInterval": 86400000,
+    "enableAnalytics": true,
+    "enableReporting": true
+  }
+}
+
