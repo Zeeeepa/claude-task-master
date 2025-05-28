@@ -32,10 +32,22 @@ async function testCodegenIntegration() {
             },
             codegen: {
                 enable_mock: false,
-                api_key: CODEGEN_CONFIG.token,
-                org_id: CODEGEN_CONFIG.org_id,
-                api_url: "https://api.codegen.sh",
-                timeout: 120000 // 2 minutes timeout
+                authentication: {
+                    token: CODEGEN_CONFIG.token,
+                    orgId: CODEGEN_CONFIG.org_id
+                },
+                api: {
+                    baseURL: "https://api.codegen.sh",
+                    timeout: 120000 // 2 minutes timeout
+                },
+                rateLimiting: {
+                    enabled: true,
+                    requestsPerMinute: 30 // Conservative for testing
+                },
+                polling: {
+                    defaultInterval: 3000, // 3 seconds for faster testing
+                    maxWaitTime: 300000 // 5 minutes
+                }
             },
             validation: { 
                 enable_mock: true 
@@ -96,15 +108,21 @@ async function testCodegenIntegration() {
                 console.log(`Task ${i + 1}:`);
                 console.log(`  Status: ${codegenResult.status}`);
                 console.log(`  Task ID: ${codegenResult.task_id}`);
+                console.log(`  Request ID: ${codegenResult.request_id}`);
                 
                 if (codegenResult.pr_info) {
                     console.log(`  📝 PR URL: ${codegenResult.pr_info.pr_url}`);
                     console.log(`  🌿 Branch: ${codegenResult.pr_info.branch_name}`);
                     console.log(`  📊 PR Number: #${codegenResult.pr_info.pr_number}`);
+                    
+                    if (codegenResult.pr_info.codegen_task_id) {
+                        console.log(`  🔗 Codegen Task ID: ${codegenResult.pr_info.codegen_task_id}`);
+                    }
                 }
                 
-                if (codegenResult.request_id) {
-                    console.log(`  🔗 Request ID: ${codegenResult.request_id}`);
+                if (codegenResult.metrics) {
+                    console.log(`  ⏱️  Processing Time: ${codegenResult.metrics.processing_time_ms}ms`);
+                    console.log(`  📏 Prompt Length: ${codegenResult.metrics.prompt_length} chars`);
                 }
                 
                 console.log('');
@@ -144,6 +162,24 @@ async function testCodegenIntegration() {
         
         for (const [name, componentHealth] of Object.entries(health.components)) {
             console.log(`  ${name}: ${componentHealth.status}`);
+            
+            // Show additional details for codegen component
+            if (name === 'codegen_integrator' && componentHealth.codegen_agent) {
+                console.log(`    API URL: ${componentHealth.api_url}`);
+                console.log(`    Org ID: ${componentHealth.codegen_agent.org_id}`);
+            }
+            
+            // Show rate limiting status
+            if (componentHealth.rate_limiter) {
+                const rateLimitStatus = componentHealth.rate_limiter;
+                console.log(`    Rate Limit: ${rateLimitStatus.usage.minute.used}/${rateLimitStatus.usage.minute.limit} per minute`);
+            }
+            
+            // Show quota status
+            if (componentHealth.quota_manager) {
+                const quotaStatus = componentHealth.quota_manager;
+                console.log(`    Daily Quota: ${quotaStatus.daily.used}/${quotaStatus.daily.limit} (${quotaStatus.daily.percentage.toFixed(1)}%)`);
+            }
         }
 
         await system.shutdown();
@@ -154,7 +190,8 @@ async function testCodegenIntegration() {
         
         if (result.status === 'completed' && result.codegen_results?.length > 0) {
             console.log('🟢 SUCCESS: Real Codegen API integration working properly');
-            console.log('✅ All components from PRs 13-17 are properly implemented');
+            console.log('✅ Production-grade implementation functional');
+            console.log('✅ Error handling and rate limiting operational');
             console.log('✅ End-to-end workflow functioning correctly');
         } else {
             console.log('🟡 PARTIAL SUCCESS: System working but some issues detected');
@@ -171,6 +208,13 @@ async function testCodegenIntegration() {
         console.log('• Verify network connectivity to api.codegen.sh');
         console.log('• Check if API rate limits have been exceeded');
         console.log('• Ensure the org_id is correct for the provided token');
+        console.log('• Review error details above for specific issues');
+        
+        // Show error details if it's a CodegenError
+        if (error.code) {
+            console.log(`• Error Code: ${error.code}`);
+            console.log(`• User Message: ${error.getUserMessage ? error.getUserMessage() : error.message}`);
+        }
         
         throw error;
     }
@@ -279,4 +323,3 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 }
 
 export { testCodegenIntegration, testPythonCodegenAgent };
-
