@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
 /**
- * @fileoverview Usage Example for AI-Driven CI/CD System
- * @description Demonstrates how to use the comprehensive AI-CICD system
+ * @fileoverview AI-CICD System Usage Examples
+ * @description Comprehensive examples demonstrating system capabilities
  */
 
 import { AICICDSystem, createAICICDSystem, processRequirement } from '../index.js';
-import { log } from '../../scripts/modules/utils.js';
+import { log } from '../../../scripts/modules/utils.js';
 
 /**
  * Example 1: Basic requirement processing
@@ -495,4 +495,3 @@ export {
     performanceMonitoringExample,
     runAllExamples
 };
-

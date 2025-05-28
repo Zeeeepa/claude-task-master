@@ -1,9 +1,9 @@
 /**
  * @fileoverview Context Manager
- * @description Unified context management for AI prompt generation and analytics
+ * @description Unified context management for AI-CICD system
  */
 
-import { log } from '../../scripts/modules/utils.js';
+import { log } from '../../../scripts/modules/utils.js';
 
 /**
  * Context manager for comprehensive context preservation and retrieval
@@ -625,4 +625,3 @@ ${context.requirements_context.functional_requirements.map(req => `  - "${req}"`
 }
 
 export default ContextManager;
-

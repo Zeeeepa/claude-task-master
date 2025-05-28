@@ -3,36 +3,8 @@
  * @description Unified task storage with comprehensive context preservation
  */
 
-import { log } from '../../scripts/modules/utils.js';
+import { log } from '../../../scripts/modules/utils.js';
 
-/**
- * Task storage manager with PostgreSQL backend and mock support
- */
-export class TaskStorageManager {
-    constructor(config = {}) {
-        this.config = {
-            host: config.host || 'localhost',
-            port: config.port || 5432,
-            database: config.database || 'codegen-taskmaster-db',
-            username: config.username || 'software_developer',
-            password: config.password || 'password',
-            ssl_mode: config.ssl_mode || 'require',
-            enable_mock: config.enable_mock || false,
-            pool_min_size: config.pool_min_size || 5,
-            pool_max_size: config.pool_max_size || 20,
-            command_timeout: config.command_timeout || 60000,
-            ...config
-        };
-        
-        this.isInitialized = false;
-        this.mockStorage = new Map();
-        this.mockContext = new Map();
-        this.pool = null;
-    }
-
-    /**
-     * Initialize the task storage
-     */
 /**
  * Interface that defines the required operations for any task storage implementation.
  * Any concrete implementation (PostgreSQL, MongoDB, etc.) should implement this interface.
@@ -83,6 +55,26 @@ export class TaskStorageManager {
         this.mockContext = new Map();
         this.pool = null;
     }
+
+    /**
+     * Initialize the task storage
+     */
+    async initialize() {
+        log('debug', 'Initializing task storage manager...');
+        
+        if (this.config.enable_mock) {
+            log('info', 'Using mock task storage');
+            this.isInitialized = true;
+            return;
+        }
+
+        try {
+            // In a real implementation, this would initialize PostgreSQL connection
+            // For now, we'll use mock mode
+            log('warning', 'PostgreSQL connection not implemented, using mock mode');
+            this.config.enable_mock = true;
+            this.isInitialized = true;
+            
         } catch (error) {
             log('error', `Failed to initialize task storage: ${error.message}`);
             throw error;
@@ -558,4 +550,3 @@ export class TaskStorageManager {
 }
 
 export default TaskStorageManager;
-

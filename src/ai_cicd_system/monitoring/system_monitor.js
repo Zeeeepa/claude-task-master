@@ -1,9 +1,9 @@
 /**
  * @fileoverview System Monitor
- * @description Comprehensive system monitoring and metrics collection
+ * @description Comprehensive system monitoring and health tracking
  */
 
-import { log } from '../../scripts/modules/utils.js';
+import { log } from '../../../scripts/modules/utils.js';
 
 /**
  * System monitor for comprehensive health tracking and metrics
@@ -638,4 +638,3 @@ class AlertManager {
 }
 
 export default SystemMonitor;
-

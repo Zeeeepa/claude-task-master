@@ -3,7 +3,7 @@
  * @description Unified configuration for all AI-CICD system components
  */
 
-import { log } from '../../scripts/modules/utils.js';
+import { log } from '../../../scripts/modules/utils.js';
 
 /**
  * System configuration with environment-based defaults
@@ -352,4 +352,3 @@ export class SystemConfig {
 }
 
 export default SystemConfig;
-

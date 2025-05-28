@@ -3,7 +3,7 @@
  * @description Unified codegen integration with intelligent prompt generation
  */
 
-import { log } from '../../scripts/modules/utils.js';
+import { log } from '../../../scripts/modules/utils.js';
 
 /**
  * Codegen integrator that handles prompt generation and PR creation
@@ -293,7 +293,10 @@ class PromptGenerator {
     }
 
     getHealth() {
-        return { status: 'healthy', templates_loaded: this.templates.getTemplateCount() };
+        return { 
+            status: 'healthy', 
+            templates_loaded: Object.keys(this.templates).length 
+        };
     }
 
     _buildPromptContent(task, context, template) {
@@ -582,4 +585,3 @@ class PRTracker {
 }
 
 export default CodegenIntegrator;
-

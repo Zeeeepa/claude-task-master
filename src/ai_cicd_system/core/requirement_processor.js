@@ -1,9 +1,9 @@
 /**
  * @fileoverview Requirement Processor
- * @description Unified requirement analysis and task decomposition
+ * @description Advanced NLP-powered requirement analysis and task decomposition
  */
 
-import { log } from '../../scripts/modules/utils.js';
+import { log } from '../../../scripts/modules/utils.js';
 
 /**
  * Requirement processor that combines NLP analysis with task decomposition
@@ -657,4 +657,3 @@ class DependencyAnalyzer {
 }
 
 export default RequirementProcessor;
-
