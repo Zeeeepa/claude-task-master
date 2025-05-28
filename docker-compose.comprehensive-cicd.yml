@@ -1,0 +1,222 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: codegen-taskmaster-db
+    environment:
+      POSTGRES_DB: codegen-taskmaster-db
+      POSTGRES_USER: software_developer
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql/init:/docker-entrypoint-initdb.d
+    networks:
+      - cicd-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U software_developer -d codegen-taskmaster-db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis Cache (Optional)
+  redis:
+    image: redis:7-alpine
+    container_name: codegen-taskmaster-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - cicd-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+
+  # Comprehensive CI/CD API Server
+  cicd-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.cicd
+    container_name: codegen-cicd-api
+    environment:
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: codegen-taskmaster-db
+      DB_USER: software_developer
+      DB_PASSWORD: ${DB_PASSWORD:-password}
+      
+      # Codegen API
+      CODEGEN_ORG_ID: ${CODEGEN_ORG_ID:-323}
+      CODEGEN_API_KEY: ${CODEGEN_API_KEY}
+      
+      # AgentAPI
+      AGENTAPI_URL: ${AGENTAPI_URL:-http://agentapi:8000}
+      
+      # System
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 8080
+      HOST: 0.0.0.0
+      
+      # Redis
+      REDIS_URL: redis://redis:6379/0
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      
+      # Feature flags
+      ENABLE_CYCLICAL_IMPROVEMENT: ${ENABLE_CYCLICAL_IMPROVEMENT:-true}
+      ENABLE_WSL2_DEPLOYMENT: ${ENABLE_WSL2_DEPLOYMENT:-false}
+      ENABLE_CLAUDE_CODE_VALIDATION: ${ENABLE_CLAUDE_CODE_VALIDATION:-true}
+      
+    ports:
+      - "${PORT:-8080}:8080"
+    volumes:
+      - ./src:/app/src
+      - ./task_storage:/app/task_storage
+      - /var/run/docker.sock:/var/run/docker.sock  # For container management
+    networks:
+      - cicd-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # AgentAPI Server
+  agentapi:
+    image: agentapi:latest
+    container_name: codegen-agentapi
+    environment:
+      PORT: 8000
+      CLAUDE_CODE_PATH: /usr/local/bin/claude
+    ports:
+      - "${AGENTAPI_PORT:-8000}:8000"
+    volumes:
+      - agentapi_data:/data
+      - /tmp:/tmp  # For temporary file sharing
+    networks:
+      - cicd-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Prometheus Metrics (Optional)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: codegen-prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - cicd-network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
+  # Grafana Dashboard (Optional)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: codegen-grafana
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: false
+    networks:
+      - cicd-network
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
+  # Nginx Reverse Proxy (Optional)
+  nginx:
+    image: nginx:alpine
+    container_name: codegen-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+    networks:
+      - cicd-network
+    depends_on:
+      - cicd-api
+      - agentapi
+    restart: unless-stopped
+    profiles:
+      - production
+
+  # WSL2 Manager Service (Development only)
+  wsl2-manager:
+    build:
+      context: .
+      dockerfile: Dockerfile.wsl2
+    container_name: codegen-wsl2-manager
+    privileged: true
+    environment:
+      WSL2_DISTRO: ${WSL2_DISTRO:-Ubuntu-22.04}
+      MAX_WSL2_INSTANCES: ${MAX_WSL2_INSTANCES:-5}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - wsl2_data:/wsl2
+    networks:
+      - cicd-network
+    restart: unless-stopped
+    profiles:
+      - development
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  agentapi_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  wsl2_data:
+    driver: local
+
+networks:
+  cicd-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
