@@ -1,0 +1,445 @@
+{
+  "version": "1.0",
+  "metadata": {
+    "name": "AI CI/CD System RBAC Policies",
+    "description": "Role-based access control policies for the AI CI/CD system",
+    "lastUpdated": "2024-01-01T00:00:00Z",
+    "author": "Security Team"
+  },
+  "roles": {
+    "super_admin": {
+      "name": "Super Administrator",
+      "description": "Full system access with all permissions",
+      "permissions": ["*"],
+      "inherits": [],
+      "constraints": {
+        "mfaRequired": true,
+        "sessionTimeout": 3600,
+        "ipWhitelist": [],
+        "timeRestrictions": []
+      }
+    },
+    "admin": {
+      "name": "Administrator",
+      "description": "System administration with limited security access",
+      "permissions": [
+        "system:read",
+        "system:write",
+        "users:read",
+        "users:write",
+        "users:delete",
+        "tasks:*",
+        "cicd:*",
+        "security:read",
+        "api:read",
+        "api:write"
+      ],
+      "inherits": ["user"],
+      "constraints": {
+        "mfaRequired": true,
+        "sessionTimeout": 7200,
+        "ipWhitelist": [],
+        "timeRestrictions": []
+      }
+    },
+    "developer": {
+      "name": "Developer",
+      "description": "Development and CI/CD access",
+      "permissions": [
+        "system:read",
+        "tasks:read",
+        "tasks:write",
+        "tasks:execute",
+        "cicd:read",
+        "cicd:write",
+        "cicd:execute",
+        "api:read",
+        "api:write"
+      ],
+      "inherits": ["user"],
+      "constraints": {
+        "mfaRequired": false,
+        "sessionTimeout": 14400,
+        "ipWhitelist": [],
+        "timeRestrictions": []
+      }
+    },
+    "operator": {
+      "name": "Operator",
+      "description": "Operations and deployment access",
+      "permissions": [
+        "system:read",
+        "tasks:read",
+        "tasks:execute",
+        "cicd:read",
+        "cicd:execute",
+        "cicd:deploy",
+        "security:read",
+        "api:read"
+      ],
+      "inherits": ["user"],
+      "constraints": {
+        "mfaRequired": true,
+        "sessionTimeout": 7200,
+        "ipWhitelist": [],
+        "timeRestrictions": []
+      }
+    },
+    "auditor": {
+      "name": "Auditor",
+      "description": "Read-only access for auditing and compliance",
+      "permissions": [
+        "system:read",
+        "users:read",
+        "tasks:read",
+        "cicd:read",
+        "security:read",
+        "security:audit",
+        "api:read"
+      ],
+      "inherits": ["user"],
+      "constraints": {
+        "mfaRequired": true,
+        "sessionTimeout": 3600,
+        "ipWhitelist": [],
+        "timeRestrictions": []
+      }
+    },
+    "user": {
+      "name": "User",
+      "description": "Basic user access",
+      "permissions": [
+        "tasks:read",
+        "api:read"
+      ],
+      "inherits": [],
+      "constraints": {
+        "mfaRequired": false,
+        "sessionTimeout": 28800,
+        "ipWhitelist": [],
+        "timeRestrictions": []
+      }
+    },
+    "service": {
+      "name": "Service Account",
+      "description": "Service-to-service communication",
+      "permissions": [
+        "api:read",
+        "api:write",
+        "tasks:read",
+        "tasks:write",
+        "tasks:execute"
+      ],
+      "inherits": [],
+      "constraints": {
+        "mfaRequired": false,
+        "sessionTimeout": 86400,
+        "ipWhitelist": [],
+        "timeRestrictions": []
+      }
+    },
+    "readonly": {
+      "name": "Read Only",
+      "description": "Read-only access to non-sensitive resources",
+      "permissions": [
+        "tasks:read",
+        "cicd:read",
+        "api:read"
+      ],
+      "inherits": [],
+      "constraints": {
+        "mfaRequired": false,
+        "sessionTimeout": 14400,
+        "ipWhitelist": [],
+        "timeRestrictions": []
+      }
+    }
+  },
+  "permissions": {
+    "system": {
+      "read": {
+        "description": "View system information and configuration",
+        "resources": ["config", "status", "metrics"],
+        "conditions": []
+      },
+      "write": {
+        "description": "Modify system configuration",
+        "resources": ["config", "settings"],
+        "conditions": ["audit_required"]
+      },
+      "admin": {
+        "description": "Full system administration",
+        "resources": ["*"],
+        "conditions": ["audit_required", "approval_required"]
+      }
+    },
+    "users": {
+      "read": {
+        "description": "View user information",
+        "resources": ["profiles", "roles", "permissions"],
+        "conditions": []
+      },
+      "write": {
+        "description": "Create and modify users",
+        "resources": ["profiles", "roles", "permissions"],
+        "conditions": ["audit_required"]
+      },
+      "delete": {
+        "description": "Delete users",
+        "resources": ["profiles"],
+        "conditions": ["audit_required", "approval_required"]
+      }
+    },
+    "tasks": {
+      "read": {
+        "description": "View tasks and their status",
+        "resources": ["tasks", "status", "logs"],
+        "conditions": []
+      },
+      "write": {
+        "description": "Create and modify tasks",
+        "resources": ["tasks", "metadata"],
+        "conditions": ["audit_required"]
+      },
+      "delete": {
+        "description": "Delete tasks",
+        "resources": ["tasks"],
+        "conditions": ["audit_required"]
+      },
+      "execute": {
+        "description": "Execute tasks",
+        "resources": ["tasks"],
+        "conditions": ["audit_required"]
+      }
+    },
+    "cicd": {
+      "read": {
+        "description": "View CI/CD pipelines and builds",
+        "resources": ["pipelines", "builds", "artifacts"],
+        "conditions": []
+      },
+      "write": {
+        "description": "Create and modify pipelines",
+        "resources": ["pipelines", "configurations"],
+        "conditions": ["audit_required"]
+      },
+      "execute": {
+        "description": "Execute pipelines and builds",
+        "resources": ["pipelines", "builds"],
+        "conditions": ["audit_required"]
+      },
+      "deploy": {
+        "description": "Deploy applications",
+        "resources": ["deployments", "environments"],
+        "conditions": ["audit_required", "approval_required"]
+      }
+    },
+    "security": {
+      "read": {
+        "description": "View security logs and settings",
+        "resources": ["logs", "settings", "reports"],
+        "conditions": []
+      },
+      "write": {
+        "description": "Modify security settings",
+        "resources": ["settings", "policies"],
+        "conditions": ["audit_required", "approval_required"]
+      },
+      "audit": {
+        "description": "Access audit logs and compliance reports",
+        "resources": ["audit_logs", "compliance_reports"],
+        "conditions": ["audit_required"]
+      }
+    },
+    "api": {
+      "read": {
+        "description": "Read API access",
+        "resources": ["endpoints"],
+        "conditions": []
+      },
+      "write": {
+        "description": "Write API access",
+        "resources": ["endpoints"],
+        "conditions": ["rate_limited"]
+      },
+      "admin": {
+        "description": "API administration",
+        "resources": ["keys", "quotas", "configurations"],
+        "conditions": ["audit_required"]
+      }
+    }
+  },
+  "resourcePolicies": {
+    "tasks": {
+      "ownership": {
+        "enabled": true,
+        "rules": [
+          {
+            "condition": "user_is_owner",
+            "permissions": ["read", "write", "delete"]
+          },
+          {
+            "condition": "user_has_role:admin",
+            "permissions": ["read", "write", "delete", "execute"]
+          }
+        ]
+      },
+      "visibility": {
+        "public": ["read"],
+        "private": ["owner_only"],
+        "team": ["team_members"]
+      }
+    },
+    "cicd": {
+      "environments": {
+        "development": {
+          "deploy": ["developer", "operator", "admin"]
+        },
+        "staging": {
+          "deploy": ["operator", "admin"]
+        },
+        "production": {
+          "deploy": ["operator", "admin"],
+          "conditions": ["approval_required"]
+        }
+      }
+    },
+    "data": {
+      "classification": {
+        "public": {
+          "access": ["*"],
+          "encryption": false
+        },
+        "internal": {
+          "access": ["user", "developer", "operator", "admin"],
+          "encryption": true
+        },
+        "confidential": {
+          "access": ["admin", "auditor"],
+          "encryption": true,
+          "conditions": ["audit_required"]
+        },
+        "restricted": {
+          "access": ["super_admin"],
+          "encryption": true,
+          "conditions": ["audit_required", "approval_required"]
+        }
+      }
+    }
+  },
+  "conditions": {
+    "audit_required": {
+      "description": "Action must be logged for audit purposes",
+      "implementation": "audit_logger"
+    },
+    "approval_required": {
+      "description": "Action requires approval from authorized personnel",
+      "implementation": "approval_workflow"
+    },
+    "rate_limited": {
+      "description": "Action is subject to rate limiting",
+      "implementation": "rate_limiter"
+    },
+    "mfa_required": {
+      "description": "Multi-factor authentication required",
+      "implementation": "mfa_validator"
+    },
+    "ip_whitelist": {
+      "description": "Access restricted to whitelisted IP addresses",
+      "implementation": "ip_validator"
+    },
+    "time_restricted": {
+      "description": "Access restricted to specific time windows",
+      "implementation": "time_validator"
+    }
+  },
+  "workflows": {
+    "user_provisioning": {
+      "steps": [
+        {
+          "action": "create_user",
+          "required_role": "admin",
+          "conditions": ["audit_required"]
+        },
+        {
+          "action": "assign_role",
+          "required_role": "admin",
+          "conditions": ["audit_required", "approval_required"]
+        },
+        {
+          "action": "activate_user",
+          "required_role": "admin",
+          "conditions": ["audit_required"]
+        }
+      ]
+    },
+    "role_modification": {
+      "steps": [
+        {
+          "action": "request_change",
+          "required_role": "admin",
+          "conditions": ["audit_required"]
+        },
+        {
+          "action": "approve_change",
+          "required_role": "super_admin",
+          "conditions": ["audit_required"]
+        },
+        {
+          "action": "apply_change",
+          "required_role": "super_admin",
+          "conditions": ["audit_required"]
+        }
+      ]
+    },
+    "emergency_access": {
+      "enabled": true,
+      "duration": 3600,
+      "required_approvers": 2,
+      "conditions": ["audit_required", "approval_required", "mfa_required"]
+    }
+  },
+  "compliance": {
+    "soc2": {
+      "mappings": {
+        "CC6.1": ["users:read", "users:write"],
+        "CC6.2": ["system:admin"],
+        "CC6.3": ["*:*"],
+        "CC6.6": ["users:delete"],
+        "CC6.7": ["api:*"]
+      }
+    },
+    "gdpr": {
+      "data_subject_rights": {
+        "access": ["users:read"],
+        "rectification": ["users:write"],
+        "erasure": ["users:delete"],
+        "portability": ["users:read"],
+        "restriction": ["users:write"]
+      }
+    },
+    "iso27001": {
+      "controls": {
+        "A.9.1.1": ["users:*"],
+        "A.9.1.2": ["system:admin"],
+        "A.9.2.1": ["users:write"],
+        "A.9.2.2": ["system:write"],
+        "A.9.2.3": ["users:delete"]
+      }
+    }
+  },
+  "enforcement": {
+    "mode": "strict",
+    "fallback": "deny",
+    "cache": {
+      "enabled": true,
+      "ttl": 300
+    },
+    "monitoring": {
+      "enabled": true,
+      "alert_on_violations": true,
+      "log_all_decisions": true
+    }
+  }
+}
+
