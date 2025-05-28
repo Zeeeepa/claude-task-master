@@ -1,331 +1,292 @@
 /**
- * @fileoverview Database Migration Runner
- * @description Handles database schema migrations with version tracking
+ * @fileoverview Enhanced Migration Runner
+ * @description Production-ready database migration runner with enhanced CI/CD schema support
  */
 
-import fs from 'fs/promises';
+import fs from 'fs';
 import path from 'path';
-import crypto from 'crypto';
 import { fileURLToPath } from 'url';
-import { getConnection } from '../connection.js';
-import { log } from '../../../../scripts/modules/utils.js';
+import { getConnection, initializeDatabase } from '../connection.js';
+import { log } from '../../../scripts/modules/utils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * Database Migration Runner
+ * Enhanced Migration Runner for CI/CD schema
  */
 export class MigrationRunner {
-    constructor(connection = null) {
-        this.connection = connection || getConnection();
+    constructor() {
         this.migrationsDir = __dirname;
-        this.migrationsTable = 'schema_migrations';
+        this.db = null;
     }
 
     /**
-     * Run all pending migrations
-     * @returns {Promise<Array>} Applied migrations
+     * Initialize the migration runner
      */
-    async runMigrations() {
-        if (!this.connection.isConnected) {
-            throw new Error('Database connection not initialized');
-        }
-
-        log('info', 'Starting database migrations...');
-
-        // Ensure migrations table exists
-        await this._ensureMigrationsTable();
-
-        // Get all migration files
-        const migrationFiles = await this._getMigrationFiles();
-        
-        // Get applied migrations
-        const appliedMigrations = await this._getAppliedMigrations();
-        
-        // Filter pending migrations
-        const pendingMigrations = migrationFiles.filter(file => 
-            !appliedMigrations.includes(file.version)
-        );
-
-        if (pendingMigrations.length === 0) {
-            log('info', 'No pending migrations found');
-            return [];
-        }
-
-        log('info', `Found ${pendingMigrations.length} pending migrations`);
-
-        const appliedMigrationsList = [];
-
-        // Apply each pending migration
-        for (const migration of pendingMigrations) {
-            try {
-                await this._applyMigration(migration);
-                appliedMigrationsList.push(migration);
-                log('info', `Applied migration: ${migration.version} - ${migration.description}`);
-            } catch (error) {
-                log('error', `Failed to apply migration ${migration.version}: ${error.message}`);
-                throw error;
-            }
-        }
-
-        log('info', `Successfully applied ${appliedMigrationsList.length} migrations`);
-        return appliedMigrationsList;
-    }
-
-    /**
-     * Rollback the last migration
-     * @returns {Promise<Object>} Rolled back migration
-     */
-    async rollbackLastMigration() {
-        log('warn', 'Migration rollback requested');
-        
-        const appliedMigrations = await this._getAppliedMigrations();
-        if (appliedMigrations.length === 0) {
-            throw new Error('No migrations to rollback');
-        }
-
-        const lastMigration = appliedMigrations[appliedMigrations.length - 1];
-        
-        // Check if rollback script exists
-        const rollbackFile = path.join(this.migrationsDir, `${lastMigration}_rollback.sql`);
-        
+    async initialize() {
         try {
-            await fs.access(rollbackFile);
+            this.db = await initializeDatabase();
+            log('info', 'Migration runner initialized successfully');
         } catch (error) {
-            throw new Error(`Rollback script not found for migration ${lastMigration}`);
+            log('error', `Failed to initialize migration runner: ${error.message}`);
+            throw error;
         }
-
-        // Execute rollback
-        const rollbackSql = await fs.readFile(rollbackFile, 'utf8');
-        
-        await this.connection.transaction(async (client) => {
-            // Execute rollback SQL
-            await client.query(rollbackSql);
-            
-            // Remove migration record
-            await client.query(
-                `DELETE FROM ${this.migrationsTable} WHERE version = $1`,
-                [lastMigration]
-            );
-        });
-
-        log('warn', `Rolled back migration: ${lastMigration}`);
-        return { version: lastMigration };
-    }
-
-    /**
-     * Get migration status
-     * @returns {Promise<Object>} Migration status
-     */
-    async getMigrationStatus() {
-        const migrationFiles = await this._getMigrationFiles();
-        const appliedMigrations = await this._getAppliedMigrations();
-        
-        const status = migrationFiles.map(file => ({
-            version: file.version,
-            description: file.description,
-            applied: appliedMigrations.includes(file.version),
-            file: file.filename
-        }));
-
-        const pendingCount = status.filter(s => !s.applied).length;
-        const appliedCount = status.filter(s => s.applied).length;
-
-        return {
-            total: status.length,
-            applied: appliedCount,
-            pending: pendingCount,
-            migrations: status
-        };
-    }
-
-    /**
-     * Validate all migrations
-     * @returns {Promise<Object>} Validation result
-     */
-    async validateMigrations() {
-        const migrationFiles = await this._getMigrationFiles();
-        const errors = [];
-        const warnings = [];
-
-        // Check for duplicate versions
-        const versions = migrationFiles.map(f => f.version);
-        const duplicates = versions.filter((v, i) => versions.indexOf(v) !== i);
-        if (duplicates.length > 0) {
-            errors.push(`Duplicate migration versions found: ${duplicates.join(', ')}`);
-        }
-
-        // Check for missing files
-        for (const migration of migrationFiles) {
-            try {
-                await fs.access(migration.filepath);
-            } catch (error) {
-                errors.push(`Migration file not found: ${migration.filename}`);
-            }
-        }
-
-        // Check for syntax errors (basic validation)
-        for (const migration of migrationFiles) {
-            try {
-                const content = await fs.readFile(migration.filepath, 'utf8');
-                if (!content.trim()) {
-                    warnings.push(`Migration file is empty: ${migration.filename}`);
-                }
-                
-                // Check for common SQL syntax issues
-                if (!content.toLowerCase().includes('create') && 
-                    !content.toLowerCase().includes('alter') &&
-                    !content.toLowerCase().includes('insert')) {
-                    warnings.push(`Migration may not contain any DDL statements: ${migration.filename}`);
-                }
-            } catch (error) {
-                errors.push(`Cannot read migration file: ${migration.filename}`);
-            }
-        }
-
-        return {
-            valid: errors.length === 0,
-            errors,
-            warnings
-        };
-    }
-
-    /**
-     * Ensure migrations table exists
-     * @private
-     */
-    async _ensureMigrationsTable() {
-        const createTableSql = `
-            CREATE TABLE IF NOT EXISTS ${this.migrationsTable} (
-                version VARCHAR(50) PRIMARY KEY,
-                description TEXT,
-                applied_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                checksum VARCHAR(64)
-            )
-        `;
-        
-        await this.connection.query(createTableSql);
     }
 
     /**
      * Get all migration files
-     * @private
+     * @returns {Array} Array of migration files
      */
-    async _getMigrationFiles() {
-        const files = await fs.readdir(this.migrationsDir);
-        const migrationFiles = files
-            .filter(file => file.endsWith('.sql') && !file.endsWith('_rollback.sql'))
-            .filter(file => file !== 'runner.js')
-            .map(file => {
-                const version = file.split('_')[0];
-                const description = file
-                    .replace(/^\d+_/, '')
-                    .replace(/\.sql$/, '')
-                    .replace(/_/g, ' ');
-                
-                return {
-                    version,
-                    description,
-                    filename: file,
-                    filepath: path.join(this.migrationsDir, file)
-                };
-            })
-            .sort((a, b) => a.version.localeCompare(b.version));
-
-        return migrationFiles;
+    getMigrationFiles() {
+        const files = fs.readdirSync(this.migrationsDir)
+            .filter(file => file.endsWith('.sql') && file.match(/^\d{3}_/))
+            .sort();
+        
+        return files.map(file => ({
+            version: file.substring(0, 3),
+            filename: file,
+            path: path.join(this.migrationsDir, file)
+        }));
     }
 
     /**
-     * Get applied migrations
-     * @private
+     * Get applied migrations from database
+     * @returns {Array} Array of applied migration versions
      */
-    async _getAppliedMigrations() {
+    async getAppliedMigrations() {
         try {
-            const result = await this.connection.query(
-                `SELECT version FROM ${this.migrationsTable} ORDER BY version`
+            const result = await this.db.query(
+                'SELECT version FROM schema_migrations ORDER BY version'
             );
             return result.rows.map(row => row.version);
         } catch (error) {
-            // Table might not exist yet
-            return [];
+            // If table doesn't exist, no migrations have been applied
+            if (error.code === '42P01') {
+                return [];
+            }
+            throw error;
         }
     }
 
     /**
-     * Apply a single migration
-     * @private
+     * Run a single migration
+     * @param {Object} migration - Migration object
      */
-    async _applyMigration(migration) {
-        const sql = await fs.readFile(migration.filepath, 'utf8');
-        const checksum = crypto.createHash('sha256').update(sql).digest('hex');
-
-        await this.connection.transaction(async (client) => {
-            // Execute migration SQL
-            await client.query(sql);
+    async runMigration(migration) {
+        log('info', `Running migration ${migration.version}: ${migration.filename}`);
+        
+        try {
+            const sql = fs.readFileSync(migration.path, 'utf8');
             
-            // Record migration
-            await client.query(
-                `INSERT INTO ${this.migrationsTable} (version, description, checksum) 
-                 VALUES ($1, $2, $3)`,
-                [migration.version, migration.description, checksum]
-            );
-        });
+            // Execute migration in a transaction
+            await this.db.transaction(async (client) => {
+                await client.query(sql);
+                log('info', `Migration ${migration.version} completed successfully`);
+            });
+            
+        } catch (error) {
+            log('error', `Migration ${migration.version} failed: ${error.message}`);
+            throw error;
+        }
     }
 
     /**
-     * Create a new migration file
-     * @param {string} description - Migration description
-     * @returns {Promise<string>} Created file path
+     * Run all pending migrations
      */
-    async createMigration(description) {
-        const timestamp = new Date().toISOString().replace(/[-:T]/g, '').split('.')[0];
-        const version = timestamp.substring(0, 14); // YYYYMMDDHHMMSS
-        const filename = `${version}_${description.toLowerCase().replace(/\s+/g, '_')}.sql`;
-        const filepath = path.join(this.migrationsDir, filename);
-
-        const template = `-- Migration: ${filename}
--- Description: ${description}
--- Created: ${new Date().toISOString().split('T')[0]}
--- Version: ${version}
-
--- Add your migration SQL here
-
--- Example:
--- CREATE TABLE example (
---     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
---     name VARCHAR(255) NOT NULL,
---     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
--- );
-
--- Don't forget to add appropriate indexes and constraints
-`;
-
-        await fs.writeFile(filepath, template);
-        log('info', `Created migration file: ${filename}`);
+    async runPendingMigrations() {
+        const allMigrations = this.getMigrationFiles();
+        const appliedMigrations = await this.getAppliedMigrations();
         
-        return filepath;
+        const pendingMigrations = allMigrations.filter(
+            migration => !appliedMigrations.includes(migration.version)
+        );
+        
+        if (pendingMigrations.length === 0) {
+            log('info', 'No pending migrations to run');
+            return;
+        }
+        
+        log('info', `Found ${pendingMigrations.length} pending migrations`);
+        
+        for (const migration of pendingMigrations) {
+            await this.runMigration(migration);
+        }
+        
+        log('info', 'All pending migrations completed successfully');
+    }
+
+    /**
+     * Validate database schema
+     */
+    async validateSchema() {
+        log('info', 'Validating database schema...');
+        
+        const requiredTables = [
+            'tasks',
+            'task_contexts', 
+            'workflow_states',
+            'audit_logs',
+            'task_dependencies',
+            'performance_metrics',
+            'schema_migrations',
+            'deployments',
+            'validation_results',
+            'prompt_templates',
+            'deployment_scripts',
+            'system_logs'
+        ];
+        
+        const requiredViews = [
+            'active_tasks',
+            'task_summary',
+            'recent_activity',
+            'active_deployments',
+            'deployment_summary',
+            'system_health',
+            'task_deployment_status'
+        ];
+        
+        const requiredFunctions = [
+            'update_updated_at_column',
+            'audit_trigger_function',
+            'update_deployment_status',
+            'log_system_event'
+        ];
+        
+        // Check tables
+        for (const table of requiredTables) {
+            const result = await this.db.query(
+                `SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_schema = 'public' 
+                    AND table_name = $1
+                )`,
+                [table]
+            );
+            
+            if (!result.rows[0].exists) {
+                throw new Error(`Required table '${table}' is missing`);
+            }
+        }
+        
+        // Check views
+        for (const view of requiredViews) {
+            const result = await this.db.query(
+                `SELECT EXISTS (
+                    SELECT FROM information_schema.views 
+                    WHERE table_schema = 'public' 
+                    AND table_name = $1
+                )`,
+                [view]
+            );
+            
+            if (!result.rows[0].exists) {
+                throw new Error(`Required view '${view}' is missing`);
+            }
+        }
+        
+        // Check functions
+        for (const func of requiredFunctions) {
+            const result = await this.db.query(
+                `SELECT EXISTS (
+                    SELECT FROM information_schema.routines 
+                    WHERE routine_schema = 'public' 
+                    AND routine_name = $1
+                )`,
+                [func]
+            );
+            
+            if (!result.rows[0].exists) {
+                throw new Error(`Required function '${func}' is missing`);
+            }
+        }
+        
+        log('info', 'Database schema validation completed successfully');
+    }
+
+    /**
+     * Get migration status
+     */
+    async getStatus() {
+        const allMigrations = this.getMigrationFiles();
+        const appliedMigrations = await this.getAppliedMigrations();
+        
+        const status = {
+            total: allMigrations.length,
+            applied: appliedMigrations.length,
+            pending: allMigrations.length - appliedMigrations.length,
+            migrations: allMigrations.map(migration => ({
+                ...migration,
+                applied: appliedMigrations.includes(migration.version)
+            }))
+        };
+        
+        return status;
+    }
+
+    /**
+     * Shutdown the migration runner
+     */
+    async shutdown() {
+        if (this.db) {
+            await this.db.shutdown();
+            log('info', 'Migration runner shutdown completed');
+        }
     }
 }
 
 /**
- * Run migrations from command line
+ * CLI interface for migration runner
  */
-export async function runMigrationsFromCLI() {
+async function runCLI() {
+    const command = process.argv[2] || 'migrate';
+    const runner = new MigrationRunner();
+    
     try {
-        const connection = getConnection();
-        await connection.initialize();
+        await runner.initialize();
         
-        const runner = new MigrationRunner(connection);
-        await runner.runMigrations();
+        switch (command) {
+            case 'migrate':
+                await runner.runPendingMigrations();
+                await runner.validateSchema();
+                break;
+                
+            case 'status':
+                const status = await runner.getStatus();
+                console.log('Migration Status:');
+                console.log(`Total: ${status.total}`);
+                console.log(`Applied: ${status.applied}`);
+                console.log(`Pending: ${status.pending}`);
+                console.log('\nMigrations:');
+                status.migrations.forEach(migration => {
+                    const status = migration.applied ? '✓' : '✗';
+                    console.log(`  ${status} ${migration.version} - ${migration.filename}`);
+                });
+                break;
+                
+            case 'validate':
+                await runner.validateSchema();
+                console.log('Schema validation passed');
+                break;
+                
+            default:
+                console.log('Usage: node runner.js [migrate|status|validate]');
+                process.exit(1);
+        }
         
-        await connection.shutdown();
-        process.exit(0);
     } catch (error) {
         log('error', `Migration failed: ${error.message}`);
+        console.error('Migration failed:', error.message);
         process.exit(1);
+    } finally {
+        await runner.shutdown();
     }
 }
 
-export default MigrationRunner;
+// Run CLI if this file is executed directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+    runCLI();
+}
 
+export default MigrationRunner;

@@ -1,0 +1,131 @@
+# Cloudflare Tunnel Configuration for PostgreSQL Database Access
+# This configuration exposes the PostgreSQL database securely through Cloudflare tunnels
+# for external service access, particularly for Codegen integration
+
+tunnel: codegen-taskmaster-db-tunnel
+credentials-file: /etc/cloudflared/credentials.json
+
+# Ingress rules for database access
+ingress:
+  # PostgreSQL database access
+  - hostname: db.codegen-taskmaster.your-domain.com
+    service: tcp://localhost:5432
+    originRequest:
+      # Enable TCP proxy for PostgreSQL
+      tcpKeepAlive: 30s
+      connectTimeout: 30s
+      tlsTimeout: 30s
+      # Disable HTTP/2 for TCP connections
+      http2Origin: false
+      # Enable connection pooling
+      keepAliveConnections: 100
+      keepAliveTimeout: 90s
+
+  # Health check endpoint
+  - hostname: health.codegen-taskmaster.your-domain.com
+    service: http://localhost:3000/health
+    originRequest:
+      connectTimeout: 10s
+      tlsTimeout: 10s
+      httpHostHeader: localhost
+
+  # API access for system monitoring
+  - hostname: api.codegen-taskmaster.your-domain.com
+    service: http://localhost:3000
+    originRequest:
+      connectTimeout: 30s
+      tlsTimeout: 30s
+      httpHostHeader: localhost
+      # Enable compression
+      compression: gzip
+
+  # Catch-all rule (required)
+  - service: http_status:404
+
+# Logging configuration
+logLevel: info
+logFile: /var/log/cloudflared/tunnel.log
+
+# Metrics and monitoring
+metrics: 0.0.0.0:8080
+
+# Connection settings
+retries: 3
+grace-period: 30s
+
+# TLS settings for secure connections
+originServerName: localhost
+
+# Protocol settings
+protocol: auto
+
+# Edge locations (optional - Cloudflare will auto-select optimal locations)
+# edge-ip-version: auto
+
+# Additional security headers for HTTP services
+httpHostHeader: localhost
+
+# Connection pool settings
+connectionPoolSize: 4
+
+# Heartbeat settings
+heartbeatInterval: 5s
+heartbeatCount: 5
+
+# Proxy settings for database connections
+proxyConnectTimeout: 30s
+proxyTLSTimeout: 30s
+
+# Buffer settings for high-throughput database operations
+bufferSize: 512kb
+
+# Compression settings
+compression: gzip
+
+# Keep-alive settings for persistent connections
+keepAliveConnections: 100
+keepAliveTimeout: 90s
+
+# DNS settings
+dnsResolverIPs:
+  - 1.1.1.1
+  - 1.0.0.1
+
+# Regional settings (optional)
+# region: auto
+
+# Load balancing settings
+loadBalancer:
+  pool: default
+  sessionAffinity: none
+
+# Security settings
+security:
+  # Enable DDoS protection
+  ddosProtection: true
+  # Rate limiting
+  rateLimit:
+    threshold: 1000
+    period: 60s
+  # IP allowlist (optional - configure based on your needs)
+  # allowedIPs:
+  #   - 192.168.1.0/24
+  #   - 10.0.0.0/8
+
+# Monitoring and alerting
+monitoring:
+  enabled: true
+  healthCheck:
+    interval: 30s
+    timeout: 10s
+    path: /health
+  metrics:
+    enabled: true
+    port: 8080
+    path: /metrics
+
+# Backup tunnel configuration (optional)
+# backup:
+#   tunnel: codegen-taskmaster-db-tunnel-backup
+#   credentials-file: /etc/cloudflared/backup-credentials.json
+
