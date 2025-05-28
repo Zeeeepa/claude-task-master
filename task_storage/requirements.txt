@@ -1,0 +1,36 @@
+# PostgreSQL Task Storage and Context Engine Requirements
+
+# Core database dependencies
+asyncpg>=0.29.0          # Async PostgreSQL driver
+psycopg2-binary>=2.9.9   # PostgreSQL adapter (for sync operations)
+
+# Data validation and serialization
+pydantic>=2.5.0          # Data validation and settings management
+dataclasses-json>=0.6.3  # JSON serialization for dataclasses
+
+# Async support
+asyncio-mqtt>=0.16.0     # Async MQTT client (for event streaming)
+aiofiles>=23.2.1         # Async file operations
+
+# Logging and monitoring
+structlog>=23.2.0        # Structured logging
+prometheus-client>=0.19.0 # Metrics collection
+
+# Testing dependencies
+pytest>=7.4.0            # Testing framework
+pytest-asyncio>=0.23.0   # Async testing support
+pytest-cov>=4.1.0        # Coverage reporting
+factory-boy>=3.3.0       # Test data generation
+
+# Development dependencies
+black>=23.12.0           # Code formatting
+isort>=5.13.0            # Import sorting
+mypy>=1.8.0              # Type checking
+flake8>=7.0.0            # Linting
+
+# Optional dependencies for enhanced features
+redis>=5.0.0             # Caching and session storage
+celery>=5.3.0            # Task queue for background processing
+sqlalchemy>=2.0.0        # ORM support (optional)
+alembic>=1.13.0          # Database migrations (optional)
+
