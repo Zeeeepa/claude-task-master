@@ -1,0 +1,791 @@
+openapi: 3.0.3
+info:
+  title: Claude Task Master API Gateway
+  description: |
+    Foundational API Gateway with comprehensive authentication and authorization.
+    This gateway serves as the central entry point for all API requests in the
+    Claude Task Master system, providing JWT-based authentication, RBAC, rate limiting,
+    and request routing capabilities.
+  version: 1.0.0
+  contact:
+    name: Claude Task Master Team
+    url: https://github.com/Zeeeepa/claude-task-master
+  license:
+    name: MIT WITH Commons-Clause
+    url: https://github.com/Zeeeepa/claude-task-master/blob/main/LICENSE
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Development server
+  - url: https://api.claude-task-master.com/v1
+    description: Production server
+
+security:
+  - BearerAuth: []
+  - ApiKeyAuth: []
+  - ServiceTokenAuth: []
+
+paths:
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Authenticate user with credentials
+      description: Authenticate a user and return JWT tokens
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginCredentials'
+            examples:
+              password_login:
+                summary: Password-based login
+                value:
+                  type: "password"
+                  email: "user@example.com"
+                  password: "securepassword123"
+              api_key_login:
+                summary: API key login
+                value:
+                  type: "api_key"
+                  api_key: "ak_1234567890abcdef"
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResult'
+        '401':
+          description: Authentication failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh access token
+      description: Exchange a refresh token for a new access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refresh_token
+              properties:
+                refresh_token:
+                  type: string
+                  description: Valid refresh token
+      responses:
+        '200':
+          description: Token refresh successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+        '401':
+          description: Invalid refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Revoke authentication tokens
+      description: Revoke the current access and refresh tokens
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Successfully logged out"
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/validate:
+    get:
+      tags:
+        - Authentication
+      summary: Validate current token
+      description: Validate the current authentication token and return user info
+      responses:
+        '200':
+          description: Token is valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenValidation'
+        '401':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/permissions:
+    get:
+      tags:
+        - Authorization
+      summary: Get user permissions
+      description: Retrieve the current user's permissions and roles
+      responses:
+        '200':
+          description: Permissions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user_id:
+                    type: string
+                  roles:
+                    type: array
+                    items:
+                      type: string
+                  permissions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Permission'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /gateway/routes:
+    get:
+      tags:
+        - Gateway Management
+      summary: List registered routes
+      description: Get all registered API routes and their configurations
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: service
+          in: query
+          description: Filter routes by service name
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Routes retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  routes:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RouteDefinition'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags:
+        - Gateway Management
+      summary: Register new route
+      description: Register a new API route with the gateway
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RouteDefinition'
+      responses:
+        '201':
+          description: Route registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Route registered successfully"
+                  route_id:
+                    type: string
+        '400':
+          description: Invalid route definition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /gateway/health:
+    get:
+      tags:
+        - Gateway Management
+      summary: Gateway health check
+      description: Check the health status of the API gateway
+      security: []
+      responses:
+        '200':
+          description: Gateway is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  timestamp:
+                    type: string
+                    format: date-time
+                  version:
+                    type: string
+                  uptime:
+                    type: number
+                    description: Uptime in seconds
+                  services:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      properties:
+                        status:
+                          type: string
+                          enum: [healthy, degraded, unhealthy]
+                        response_time:
+                          type: number
+                          description: Response time in milliseconds
+
+  /proxy/{service}/{path}:
+    get:
+      tags:
+        - Proxy
+      summary: Proxy GET request
+      description: Proxy a GET request to a backend service
+      parameters:
+        - name: service
+          in: path
+          required: true
+          description: Target service name
+          schema:
+            type: string
+        - name: path
+          in: path
+          required: true
+          description: Service-specific path
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Request proxied successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Service or endpoint not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: Bad gateway - service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    post:
+      tags:
+        - Proxy
+      summary: Proxy POST request
+      description: Proxy a POST request to a backend service
+      parameters:
+        - name: service
+          in: path
+          required: true
+          description: Target service name
+          schema:
+            type: string
+        - name: path
+          in: path
+          required: true
+          description: Service-specific path
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+          multipart/form-data:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Request proxied successfully
+        '201':
+          description: Resource created successfully
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Service or endpoint not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '502':
+          description: Bad gateway - service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token for user authentication
+    
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for service authentication
+    
+    ServiceTokenAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Service-to-service JWT token for AI agents
+
+  schemas:
+    LoginCredentials:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          enum: [password, api_key, oauth, service_token]
+          description: Type of authentication credentials
+        email:
+          type: string
+          format: email
+          description: User email (required for password auth)
+        password:
+          type: string
+          format: password
+          description: User password (required for password auth)
+        api_key:
+          type: string
+          description: API key (required for api_key auth)
+        oauth_token:
+          type: string
+          description: OAuth token (required for oauth auth)
+        service_token:
+          type: string
+          description: Service token (required for service_token auth)
+        service_id:
+          type: string
+          description: Service identifier (required for service_token auth)
+
+    AuthResult:
+      type: object
+      required:
+        - success
+        - user_id
+        - access_token
+        - refresh_token
+        - expires_in
+      properties:
+        success:
+          type: boolean
+          example: true
+        user_id:
+          type: string
+          description: Unique user identifier
+        access_token:
+          type: string
+          description: JWT access token
+        refresh_token:
+          type: string
+          description: JWT refresh token
+        expires_in:
+          type: integer
+          description: Access token expiration time in seconds
+        token_type:
+          type: string
+          example: "Bearer"
+        user_info:
+          $ref: '#/components/schemas/UserInfo'
+
+    TokenPair:
+      type: object
+      required:
+        - access_token
+        - refresh_token
+        - expires_in
+      properties:
+        access_token:
+          type: string
+          description: New JWT access token
+        refresh_token:
+          type: string
+          description: New JWT refresh token
+        expires_in:
+          type: integer
+          description: Access token expiration time in seconds
+        token_type:
+          type: string
+          example: "Bearer"
+
+    TokenValidation:
+      type: object
+      required:
+        - valid
+        - user_id
+        - expires_at
+      properties:
+        valid:
+          type: boolean
+          description: Whether the token is valid
+        user_id:
+          type: string
+          description: User ID from the token
+        expires_at:
+          type: string
+          format: date-time
+          description: Token expiration timestamp
+        roles:
+          type: array
+          items:
+            type: string
+          description: User roles
+        permissions:
+          type: array
+          items:
+            type: string
+          description: User permissions
+        token_type:
+          type: string
+          enum: [access, refresh, service]
+          description: Type of token
+
+    UserInfo:
+      type: object
+      properties:
+        user_id:
+          type: string
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        roles:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        last_login:
+          type: string
+          format: date-time
+
+    Permission:
+      type: object
+      required:
+        - resource
+        - action
+        - granted
+      properties:
+        resource:
+          type: string
+          description: Resource identifier (e.g., 'tasks', 'users', 'gateway')
+        action:
+          type: string
+          description: Action identifier (e.g., 'read', 'write', 'delete', 'admin')
+        granted:
+          type: boolean
+          description: Whether permission is granted
+        conditions:
+          type: object
+          description: Optional conditions for the permission
+          additionalProperties: true
+
+    RouteDefinition:
+      type: object
+      required:
+        - path
+        - method
+        - service
+        - target_url
+      properties:
+        path:
+          type: string
+          description: API path pattern (e.g., '/tasks/{id}')
+        method:
+          type: string
+          enum: [GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD]
+          description: HTTP method
+        service:
+          type: string
+          description: Target service name
+        target_url:
+          type: string
+          format: uri
+          description: Backend service URL
+        permissions:
+          type: array
+          items:
+            type: string
+          description: Required permissions to access this route
+        rate_limit:
+          $ref: '#/components/schemas/RateLimit'
+        timeout:
+          type: integer
+          description: Request timeout in milliseconds
+          default: 30000
+        retry_policy:
+          $ref: '#/components/schemas/RetryPolicy'
+        circuit_breaker:
+          $ref: '#/components/schemas/CircuitBreakerConfig'
+
+    RateLimit:
+      type: object
+      properties:
+        requests_per_minute:
+          type: integer
+          description: Maximum requests per minute
+          default: 60
+        requests_per_hour:
+          type: integer
+          description: Maximum requests per hour
+          default: 1000
+        burst_limit:
+          type: integer
+          description: Maximum burst requests
+          default: 10
+
+    RetryPolicy:
+      type: object
+      properties:
+        max_retries:
+          type: integer
+          description: Maximum number of retries
+          default: 3
+        backoff_strategy:
+          type: string
+          enum: [linear, exponential, fixed]
+          default: exponential
+        initial_delay:
+          type: integer
+          description: Initial delay in milliseconds
+          default: 1000
+        max_delay:
+          type: integer
+          description: Maximum delay in milliseconds
+          default: 30000
+
+    CircuitBreakerConfig:
+      type: object
+      properties:
+        failure_threshold:
+          type: integer
+          description: Number of failures before opening circuit
+          default: 5
+        recovery_timeout:
+          type: integer
+          description: Time to wait before attempting recovery (ms)
+          default: 60000
+        success_threshold:
+          type: integer
+          description: Number of successes needed to close circuit
+          default: 3
+
+    APIRequest:
+      type: object
+      required:
+        - method
+        - path
+        - headers
+      properties:
+        method:
+          type: string
+          enum: [GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD]
+        path:
+          type: string
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+        query:
+          type: object
+          additionalProperties:
+            type: string
+        body:
+          type: object
+        user_id:
+          type: string
+          description: Authenticated user ID
+        request_id:
+          type: string
+          description: Unique request identifier
+
+    APIResponse:
+      type: object
+      required:
+        - status_code
+        - headers
+      properties:
+        status_code:
+          type: integer
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+        body:
+          type: object
+        response_time:
+          type: number
+          description: Response time in milliseconds
+        request_id:
+          type: string
+          description: Unique request identifier
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error code
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          description: Additional error details
+          additionalProperties: true
+        request_id:
+          type: string
+          description: Unique request identifier for debugging
+        timestamp:
+          type: string
+          format: date-time
+          description: Error timestamp
+
+    RateLimitResult:
+      type: object
+      required:
+        - allowed
+        - remaining
+        - reset_time
+      properties:
+        allowed:
+          type: boolean
+          description: Whether the request is allowed
+        remaining:
+          type: integer
+          description: Remaining requests in current window
+        reset_time:
+          type: string
+          format: date-time
+          description: When the rate limit window resets
+        retry_after:
+          type: integer
+          description: Seconds to wait before retrying (if not allowed)
+
+tags:
+  - name: Authentication
+    description: User and service authentication endpoints
+  - name: Authorization
+    description: Permission and role management endpoints
+  - name: Gateway Management
+    description: API gateway configuration and monitoring
+  - name: Proxy
+    description: Request proxying to backend services
+
