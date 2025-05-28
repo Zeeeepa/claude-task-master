@@ -3,7 +3,7 @@
  * @description Unified codegen integration with intelligent prompt generation
  */
 
-import { log } from '../../scripts/modules/utils.js';
+import { log } from '../utils/simple_logger.js';
 
 /**
  * Codegen integrator that handles prompt generation and PR creation

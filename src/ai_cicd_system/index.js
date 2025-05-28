@@ -1,7 +1,7 @@
 /**
- * @fileoverview Comprehensive AI-Driven CI/CD Development Flow System
- * @description Unified system integrating requirement analysis, task storage, 
- *              codegen integration, validation, and workflow orchestration
+ * @fileoverview AI-Driven CI/CD Development Flow System
+ * @description Main entry point for the comprehensive AI-CICD system
+ * Merges functionality from PRs 13, 14, 15, 16, and 17
  */
 
 import { SystemConfig } from './config/system_config.js';
@@ -12,7 +12,7 @@ import { ValidationEngine } from './core/validation_engine.js';
 import { WorkflowOrchestrator } from './core/workflow_orchestrator.js';
 import { ContextManager } from './core/context_manager.js';
 import { SystemMonitor } from './monitoring/system_monitor.js';
-import { log } from '../scripts/modules/utils.js';
+import { log } from './utils/simple_logger.js';
 
 /**
  * Main AI-Driven CI/CD System
@@ -407,4 +407,3 @@ export async function processRequirement(requirement, config = {}) {
 }
 
 export default AICICDSystem;
-

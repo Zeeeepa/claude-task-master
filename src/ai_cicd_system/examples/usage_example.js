@@ -6,7 +6,7 @@
  */
 
 import { AICICDSystem, createAICICDSystem, processRequirement } from '../index.js';
-import { log } from '../../scripts/modules/utils.js';
+import { log } from '../utils/simple_logger.js';
 
 /**
  * Example 1: Basic requirement processing

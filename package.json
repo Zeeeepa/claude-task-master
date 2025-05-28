@@ -24,6 +24,10 @@
 		"ai-cicd:basic": "node -e \"import('./src/ai_cicd_system/examples/usage_example.js').then(m => m.basicRequirementProcessing())\"",
 		"ai-cicd:advanced": "node -e \"import('./src/ai_cicd_system/examples/usage_example.js').then(m => m.advancedSystemUsage())\"",
 		"ai-cicd:components": "node -e \"import('./src/ai_cicd_system/examples/usage_example.js').then(m => m.componentLevelUsage())\"",
+		"ai-cicd:test": "node tests/component_analysis.js",
+		"ai-cicd:integration": "node tests/codegen_integration_test.js",
+		"ai-cicd:health": "node -e \"import('./src/ai_cicd_system/utils/health_checker.js').then(m => { const h = new m.EnhancedHealthChecker(); m.registerDefaultHealthChecks(h); h.runAllHealthChecks().then(r => console.log(JSON.stringify(r, null, 2))); })\"",
+		"ai-cicd:robustness": "node tests/robustness_test.js",
 		"prepare": "chmod +x bin/task-master.js mcp-server/server.js",
 		"changeset": "changeset",
 		"release": "changeset publish",
@@ -32,6 +36,8 @@
 		"mcp-server": "node mcp-server/server.js",
 		"format-check": "prettier --check .",
 		"format": "prettier --write .",
+		"lint": "eslint . --ext .js,.jsx,.ts,.tsx --fix || echo 'ESLint not configured'",
+		"security-audit": "npm audit --audit-level=moderate",
 		"workflow-demo": "node src/workflow_orchestrator/demo.js"
 	},
 	"keywords": [

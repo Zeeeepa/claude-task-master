@@ -3,7 +3,7 @@
  * @description Unified context management for AI prompt generation and analytics
  */
 
-import { log } from '../../scripts/modules/utils.js';
+import { log } from '../utils/simple_logger.js';
 
 /**
  * Context manager for comprehensive context preservation and retrieval

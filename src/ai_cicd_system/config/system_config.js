@@ -1,12 +1,13 @@
 /**
  * @fileoverview System Configuration Manager
- * @description Unified configuration for all AI-CICD system components
+ * @description Unified configuration for all AI-CICD system components with enhanced validation
  */
 
-import { log } from '../../scripts/modules/utils.js';
+import { log } from '../utils/simple_logger.js';
+import { defaultConfigValidator } from '../utils/config_validator.js';
 
 /**
- * System configuration with environment-based defaults
+ * System configuration with environment-based defaults and enhanced validation
  */
 export class SystemConfig {
     constructor(userConfig = {}) {
@@ -15,8 +16,8 @@ export class SystemConfig {
         // Merge user config with defaults
         this.config = this._mergeWithDefaults(userConfig);
         
-        // Validate configuration
-        this._validateConfig();
+        // Validate configuration with enhanced validation
+        this._validateConfigurationEnhanced();
     }
 
     /**
@@ -231,48 +232,42 @@ export class SystemConfig {
     }
 
     /**
-     * Validate configuration
+     * Validate configuration with enhanced validation
      * @private
      */
-    _validateConfig() {
-        const errors = [];
-        const warnings = [];
-
-        // Check required environment variables for production
-        if (this.config.mode === 'production') {
-            if (!this.config.database.host || this.config.database.host === 'localhost') {
-                warnings.push('Database host not configured for production');
-            }
-            
-            if (!this.config.codegen.api_key) {
-                warnings.push('Codegen API key not configured - using mock mode');
-            }
-            
-            if (!this.config.validation.api_key) {
-                warnings.push('Claude Code API key not configured - using mock mode');
-            }
-            
-            if (this.config.security.secret_key === 'dev-secret-key') {
-                errors.push('Production secret key not configured');
-            }
+    _validateConfigurationEnhanced() {
+        // Use enhanced configuration validator
+        const validationResult = defaultConfigValidator.validateWithReport(this.config);
+        
+        // Log validation results
+        if (validationResult.errors.length > 0) {
+            validationResult.errors.forEach(error => log('error', `Config error: ${error}`));
         }
-
-        // Validate numeric values
-        if (this.config.database.port < 1 || this.config.database.port > 65535) {
-            errors.push('Invalid database port');
+        
+        if (validationResult.warnings.length > 0) {
+            validationResult.warnings.forEach(warning => log('warn', `Config warning: ${warning}`));
         }
-
-        if (this.config.workflow.max_concurrent_workflows < 1) {
-            errors.push('Max concurrent workflows must be at least 1');
+        
+        if (validationResult.securityIssues.length > 0) {
+            validationResult.securityIssues.forEach(issue => log('warn', `Security issue: ${issue}`));
         }
-
-        // Log warnings
-        warnings.forEach(warning => log('warning', `Config warning: ${warning}`));
-
-        // Throw errors
-        if (errors.length > 0) {
-            throw new Error(`Configuration errors: ${errors.join(', ')}`);
+        
+        // Log configuration score
+        log('info', `Configuration score: ${validationResult.summary.configurationScore}/100`);
+        
+        // Log recommendations
+        const recommendations = validationResult.recommendations;
+        if (recommendations.security.length > 0) {
+            log('info', `Security recommendations: ${recommendations.security.length} items`);
         }
+        
+        // Throw error if configuration is invalid
+        if (!validationResult.valid) {
+            throw new Error(`Configuration validation failed: ${validationResult.errors.join(', ')}`);
+        }
+        
+        // Store validation result for later access
+        this.validationResult = validationResult;
     }
 
     /**
@@ -310,8 +305,17 @@ export class SystemConfig {
                 workflow: this.config.workflow.enable_parallel_execution,
                 context: this.config.context.enable_context_caching,
                 monitoring: this.config.monitoring.enable_metrics
-            }
+            },
+            validation_result: this.validationResult?.summary || null
         };
+    }
+
+    /**
+     * Get detailed validation report
+     * @returns {Object} Detailed validation report
+     */
+    getValidationReport() {
+        return this.validationResult || null;
     }
 
     /**
@@ -352,4 +356,3 @@ export class SystemConfig {
 }
 
 export default SystemConfig;
-

@@ -3,7 +3,7 @@
  * @description Unified workflow orchestration and state management
  */
 
-import { log } from '../../scripts/modules/utils.js';
+import { log } from '../utils/simple_logger.js';
 
 /**
  * Workflow orchestrator that manages complex development workflows
