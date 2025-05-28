@@ -445,7 +445,7 @@ async function setModel(role, modelId, options = {}) {
 		let warningMessage = null;
 
 		// Find the model data in internal list initially to see if it exists at all
-		let modelData = availableModels.find((m) => m.id === modelId);
+		const modelData = availableModels.find((m) => m.id === modelId);
 
 		// --- Revised Logic: Prioritize providerHint --- //
 

@@ -388,7 +388,7 @@ function findTaskById(
 	}
 
 	let taskResult = null;
-	let originalSubtaskCount = null;
+	const originalSubtaskCount = null;
 
 	// Find the main task
 	const id = parseInt(taskId, 10);

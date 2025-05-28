@@ -6,6 +6,7 @@
  */
 
 import { createAICICDSystem } from '../src/ai_cicd_system/index.js';
+import assert from 'assert';
 
 // Provided Codegen credentials
 const CODEGEN_CONFIG = {
@@ -282,8 +283,6 @@ async function testPythonCodegenAgent() {
 		console.log(`Status: ${result.status}`);
 
 		// Automated assertions for result object
-		import assert from 'assert';
-
 		// Assert that the result status is 'completed'
 		assert.strictEqual(
 			result.status,
