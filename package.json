@@ -21,6 +21,8 @@
 		"release": "changeset publish",
 		"inspector": "npx @modelcontextprotocol/inspector node mcp-server/server.js",
 		"mcp-server": "node mcp-server/server.js",
+		"webhook-server": "node webhooks/server.js",
+		"webhook-dev": "NODE_ENV=development node webhooks/server.js",
 		"format-check": "prettier --check .",
 		"format": "prettier --write ."
 	},
