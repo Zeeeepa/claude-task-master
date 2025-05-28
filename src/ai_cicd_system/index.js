@@ -13,6 +13,7 @@ import { WorkflowOrchestrator } from './core/workflow_orchestrator.js';
 import { ContextManager } from './core/context_manager.js';
 import { SystemMonitor } from './monitoring/system_monitor.js';
 import { log } from '../scripts/modules/utils.js';
+import { ErrorHandlingSystem } from './error_handling/index.js';
 
 /**
  * Main AI-Driven CI/CD System
@@ -24,7 +25,17 @@ export class AICICDSystem {
         this.components = new Map();
         this.isInitialized = false;
         this.activeWorkflows = new Map();
-        
+        this.errorHandler = new ErrorHandlingSystem({
+            enableAnalytics: config.enableErrorAnalytics !== false,
+            enablePatternRecognition: config.enablePatternRecognition !== false,
+            enableAutomatedFixes: config.enableAutomatedFixes !== false,
+            enableEscalation: config.enableEscalation !== false,
+            codegenClient: this.codegenIntegrator,
+            linearClient: config.linearClient,
+            alertingClient: config.alertingClient,
+            ...config.errorHandling
+        });
+
         // Initialize core components
         this._initializeComponents();
     }
@@ -163,54 +174,81 @@ export class AICICDSystem {
         } catch (error) {
             log('error', `Workflow ${workflowId} failed: ${error.message}`);
             
-            // Update workflow with error state
-            const errorResult = {
-                workflow_id: workflowId,
-                status: 'failed',
-                error: error.message,
-                failed_at: new Date()
-            };
+            // Handle errors through the error handling system
+            const errorResult = await this.errorHandler.handleError(error, {
+                operation: 'processRequirement',
+                requirement: requirement.id,
+                environment: this.config.environment || 'unknown'
+            });
 
-            this.activeWorkflows.delete(workflowId);
-            throw errorResult;
+            if (errorResult.success) {
+                // If error was resolved, retry the operation
+                return await this.processRequirement(requirement);
+            } else {
+                // If error couldn't be resolved, throw with additional context
+                throw new Error(`Requirement processing failed: ${error.message}. Error handling result: ${JSON.stringify(errorResult)}`);
+            }
         }
     }
 
     /**
-     * Get system health and status
-     * @returns {Promise<SystemHealth>} System health information
+     * Get system status and health information
+     * @returns {Object} System status
      */
-    async getSystemHealth() {
-        if (!this.isInitialized) {
-            return { status: 'not_initialized', components: {} };
+    getSystemStatus() {
+        const componentStatus = {};
+        
+        for (const [name, component] of this.components.entries()) {
+            componentStatus[name] = {
+                initialized: !!component,
+                healthy: this._checkComponentHealth(component)
+            };
         }
 
-        const health = {
-            status: 'healthy',
-            components: {},
-            active_workflows: this.activeWorkflows.size,
-            system_uptime: Date.now() - this.config.startTime,
-            last_check: new Date()
+        // Add error handling statistics
+        const errorStats = this.errorHandler.getStatistics();
+        
+        return {
+            system: {
+                initialized: this.isInitialized,
+                uptime: Date.now() - this.startTime,
+                activeWorkflows: this.activeWorkflows.size,
+                health: this._calculateSystemHealth(errorStats)
+            },
+            components: componentStatus,
+            errorHandling: {
+                totalErrors: errorStats.system.totalErrors,
+                resolvedErrors: errorStats.system.resolvedErrors,
+                resolutionRate: errorStats.system.resolutionRate,
+                escalatedErrors: errorStats.system.escalatedErrors,
+                automatedFixes: errorStats.system.automatedFixes,
+                uptime: errorStats.system.uptime
+            },
+            database: this.database ? {
+                connected: true,
+                pool_size: this.database.pool?.totalCount || 0,
+                active_connections: this.database.pool?.idleCount || 0
+            } : { connected: false }
         };
+    }
 
-        // Check each component health
-        for (const [name, component] of this.components) {
-            try {
-                if (component.getHealth) {
-                    health.components[name] = await component.getHealth();
-                } else {
-                    health.components[name] = { status: 'unknown' };
-                }
-            } catch (error) {
-                health.components[name] = { 
-                    status: 'error', 
-                    error: error.message 
-                };
-                health.status = 'degraded';
-            }
+    /**
+     * Calculate overall system health
+     * @param {Object} errorStats - Error statistics
+     * @returns {string} Health status
+     * @private
+     */
+    _calculateSystemHealth(errorStats) {
+        const resolutionRate = errorStats.system.resolutionRate;
+        const recentErrorRate = errorStats.components.analytics?.realTime?.errorRate || 0;
+        
+        if (resolutionRate >= 0.95 && recentErrorRate < 1) {
+            return 'HEALTHY';
+        } else if (resolutionRate >= 0.8 && recentErrorRate < 5) {
+            return 'DEGRADED';
+        } else {
+            return 'UNHEALTHY';
         }
-
-        return health;
     }
 
     /**
@@ -407,4 +445,3 @@ export async function processRequirement(requirement, config = {}) {
 }
 
 export default AICICDSystem;
-

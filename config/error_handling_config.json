@@ -1,0 +1,154 @@
+{
+  "errorHandling": {
+    "enableAnalytics": true,
+    "enablePatternRecognition": true,
+    "enableAutomatedFixes": true,
+    "enableEscalation": true,
+    "maxRetryAttempts": 3,
+    "escalationThreshold": 3,
+    
+    "classifier": {
+      "enableMLClassification": true,
+      "confidenceThreshold": 0.7,
+      "maxPatternHistory": 1000
+    },
+    
+    "retry": {
+      "maxRetries": 3,
+      "baseDelay": 1000,
+      "maxDelay": 30000,
+      "backoffMultiplier": 2,
+      "jitterEnabled": true,
+      "jitterFactor": 0.1,
+      "enableCircuitBreaker": true,
+      "circuitBreakerThreshold": 5,
+      "circuitBreakerTimeout": 60000,
+      "retryStrategies": ["exponential", "linear", "fixed", "fibonacci", "adaptive"]
+    },
+    
+    "fixGenerator": {
+      "enableLearning": true,
+      "maxFixAttempts": 3,
+      "confidenceThreshold": 0.7,
+      "enableCodegenIntegration": true
+    },
+    
+    "escalation": {
+      "enableAutoEscalation": true,
+      "escalationThresholds": {
+        "errorCount": 5,
+        "timeWindowMs": 300000,
+        "severity": "HIGH",
+        "failureRate": 0.8
+      },
+      "escalationLevels": [
+        "AUTOMATED_RETRY",
+        "AUTOMATED_FIX", 
+        "CODEGEN_ASSISTANCE",
+        "HUMAN_INTERVENTION",
+        "SYSTEM_SHUTDOWN"
+      ]
+    },
+    
+    "analytics": {
+      "retentionPeriod": 2592000000,
+      "aggregationIntervals": ["1h", "1d", "1w"],
+      "enableRealTimeAnalytics": true,
+      "enableTrendAnalysis": true,
+      "enableAnomalyDetection": true
+    },
+    
+    "patternRecognition": {
+      "enableMLPrediction": true,
+      "patternConfidenceThreshold": 0.7,
+      "maxPatternHistory": 10000,
+      "learningRate": 0.01,
+      "enableRealTimeLearning": true
+    }
+  },
+  
+  "integrations": {
+    "codegen": {
+      "enabled": true,
+      "apiUrl": "${CODEGEN_API_URL}",
+      "apiKey": "${CODEGEN_API_KEY}",
+      "orgId": "${CODEGEN_ORG_ID}",
+      "timeout": 30000,
+      "retryAttempts": 3
+    },
+    
+    "linear": {
+      "enabled": true,
+      "apiKey": "${LINEAR_API_KEY}",
+      "teamId": "${LINEAR_TEAM_ID}",
+      "defaultAssignee": "codegen",
+      "priorityMapping": {
+        "LOW": "LOW",
+        "MEDIUM": "MEDIUM", 
+        "HIGH": "HIGH",
+        "CRITICAL": "URGENT"
+      }
+    },
+    
+    "alerting": {
+      "enabled": true,
+      "channels": {
+        "slack": {
+          "enabled": true,
+          "webhookUrl": "${SLACK_WEBHOOK_URL}",
+          "channel": "#alerts",
+          "username": "Error Handler"
+        },
+        "email": {
+          "enabled": false,
+          "smtpHost": "${SMTP_HOST}",
+          "smtpPort": 587,
+          "username": "${SMTP_USERNAME}",
+          "password": "${SMTP_PASSWORD}",
+          "from": "alerts@company.com",
+          "to": ["team@company.com"]
+        }
+      }
+    },
+    
+    "database": {
+      "enabled": true,
+      "connectionString": "${DATABASE_URL}",
+      "poolSize": 10,
+      "timeout": 5000,
+      "retryAttempts": 3
+    }
+  },
+  
+  "monitoring": {
+    "enableMetrics": true,
+    "metricsPort": 9090,
+    "enableHealthCheck": true,
+    "healthCheckPort": 8080,
+    "enableLogging": true,
+    "logLevel": "info",
+    "logFormat": "json"
+  },
+  
+  "security": {
+    "enableEncryption": true,
+    "encryptionKey": "${ENCRYPTION_KEY}",
+    "enableAuditLog": true,
+    "auditLogRetention": 7776000000,
+    "enableRateLimiting": true,
+    "rateLimitWindow": 60000,
+    "rateLimitMax": 100
+  },
+  
+  "performance": {
+    "enableCaching": true,
+    "cacheSize": 1000,
+    "cacheTTL": 300000,
+    "enableCompression": true,
+    "compressionLevel": 6,
+    "enableBatching": true,
+    "batchSize": 100,
+    "batchTimeout": 5000
+  }
+}
+
