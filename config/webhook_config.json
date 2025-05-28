@@ -1,0 +1,199 @@
+{
+  "webhook": {
+    "server": {
+      "port": 3001,
+      "path": "/webhook/github",
+      "maxPayloadSize": "10mb",
+      "enableCors": false
+    },
+    "security": {
+      "github": {
+        "secret": "${GITHUB_WEBHOOK_SECRET}",
+        "algorithm": "sha256",
+        "encoding": "hex"
+      },
+      "validation": {
+        "enablePayloadValidation": true,
+        "maxPayloadSize": 10485760,
+        "allowedEvents": [
+          "pull_request",
+          "push",
+          "check_run",
+          "check_suite",
+          "pull_request_review",
+          "pull_request_review_comment",
+          "status"
+        ],
+        "requiredHeaders": [
+          "X-GitHub-Event",
+          "X-GitHub-Delivery",
+          "X-Hub-Signature-256"
+        ]
+      },
+      "security": {
+        "enableRateLimiting": true,
+        "enableIPWhitelist": false,
+        "allowedIPs": [],
+        "enableUserAgentValidation": true,
+        "allowedUserAgents": [
+          "^GitHub-Hookshot/",
+          "^GitHub-Hookshot-[a-f0-9]+$"
+        ],
+        "enableTimestampValidation": true,
+        "maxTimestampAge": 300000
+      },
+      "rateLimiting": {
+        "windowMs": 900000,
+        "max": 1000,
+        "slowDownThreshold": 100
+      }
+    },
+    "queue": {
+      "redis": {
+        "host": "${REDIS_HOST:-localhost}",
+        "port": "${REDIS_PORT:-6379}",
+        "password": "${REDIS_PASSWORD}",
+        "db": 0
+      },
+      "processing": {
+        "maxRetries": 3,
+        "retryDelay": 1000,
+        "retryBackoffMultiplier": 2,
+        "maxRetryDelay": 30000,
+        "processingTimeout": 300000,
+        "batchSize": 10,
+        "concurrency": 5
+      },
+      "queues": {
+        "default": "webhook:events:default",
+        "deployment": "webhook:events:deployment",
+        "validation": "webhook:events:validation",
+        "workflow": "webhook:events:workflow",
+        "recovery": "webhook:events:recovery",
+        "deadLetter": "webhook:events:dead_letter"
+      }
+    },
+    "correlation": {
+      "redis": {
+        "host": "${REDIS_HOST:-localhost}",
+        "port": "${REDIS_PORT:-6379}",
+        "password": "${REDIS_PASSWORD}",
+        "db": 1,
+        "keyPrefix": "webhook:correlation:"
+      },
+      "correlation": {
+        "eventTTL": 86400,
+        "workflowTTL": 604800,
+        "duplicateWindow": 3600,
+        "maxCorrelationDepth": 10
+      },
+      "tracking": {
+        "enableEventTracking": true,
+        "enableWorkflowTracking": true,
+        "enableMetrics": true
+      }
+    },
+    "processor": {
+      "agentapi": {
+        "baseUrl": "${AGENTAPI_BASE_URL:-http://localhost:8000}",
+        "apiKey": "${AGENTAPI_API_KEY}",
+        "timeout": 300000,
+        "retries": 3
+      },
+      "database": {
+        "connectionString": "${DATABASE_URL}",
+        "schema": "ai_cicd"
+      },
+      "linear": {
+        "apiKey": "${LINEAR_API_KEY}",
+        "baseUrl": "https://api.linear.app/graphql"
+      },
+      "processing": {
+        "maxConcurrentJobs": 10,
+        "jobTimeout": 600000,
+        "enableParallelProcessing": true
+      }
+    },
+    "monitoring": {
+      "enableMetrics": true,
+      "enableTracing": true,
+      "enableSecurityMetrics": true,
+      "logSecurityEvents": true,
+      "metricsInterval": 60000,
+      "healthCheckInterval": 30000
+    }
+  },
+  "environments": {
+    "development": {
+      "webhook": {
+        "server": {
+          "port": 3001
+        },
+        "security": {
+          "validation": {
+            "enablePayloadValidation": false
+          },
+          "security": {
+            "enableIPWhitelist": false,
+            "enableUserAgentValidation": false
+          }
+        },
+        "monitoring": {
+          "logSecurityEvents": false
+        }
+      }
+    },
+    "staging": {
+      "webhook": {
+        "server": {
+          "port": 3001
+        },
+        "security": {
+          "validation": {
+            "enablePayloadValidation": true
+          },
+          "security": {
+            "enableIPWhitelist": false,
+            "enableUserAgentValidation": true
+          }
+        }
+      }
+    },
+    "production": {
+      "webhook": {
+        "server": {
+          "port": 3001
+        },
+        "security": {
+          "validation": {
+            "enablePayloadValidation": true
+          },
+          "security": {
+            "enableRateLimiting": true,
+            "enableIPWhitelist": true,
+            "allowedIPs": [
+              "140.82.112.0/20",
+              "185.199.108.0/22",
+              "192.30.252.0/22",
+              "143.55.64.0/20"
+            ],
+            "enableUserAgentValidation": true,
+            "enableTimestampValidation": true
+          }
+        },
+        "queue": {
+          "processing": {
+            "concurrency": 10,
+            "batchSize": 20
+          }
+        },
+        "monitoring": {
+          "enableMetrics": true,
+          "enableTracing": true,
+          "logSecurityEvents": true
+        }
+      }
+    }
+  }
+}
+
