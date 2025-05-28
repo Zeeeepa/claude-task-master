@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Master - Monitoring Dashboard</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f1419;
+            color: #ffffff;
+            line-height: 1.6;
+        }
+
+        .header {
+            background: #1a1f2e;
+            padding: 1rem 2rem;
+            border-bottom: 1px solid #2d3748;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #4fd1c7;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-healthy { background: #48bb78; }
+        .status-warning { background: #ed8936; }
+        .status-critical { background: #f56565; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: #1a1f2e;
+            border: 1px solid #2d3748;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .card h3 {
+            color: #4fd1c7;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-label {
+            color: #a0aec0;
+            font-size: 0.9rem;
+        }
+
+        .metric-trend {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .trend-up { color: #48bb78; }
+        .trend-down { color: #f56565; }
+        .trend-stable { color: #4fd1c7; }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 1rem;
+        }
+
+        .alerts-section {
+            margin-top: 2rem;
+        }
+
+        .alert-item {
+            background: #2d3748;
+            border-left: 4px solid;
+            padding: 1rem;
+            margin-bottom: 0.5rem;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .alert-critical { border-left-color: #f56565; }
+        .alert-warning { border-left-color: #ed8936; }
+        .alert-info { border-left-color: #4fd1c7; }
+
+        .alert-title {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .alert-time {
+            color: #a0aec0;
+            font-size: 0.8rem;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .control-group label {
+            color: #a0aec0;
+            font-size: 0.9rem;
+        }
+
+        select, button {
+            background: #2d3748;
+            color: #ffffff;
+            border: 1px solid #4a5568;
+            border-radius: 4px;
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+
+        button {
+            background: #4fd1c7;
+            color: #0f1419;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        button:hover {
+            background: #38b2ac;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            color: #a0aec0;
+        }
+
+        .error {
+            background: #742a2a;
+            color: #fed7d7;
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+        }
+
+        .connection-status {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            z-index: 1000;
+        }
+
+        .connected {
+            background: #276749;
+            color: #9ae6b4;
+        }
+
+        .disconnected {
+            background: #742a2a;
+            color: #fed7d7;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .header {
+                padding: 1rem;
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="connection-status" id="connectionStatus">
+        <span id="connectionText">Connecting...</span>
+    </div>
+
+    <header class="header">
+        <h1>📊 Task Master Monitoring Dashboard</h1>
+        <div class="status-indicator">
+            <div class="status-dot status-healthy" id="statusDot"></div>
+            <span id="statusText">System Healthy</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="controls">
+            <div class="control-group">
+                <label for="timeRange">Time Range:</label>
+                <select id="timeRange">
+                    <option value="5m">5 minutes</option>
+                    <option value="15m">15 minutes</option>
+                    <option value="1h" selected>1 hour</option>
+                    <option value="6h">6 hours</option>
+                    <option value="24h">24 hours</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <button onclick="refreshDashboard()">🔄 Refresh</button>
+                <button onclick="exportData()">📥 Export</button>
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <!-- Performance Metrics -->
+            <div class="card">
+                <h3>⚡ Performance</h3>
+                <div class="metric-value" id="responseTime">--</div>
+                <div class="metric-label">Average Response Time (ms)</div>
+                <div class="metric-trend" id="responseTimeTrend"></div>
+                <div class="chart-container">
+                    <canvas id="performanceChart"></canvas>
+                </div>
+            </div>
+
+            <!-- System Health -->
+            <div class="card">
+                <h3>🖥️ System Health</h3>
+                <div class="metric-value" id="cpuUsage">--</div>
+                <div class="metric-label">CPU Usage (%)</div>
+                <div class="metric-trend" id="cpuTrend"></div>
+                <div class="chart-container">
+                    <canvas id="systemChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Workflow Metrics -->
+            <div class="card">
+                <h3>🔄 Workflow</h3>
+                <div class="metric-value" id="taskCompletion">--</div>
+                <div class="metric-label">Task Completion Rate (%)</div>
+                <div class="metric-trend" id="workflowTrend"></div>
+                <div class="chart-container">
+                    <canvas id="workflowChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Error Rate -->
+            <div class="card">
+                <h3>🚨 Error Rate</h3>
+                <div class="metric-value" id="errorRate">--</div>
+                <div class="metric-label">Errors per minute</div>
+                <div class="metric-trend" id="errorTrend"></div>
+                <div class="chart-container">
+                    <canvas id="errorChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Memory Usage -->
+            <div class="card">
+                <h3>💾 Memory</h3>
+                <div class="metric-value" id="memoryUsage">--</div>
+                <div class="metric-label">Memory Usage (%)</div>
+                <div class="metric-trend" id="memoryTrend"></div>
+                <div class="chart-container">
+                    <canvas id="memoryChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Throughput -->
+            <div class="card">
+                <h3>📈 Throughput</h3>
+                <div class="metric-value" id="throughput">--</div>
+                <div class="metric-label">Requests per second</div>
+                <div class="metric-trend" id="throughputTrend"></div>
+                <div class="chart-container">
+                    <canvas id="throughputChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alerts Section -->
+        <div class="alerts-section">
+            <div class="card">
+                <h3>🚨 Active Alerts</h3>
+                <div id="alertsList">
+                    <div class="loading">Loading alerts...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dashboard JavaScript
+        class MonitoringDashboard {
+            constructor() {
+                this.socket = null;
+                this.charts = {};
+                this.data = {
+                    performance: [],
+                    system: [],
+                    workflow: [],
+                    realtime: []
+                };
+                this.init();
+            }
+
+            init() {
+                this.connectWebSocket();
+                this.setupCharts();
+                this.setupEventListeners();
+                this.loadInitialData();
+            }
+
+            connectWebSocket() {
+                this.socket = io();
+                
+                this.socket.on('connect', () => {
+                    this.updateConnectionStatus(true);
+                    console.log('Connected to monitoring server');
+                });
+
+                this.socket.on('disconnect', () => {
+                    this.updateConnectionStatus(false);
+                    console.log('Disconnected from monitoring server');
+                });
+
+                this.socket.on('initial_data', (data) => {
+                    this.handleInitialData(data);
+                });
+
+                this.socket.on('metrics_broadcast', (data) => {
+                    this.handleMetricsUpdate(data);
+                });
+
+                this.socket.on('alert_triggered', (data) => {
+                    this.handleNewAlert(data.alert);
+                });
+
+                this.socket.on('status_update', (data) => {
+                    this.updateSystemStatus(data.status);
+                });
+            }
+
+            updateConnectionStatus(connected) {
+                const statusEl = document.getElementById('connectionStatus');
+                const textEl = document.getElementById('connectionText');
+                
+                if (connected) {
+                    statusEl.className = 'connection-status connected';
+                    textEl.textContent = 'Connected';
+                } else {
+                    statusEl.className = 'connection-status disconnected';
+                    textEl.textContent = 'Disconnected';
+                }
+            }
+
+            setupCharts() {
+                const chartOptions = {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                color: '#2d3748'
+                            },
+                            ticks: {
+                                color: '#a0aec0'
+                            }
+                        },
+                        y: {
+                            grid: {
+                                color: '#2d3748'
+                            },
+                            ticks: {
+                                color: '#a0aec0'
+                            }
+                        }
+                    }
+                };
+
+                // Performance Chart
+                this.charts.performance = new Chart(
+                    document.getElementById('performanceChart'),
+                    {
+                        type: 'line',
+                        data: {
+                            labels: [],
+                            datasets: [{
+                                label: 'Response Time',
+                                data: [],
+                                borderColor: '#4fd1c7',
+                                backgroundColor: 'rgba(79, 209, 199, 0.1)',
+                                tension: 0.4
+                            }]
+                        },
+                        options: chartOptions
+                    }
+                );
+
+                // System Chart
+                this.charts.system = new Chart(
+                    document.getElementById('systemChart'),
+                    {
+                        type: 'line',
+                        data: {
+                            labels: [],
+                            datasets: [
+                                {
+                                    label: 'CPU Usage',
+                                    data: [],
+                                    borderColor: '#ed8936',
+                                    backgroundColor: 'rgba(237, 137, 54, 0.1)',
+                                    tension: 0.4
+                                },
+                                {
+                                    label: 'Memory Usage',
+                                    data: [],
+                                    borderColor: '#9f7aea',
+                                    backgroundColor: 'rgba(159, 122, 234, 0.1)',
+                                    tension: 0.4
+                                }
+                            ]
+                        },
+                        options: {
+                            ...chartOptions,
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    labels: {
+                                        color: '#a0aec0'
+                                    }
+                                }
+                            }
+                        }
+                    }
+                );
+
+                // Initialize other charts similarly...
+                this.initializeRemainingCharts(chartOptions);
+            }
+
+            initializeRemainingCharts(chartOptions) {
+                // Workflow Chart
+                this.charts.workflow = new Chart(
+                    document.getElementById('workflowChart'),
+                    {
+                        type: 'line',
+                        data: {
+                            labels: [],
+                            datasets: [{
+                                label: 'Task Completion Rate',
+                                data: [],
+                                borderColor: '#48bb78',
+                                backgroundColor: 'rgba(72, 187, 120, 0.1)',
+                                tension: 0.4
+                            }]
+                        },
+                        options: chartOptions
+                    }
+                );
+
+                // Error Chart
+                this.charts.error = new Chart(
+                    document.getElementById('errorChart'),
+                    {
+                        type: 'line',
+                        data: {
+                            labels: [],
+                            datasets: [{
+                                label: 'Error Rate',
+                                data: [],
+                                borderColor: '#f56565',
+                                backgroundColor: 'rgba(245, 101, 101, 0.1)',
+                                tension: 0.4
+                            }]
+                        },
+                        options: chartOptions
+                    }
+                );
+
+                // Memory Chart
+                this.charts.memory = new Chart(
+                    document.getElementById('memoryChart'),
+                    {
+                        type: 'line',
+                        data: {
+                            labels: [],
+                            datasets: [{
+                                label: 'Memory Usage',
+                                data: [],
+                                borderColor: '#9f7aea',
+                                backgroundColor: 'rgba(159, 122, 234, 0.1)',
+                                tension: 0.4
+                            }]
+                        },
+                        options: chartOptions
+                    }
+                );
+
+                // Throughput Chart
+                this.charts.throughput = new Chart(
+                    document.getElementById('throughputChart'),
+                    {
+                        type: 'line',
+                        data: {
+                            labels: [],
+                            datasets: [{
+                                label: 'Throughput',
+                                data: [],
+                                borderColor: '#4fd1c7',
+                                backgroundColor: 'rgba(79, 209, 199, 0.1)',
+                                tension: 0.4
+                            }]
+                        },
+                        options: chartOptions
+                    }
+                );
+            }
+
+            setupEventListeners() {
+                document.getElementById('timeRange').addEventListener('change', () => {
+                    this.loadInitialData();
+                });
+            }
+
+            async loadInitialData() {
+                try {
+                    const timeRange = document.getElementById('timeRange').value;
+                    
+                    // Load metrics for all types
+                    const [performance, system, workflow] = await Promise.all([
+                        this.fetchMetrics('performance', timeRange),
+                        this.fetchMetrics('system', timeRange),
+                        this.fetchMetrics('workflow', timeRange)
+                    ]);
+
+                    this.updateChartData('performance', performance);
+                    this.updateChartData('system', system);
+                    this.updateChartData('workflow', workflow);
+
+                    // Load alerts
+                    this.loadAlerts();
+                } catch (error) {
+                    console.error('Error loading initial data:', error);
+                }
+            }
+
+            async fetchMetrics(type, timeRange) {
+                const response = await fetch(`/api/metrics/realtime/${type}?timeRange=${timeRange}`);
+                const data = await response.json();
+                return data.success ? data.data : [];
+            }
+
+            updateChartData(type, metrics) {
+                if (!metrics || metrics.length === 0) return;
+
+                const chart = this.charts[type];
+                if (!chart) return;
+
+                const labels = metrics.map(m => new Date(m.timestamp).toLocaleTimeString());
+                
+                if (type === 'performance') {
+                    chart.data.labels = labels;
+                    chart.data.datasets[0].data = metrics.map(m => m.data.response_time);
+                    this.updateMetricDisplay('responseTime', metrics[metrics.length - 1].data.response_time);
+                } else if (type === 'system') {
+                    chart.data.labels = labels;
+                    chart.data.datasets[0].data = metrics.map(m => m.data.cpu_usage);
+                    chart.data.datasets[1].data = metrics.map(m => m.data.memory_usage);
+                    this.updateMetricDisplay('cpuUsage', metrics[metrics.length - 1].data.cpu_usage);
+                    this.updateMetricDisplay('memoryUsage', metrics[metrics.length - 1].data.memory_usage);
+                } else if (type === 'workflow') {
+                    chart.data.labels = labels;
+                    chart.data.datasets[0].data = metrics.map(m => m.data.task_completion_rate);
+                    this.updateMetricDisplay('taskCompletion', metrics[metrics.length - 1].data.task_completion_rate);
+                }
+
+                chart.update();
+            }
+
+            updateMetricDisplay(elementId, value) {
+                const element = document.getElementById(elementId);
+                if (element && value !== undefined) {
+                    element.textContent = typeof value === 'number' ? value.toFixed(1) : value;
+                }
+            }
+
+            async loadAlerts() {
+                try {
+                    const response = await fetch('/api/alerts');
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.displayAlerts(data.data.active_alerts);
+                    }
+                } catch (error) {
+                    console.error('Error loading alerts:', error);
+                }
+            }
+
+            displayAlerts(alerts) {
+                const alertsList = document.getElementById('alertsList');
+                
+                if (!alerts || alerts.length === 0) {
+                    alertsList.innerHTML = '<div style="color: #48bb78; text-align: center; padding: 2rem;">✅ No active alerts</div>';
+                    return;
+                }
+
+                alertsList.innerHTML = alerts.map(alert => `
+                    <div class="alert-item alert-${this.getAlertSeverity(alert)}">
+                        <div class="alert-title">${alert.type}: ${alert.metric || 'System'}</div>
+                        <div>${alert.message || `Value: ${alert.value}, Threshold: ${alert.threshold}`}</div>
+                        <div class="alert-time">${new Date(alert.timestamp).toLocaleString()}</div>
+                    </div>
+                `).join('');
+            }
+
+            getAlertSeverity(alert) {
+                if (alert.value && alert.threshold) {
+                    const ratio = alert.value / alert.threshold;
+                    if (ratio >= 2) return 'critical';
+                    if (ratio >= 1.5) return 'warning';
+                }
+                return 'info';
+            }
+
+            handleInitialData(data) {
+                if (data.status) {
+                    this.updateSystemStatus(data.status);
+                }
+                if (data.alerts) {
+                    this.displayAlerts(data.alerts);
+                }
+            }
+
+            handleMetricsUpdate(data) {
+                // Update real-time metrics
+                if (data.type && this.charts[data.type]) {
+                    // Add new data point to chart
+                    const chart = this.charts[data.type];
+                    const newLabel = new Date(data.timestamp).toLocaleTimeString();
+                    
+                    chart.data.labels.push(newLabel);
+                    if (chart.data.labels.length > 20) {
+                        chart.data.labels.shift();
+                    }
+
+                    // Update datasets based on type
+                    this.updateChartWithNewData(data.type, data.data, chart);
+                }
+            }
+
+            updateChartWithNewData(type, data, chart) {
+                if (type === 'performance') {
+                    chart.data.datasets[0].data.push(data.data.response_time);
+                    if (chart.data.datasets[0].data.length > 20) {
+                        chart.data.datasets[0].data.shift();
+                    }
+                    this.updateMetricDisplay('responseTime', data.data.response_time);
+                } else if (type === 'system') {
+                    chart.data.datasets[0].data.push(data.data.cpu_usage);
+                    chart.data.datasets[1].data.push(data.data.memory_usage);
+                    
+                    if (chart.data.datasets[0].data.length > 20) {
+                        chart.data.datasets[0].data.shift();
+                        chart.data.datasets[1].data.shift();
+                    }
+                    
+                    this.updateMetricDisplay('cpuUsage', data.data.cpu_usage);
+                    this.updateMetricDisplay('memoryUsage', data.data.memory_usage);
+                }
+
+                chart.update('none'); // Update without animation for real-time feel
+            }
+
+            handleNewAlert(alert) {
+                // Refresh alerts display
+                this.loadAlerts();
+                
+                // Show notification
+                this.showNotification(`New Alert: ${alert.type}`, 'warning');
+            }
+
+            updateSystemStatus(status) {
+                const statusDot = document.getElementById('statusDot');
+                const statusText = document.getElementById('statusText');
+                
+                if (status.overall_health) {
+                    const health = status.overall_health;
+                    statusDot.className = `status-dot status-${health.status}`;
+                    statusText.textContent = `System ${health.status.charAt(0).toUpperCase() + health.status.slice(1)} (${health.score}%)`;
+                }
+            }
+
+            showNotification(message, type = 'info') {
+                // Simple notification system
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 5rem;
+                    right: 1rem;
+                    background: ${type === 'warning' ? '#ed8936' : '#4fd1c7'};
+                    color: #0f1419;
+                    padding: 1rem;
+                    border-radius: 4px;
+                    z-index: 1001;
+                    font-weight: 600;
+                `;
+                notification.textContent = message;
+                document.body.appendChild(notification);
+
+                setTimeout(() => {
+                    document.body.removeChild(notification);
+                }, 5000);
+            }
+        }
+
+        // Global functions
+        function refreshDashboard() {
+            window.dashboard.loadInitialData();
+        }
+
+        async function exportData() {
+            const timeRange = document.getElementById('timeRange').value;
+            const type = 'performance'; // Default export type
+            
+            try {
+                const response = await fetch(`/api/export/${type}?format=csv&timeRange=${timeRange}`);
+                const blob = await response.blob();
+                
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `monitoring_data_${Date.now()}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            } catch (error) {
+                console.error('Export failed:', error);
+                alert('Export failed. Please try again.');
+            }
+        }
+
+        // Initialize dashboard when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            window.dashboard = new MonitoringDashboard();
+        });
+    </script>
+</body>
+</html>
+
