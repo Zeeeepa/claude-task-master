@@ -1,0 +1,133 @@
+# Cloudflare Tunnel Configuration for PostgreSQL Database Access
+# This configuration enables secure external access to the codegen-taskmaster-db
+# through Cloudflare's Zero Trust network
+
+# Tunnel identification (replace with actual tunnel UUID after creation)
+tunnel: ${CLOUDFLARE_TUNNEL_UUID}
+credentials-file: /etc/cloudflared/credentials.json
+
+# Ingress rules define how traffic is routed
+ingress:
+  # Primary database access rule
+  # Routes PostgreSQL traffic through the tunnel
+  - hostname: ${CLOUDFLARE_ACCESS_DOMAIN:-db.codegen-taskmaster.com}
+    service: tcp://localhost:5432
+    originRequest:
+      # TCP connection settings optimized for database traffic
+      tcpKeepAlive: 30s
+      noTLSVerify: false
+      connectTimeout: 30s
+      tlsTimeout: 10s
+      keepAliveConnections: 10
+      keepAliveTimeout: 90s
+      httpHostHeader: ${CLOUDFLARE_ACCESS_DOMAIN:-db.codegen-taskmaster.com}
+      
+  # Health check endpoint for monitoring
+  - hostname: ${CLOUDFLARE_ACCESS_DOMAIN:-db.codegen-taskmaster.com}
+    path: /health
+    service: http://localhost:8080
+    originRequest:
+      connectTimeout: 10s
+      tlsTimeout: 5s
+      
+  # Database metrics endpoint (protected)
+  - hostname: ${CLOUDFLARE_ACCESS_DOMAIN:-db.codegen-taskmaster.com}
+    path: /metrics
+    service: http://localhost:8081
+    originRequest:
+      connectTimeout: 10s
+      tlsTimeout: 5s
+      
+  # Database administration interface (if enabled)
+  - hostname: ${CLOUDFLARE_ACCESS_DOMAIN:-db.codegen-taskmaster.com}
+    path: /admin/*
+    service: http://localhost:8082
+    originRequest:
+      connectTimeout: 15s
+      tlsTimeout: 10s
+      
+  # API endpoints for database operations
+  - hostname: ${CLOUDFLARE_ACCESS_DOMAIN:-db.codegen-taskmaster.com}
+    path: /api/*
+    service: http://localhost:3000
+    originRequest:
+      connectTimeout: 30s
+      tlsTimeout: 10s
+      
+  # WebSocket connections for real-time features
+  - hostname: ${CLOUDFLARE_ACCESS_DOMAIN:-db.codegen-taskmaster.com}
+    path: /ws
+    service: http://localhost:3001
+    originRequest:
+      connectTimeout: 30s
+      tlsTimeout: 10s
+      
+  # Catch-all rule (required by Cloudflare)
+  - service: http_status:404
+
+# Logging configuration
+logLevel: ${CLOUDFLARE_LOG_LEVEL:-info}
+logFile: ${CLOUDFLARE_LOG_FILE:-/var/log/cloudflared/tunnel.log}
+logDirectory: /var/log/cloudflared
+
+# Metrics and monitoring
+metrics: ${CLOUDFLARE_METRICS_ADDRESS:-0.0.0.0:8081}
+
+# Auto-update configuration
+no-autoupdate: ${CLOUDFLARE_NO_AUTOUPDATE:-false}
+autoupdate-freq: ${CLOUDFLARE_AUTOUPDATE_FREQ:-24h}
+
+# Grace period for shutdown
+grace-period: ${CLOUDFLARE_GRACE_PERIOD:-30s}
+
+# Retry configuration for connection resilience
+retries: ${CLOUDFLARE_RETRIES:-5}
+
+# Protocol configuration
+protocol: ${CLOUDFLARE_PROTOCOL:-auto}
+
+# Edge location preferences (optional)
+# region: ${CLOUDFLARE_REGION:-auto}
+
+# Load balancer configuration (if using multiple origins)
+# lb-pool: ${CLOUDFLARE_LB_POOL}
+
+# Transport configuration for performance optimization
+transport:
+  # Disable HTTP/2 for database connections (TCP works better)
+  disableChunkedEncoding: true
+  # Connection pooling settings
+  maxIdleConns: 100
+  maxIdleConnsPerHost: 10
+  idleConnTimeout: 90s
+  
+# Proxy configuration (if behind corporate proxy)
+# proxy-dns: true
+# proxy-dns-port: 5053
+
+# Feature flags
+features:
+  # Enable connection coalescing for better performance
+  connection-coalescing: true
+  # Enable quick reconnects
+  quick-reconnects: true
+  # Enable post-quantum cryptography (future-proofing)
+  post-quantum: ${CLOUDFLARE_POST_QUANTUM:-false}
+
+# Environment-specific overrides
+# Development environment settings
+development:
+  logLevel: debug
+  metrics: 127.0.0.1:8081
+  
+# Production environment settings  
+production:
+  logLevel: warn
+  no-autoupdate: true
+  grace-period: 60s
+  
+# Staging environment settings
+staging:
+  logLevel: info
+  autoupdate-freq: 12h
+
