@@ -30,6 +30,8 @@
 		"docs": "jsdoc -c jsdoc.conf.json",
 		"inspector": "npx @modelcontextprotocol/inspector node mcp-server/server.js",
 		"mcp-server": "node mcp-server/server.js",
+		"agentapi": "node middleware/agentapi/server.js",
+		"agentapi:dev": "NODE_ENV=development node middleware/agentapi/server.js",
 		"format-check": "prettier --check .",
 		"format": "prettier --write .",
 		"workflow-demo": "node src/workflow_orchestrator/demo.js"

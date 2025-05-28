@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentAPI Middleware Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px 0;
+            margin-bottom: 30px;
+            border-radius: 8px;
+        }
+
+        .header h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            text-align: center;
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-left: 4px solid #3498db;
+        }
+
+        .card h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .status-healthy { background: #27ae60; }
+        .status-warning { background: #f39c12; }
+        .status-critical { background: #e74c3c; }
+        .status-unknown { background: #95a5a6; }
+
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding: 5px 0;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .metric:last-child {
+            border-bottom: none;
+        }
+
+        .metric-label {
+            font-weight: 500;
+        }
+
+        .metric-value {
+            color: #7f8c8d;
+        }
+
+        .agents-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .agent-card {
+            background: white;
+            border-radius: 6px;
+            padding: 15px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.1);
+        }
+
+        .agent-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .agent-name {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .agent-status {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 500;
+        }
+
+        .status-running { background: #d5f4e6; color: #27ae60; }
+        .status-stopped { background: #fadbd8; color: #e74c3c; }
+        .status-starting { background: #fef9e7; color: #f39c12; }
+
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 0 5px;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background: #2980b9;
+        }
+
+        .btn-success { background: #27ae60; }
+        .btn-success:hover { background: #229954; }
+
+        .btn-danger { background: #e74c3c; }
+        .btn-danger:hover { background: #c0392b; }
+
+        .logs {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 2px 0;
+        }
+
+        .log-timestamp {
+            color: #95a5a6;
+        }
+
+        .log-level-info { color: #3498db; }
+        .log-level-warn { color: #f39c12; }
+        .log-level-error { color: #e74c3c; }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #7f8c8d;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .agents-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 AgentAPI Middleware</h1>
+            <p>Control and monitor Claude Code, Goose, Aider, and Codex agents</p>
+        </div>
+
+        <div class="dashboard">
+            <div class="card">
+                <h3>System Health</h3>
+                <div id="system-health" class="loading">Loading...</div>
+            </div>
+
+            <div class="card">
+                <h3>Active Agents</h3>
+                <div id="active-agents" class="loading">Loading...</div>
+            </div>
+
+            <div class="card">
+                <h3>Workspaces</h3>
+                <div id="workspaces" class="loading">Loading...</div>
+            </div>
+
+            <div class="card">
+                <h3>Recent Activity</h3>
+                <div id="recent-activity" class="loading">Loading...</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>Agent Management</h3>
+            <div id="agents-list" class="loading">Loading agents...</div>
+            
+            <div class="controls">
+                <button class="btn btn-success" onclick="refreshData()">🔄 Refresh</button>
+                <button class="btn" onclick="showMetrics()">📊 Metrics</button>
+                <button class="btn" onclick="showLogs()">📋 Logs</button>
+            </div>
+        </div>
+
+        <div class="card" id="logs-section" style="display: none;">
+            <h3>System Logs</h3>
+            <div class="logs" id="logs-container">
+                <div class="loading">Loading logs...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let systemData = {};
+        let refreshInterval;
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshData();
+            startAutoRefresh();
+        });
+
+        // Auto-refresh every 30 seconds
+        function startAutoRefresh() {
+            refreshInterval = setInterval(refreshData, 30000);
+        }
+
+        // Fetch and update all data
+        async function refreshData() {
+            try {
+                await Promise.all([
+                    updateSystemHealth(),
+                    updateAgents(),
+                    updateWorkspaces(),
+                    updateActivity()
+                ]);
+            } catch (error) {
+                console.error('Error refreshing data:', error);
+            }
+        }
+
+        // Update system health
+        async function updateSystemHealth() {
+            try {
+                const response = await fetch('/health');
+                const data = await response.json();
+                
+                const healthElement = document.getElementById('system-health');
+                const status = data.status || 'unknown';
+                
+                healthElement.innerHTML = `
+                    <div class="status">
+                        <div class="status-indicator status-${status}"></div>
+                        <span>System ${status.charAt(0).toUpperCase() + status.slice(1)}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Uptime</span>
+                        <span class="metric-value">${formatUptime(data.uptime)}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Active Agents</span>
+                        <span class="metric-value">${Object.keys(data.agents || {}).length}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Workspaces</span>
+                        <span class="metric-value">${data.workspaces?.length || 0}</span>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('system-health').innerHTML = 
+                    '<div class="status"><div class="status-indicator status-critical"></div><span>Connection Error</span></div>';
+            }
+        }
+
+        // Update agents list
+        async function updateAgents() {
+            try {
+                const response = await fetch('/agents');
+                const data = await response.json();
+                
+                const agentsElement = document.getElementById('agents-list');
+                const activeAgentsElement = document.getElementById('active-agents');
+                
+                if (data.success && data.agents) {
+                    // Update active agents summary
+                    const runningAgents = data.agents.filter(agent => agent.status === 'running');
+                    activeAgentsElement.innerHTML = `
+                        <div class="metric">
+                            <span class="metric-label">Running</span>
+                            <span class="metric-value">${runningAgents.length}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Total</span>
+                            <span class="metric-value">${data.agents.length}</span>
+                        </div>
+                    `;
+
+                    // Update agents grid
+                    if (data.agents.length === 0) {
+                        agentsElement.innerHTML = '<p>No agents currently running</p>';
+                    } else {
+                        agentsElement.innerHTML = `
+                            <div class="agents-grid">
+                                ${data.agents.map(agent => `
+                                    <div class="agent-card">
+                                        <div class="agent-header">
+                                            <span class="agent-name">${agent.type}</span>
+                                            <span class="agent-status status-${agent.status}">${agent.status}</span>
+                                        </div>
+                                        <div class="metric">
+                                            <span class="metric-label">Workspace</span>
+                                            <span class="metric-value">${agent.workspaceId}</span>
+                                        </div>
+                                        <div class="metric">
+                                            <span class="metric-label">Started</span>
+                                            <span class="metric-value">${formatTime(agent.startedAt)}</span>
+                                        </div>
+                                        <div style="margin-top: 10px;">
+                                            <button class="btn btn-danger" onclick="stopAgent('${agent.type}', '${agent.workspaceId}')">Stop</button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `;
+                    }
+                } else {
+                    agentsElement.innerHTML = '<p>Error loading agents</p>';
+                    activeAgentsElement.innerHTML = '<p>Error loading data</p>';
+                }
+            } catch (error) {
+                document.getElementById('agents-list').innerHTML = '<p>Connection error</p>';
+                document.getElementById('active-agents').innerHTML = '<p>Connection error</p>';
+            }
+        }
+
+        // Update workspaces
+        async function updateWorkspaces() {
+            try {
+                const response = await fetch('/workspaces');
+                const data = await response.json();
+                
+                const workspacesElement = document.getElementById('workspaces');
+                
+                if (data.success && data.workspaces) {
+                    workspacesElement.innerHTML = `
+                        <div class="metric">
+                            <span class="metric-label">Active</span>
+                            <span class="metric-value">${data.workspaces.length}</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Disk Usage</span>
+                            <span class="metric-value">N/A</span>
+                        </div>
+                    `;
+                } else {
+                    workspacesElement.innerHTML = '<p>Error loading workspaces</p>';
+                }
+            } catch (error) {
+                document.getElementById('workspaces').innerHTML = '<p>Connection error</p>';
+            }
+        }
+
+        // Update recent activity
+        async function updateActivity() {
+            try {
+                const activityElement = document.getElementById('recent-activity');
+                
+                // This would fetch actual activity data
+                activityElement.innerHTML = `
+                    <div class="metric">
+                        <span class="metric-label">Last Deployment</span>
+                        <span class="metric-value">2 hours ago</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Validations</span>
+                        <span class="metric-value">5 today</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Errors</span>
+                        <span class="metric-value">0 today</span>
+                    </div>
+                `;
+            } catch (error) {
+                document.getElementById('recent-activity').innerHTML = '<p>Connection error</p>';
+            }
+        }
+
+        // Stop an agent
+        async function stopAgent(type, workspaceId) {
+            try {
+                const response = await fetch(`/agents/${type}/stop`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ workspaceId })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(`Agent ${type} stopped successfully`);
+                    refreshData();
+                } else {
+                    alert(`Error stopping agent: ${data.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                alert(`Error stopping agent: ${error.message}`);
+            }
+        }
+
+        // Show metrics
+        function showMetrics() {
+            window.open('/metrics', '_blank');
+        }
+
+        // Show logs
+        async function showLogs() {
+            const logsSection = document.getElementById('logs-section');
+            const logsContainer = document.getElementById('logs-container');
+            
+            if (logsSection.style.display === 'none') {
+                logsSection.style.display = 'block';
+                
+                try {
+                    // This would fetch actual logs
+                    logsContainer.innerHTML = `
+                        <div class="log-entry">
+                            <span class="log-timestamp">[${new Date().toISOString()}]</span>
+                            <span class="log-level-info">[INFO]</span>
+                            AgentAPI server started successfully
+                        </div>
+                        <div class="log-entry">
+                            <span class="log-timestamp">[${new Date().toISOString()}]</span>
+                            <span class="log-level-info">[INFO]</span>
+                            Health monitor initialized
+                        </div>
+                        <div class="log-entry">
+                            <span class="log-timestamp">[${new Date().toISOString()}]</span>
+                            <span class="log-level-info">[INFO]</span>
+                            Workspace cleanup completed
+                        </div>
+                    `;
+                } catch (error) {
+                    logsContainer.innerHTML = '<div class="log-entry">Error loading logs</div>';
+                }
+            } else {
+                logsSection.style.display = 'none';
+            }
+        }
+
+        // Utility functions
+        function formatUptime(seconds) {
+            if (!seconds) return 'Unknown';
+            
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            
+            if (hours > 0) {
+                return `${hours}h ${minutes}m`;
+            } else {
+                return `${minutes}m`;
+            }
+        }
+
+        function formatTime(timestamp) {
+            if (!timestamp) return 'Unknown';
+            
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diff = now - date;
+            
+            if (diff < 60000) {
+                return 'Just now';
+            } else if (diff < 3600000) {
+                return `${Math.floor(diff / 60000)}m ago`;
+            } else if (diff < 86400000) {
+                return `${Math.floor(diff / 3600000)}h ago`;
+            } else {
+                return date.toLocaleDateString();
+            }
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+            }
+        });
+    </script>
+</body>
+</html>
+
