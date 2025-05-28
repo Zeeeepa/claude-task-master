@@ -10,19 +10,29 @@
 		"task-master-ai": "mcp-server/server.js"
 	},
 	"scripts": {
+		"start": "node bin/task-master.js",
+		"dev": "nodemon bin/task-master.js",
 		"test": "node --experimental-vm-modules node_modules/.bin/jest",
-		"test:fails": "node --experimental-vm-modules node_modules/.bin/jest --onlyFailures",
 		"test:watch": "node --experimental-vm-modules node_modules/.bin/jest --watch",
 		"test:coverage": "node --experimental-vm-modules node_modules/.bin/jest --coverage",
 		"test:e2e": "./tests/e2e/run_e2e.sh",
 		"test:e2e-report": "./tests/e2e/run_e2e.sh --analyze-log",
+		"test:requirement-analyzer": "node --experimental-vm-modules node_modules/.bin/jest tests/requirement_analyzer.test.js",
+		"demo:requirement-analyzer": "node demo/requirement_analyzer_demo.js",
+		"demo:examples": "node -e \"import('./src/requirement_analyzer/examples.js').then(m => m.runAllExamples())\"",
+		"ai-cicd:demo": "node src/ai_cicd_system/examples/usage_example.js",
+		"ai-cicd:basic": "node -e \"import('./src/ai_cicd_system/examples/usage_example.js').then(m => m.basicRequirementProcessing())\"",
+		"ai-cicd:advanced": "node -e \"import('./src/ai_cicd_system/examples/usage_example.js').then(m => m.advancedSystemUsage())\"",
+		"ai-cicd:components": "node -e \"import('./src/ai_cicd_system/examples/usage_example.js').then(m => m.componentLevelUsage())\"",
 		"prepare": "chmod +x bin/task-master.js mcp-server/server.js",
 		"changeset": "changeset",
 		"release": "changeset publish",
+		"docs": "jsdoc -c jsdoc.conf.json",
 		"inspector": "npx @modelcontextprotocol/inspector node mcp-server/server.js",
 		"mcp-server": "node mcp-server/server.js",
 		"format-check": "prettier --check .",
-		"format": "prettier --write ."
+		"format": "prettier --write .",
+		"workflow-demo": "node src/workflow_orchestrator/demo.js"
 	},
 	"keywords": [
 		"claude",
