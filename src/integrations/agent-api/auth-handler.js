@@ -1,124 +1,126 @@
 /**
- * Authentication Handler
- * 
- * Handles secure authentication and authorization for the AgentAPI middleware.
- * Supports JWT-based authentication with refresh tokens.
+ * Authentication Handler - Unified Security Framework Integration
+ * Consolidates authentication mechanisms with enterprise security framework
  */
 
+import { EventEmitter } from 'events';
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
-import crypto from 'crypto';
+import { AuthManager } from '../../ai_cicd_system/security/auth_manager.js';
 import { SimpleLogger } from '../../ai_cicd_system/utils/simple_logger.js';
 
-export class AuthHandler {
+/**
+ * Unified Authentication Handler
+ * Integrates with the enterprise security framework while maintaining API compatibility
+ */
+export class AuthHandler extends EventEmitter {
   constructor(config = {}) {
+    super();
+    
     this.config = {
-      jwtSecret: config.jwtSecret || process.env.JWT_SECRET || this._generateSecret(),
-      jwtExpiresIn: config.jwtExpiresIn || '1h',
-      refreshTokenExpiresIn: config.refreshTokenExpiresIn || '7d',
-      saltRounds: config.saltRounds || 12,
-      maxLoginAttempts: config.maxLoginAttempts || 5,
-      lockoutDuration: config.lockoutDuration || 15 * 60 * 1000, // 15 minutes
+      jwt: {
+        secret: config.jwt?.secret || process.env.JWT_SECRET || 'default-secret',
+        expiresIn: config.jwt?.expiresIn || '24h',
+        issuer: config.jwt?.issuer || 'ai-cicd-system',
+        audience: config.jwt?.audience || 'ai-cicd-api'
+      },
+      auth: config.auth || {},
+      rateLimiting: config.rateLimiting || { enabled: false },
       ...config
     };
 
+    // Initialize enterprise authentication manager
+    this.authManager = new AuthManager(this.config.auth);
     this.logger = new SimpleLogger('AuthHandler');
-    this.refreshTokens = new Map(); // In production, use Redis or database
-    this.loginAttempts = new Map(); // Track failed login attempts
-    this.revokedTokens = new Set(); // Track revoked tokens
-  }
-
-  /**
-   * Generate a secure secret if none provided
-   */
-  _generateSecret() {
-    const secret = crypto.randomBytes(64).toString('hex');
-    this.logger.warn('Using generated JWT secret. Set JWT_SECRET environment variable for production.');
-    return secret;
-  }
-
-  /**
-   * Hash a password
-   */
-  async hashPassword(password) {
-    return bcrypt.hash(password, this.config.saltRounds);
-  }
-
-  /**
-   * Verify a password against a hash
-   */
-  async verifyPassword(password, hash) {
-    return bcrypt.compare(password, hash);
-  }
-
-  /**
-   * Generate JWT token
-   */
-  generateToken(payload) {
-    return jwt.sign(payload, this.config.jwtSecret, {
-      expiresIn: this.config.jwtExpiresIn,
-      issuer: 'agent-api-middleware',
-      audience: 'agent-api-clients'
-    });
-  }
-
-  /**
-   * Generate refresh token
-   */
-  generateRefreshToken(userId) {
-    const refreshToken = crypto.randomBytes(64).toString('hex');
-    const expiresAt = new Date(Date.now() + this._parseTimeToMs(this.config.refreshTokenExpiresIn));
     
-    this.refreshTokens.set(refreshToken, {
-      userId,
-      expiresAt,
-      createdAt: new Date()
+    // Set up event forwarding from AuthManager
+    this.setupEventForwarding();
+    
+    this.logger.info('Unified AuthHandler initialized with enterprise security framework');
+  }
+
+  /**
+   * Set up event forwarding from AuthManager to maintain compatibility
+   */
+  setupEventForwarding() {
+    this.authManager.on('userAuthenticated', (data) => {
+      this.emit('userAuthenticated', data);
     });
-
-    return refreshToken;
+    
+    this.authManager.on('authenticationFailed', (data) => {
+      this.emit('authenticationFailed', data);
+    });
+    
+    this.authManager.on('userLoggedOut', (data) => {
+      this.emit('userLoggedOut', data);
+    });
+    
+    this.authManager.on('tokenRefreshed', (data) => {
+      this.emit('tokenRefreshed', data);
+    });
   }
 
   /**
-   * Parse time string to milliseconds
+   * Authenticate user using enterprise security framework
    */
-  _parseTimeToMs(timeStr) {
-    const units = {
-      's': 1000,
-      'm': 60 * 1000,
-      'h': 60 * 60 * 1000,
-      'd': 24 * 60 * 60 * 1000
-    };
-
-    const match = timeStr.match(/^(\d+)([smhd])$/);
-    if (!match) {
-      throw new Error(`Invalid time format: ${timeStr}`);
-    }
-
-    const [, value, unit] = match;
-    return parseInt(value) * units[unit];
-  }
-
-  /**
-   * Verify JWT token
-   */
-  async verifyToken(token) {
+  async authenticate(credentials) {
     try {
-      if (this.revokedTokens.has(token)) {
-        return { valid: false, error: 'Token has been revoked' };
-      }
-
-      const decoded = jwt.verify(token, this.config.jwtSecret, {
-        issuer: 'agent-api-middleware',
-        audience: 'agent-api-clients'
+      const { username, password, mfaToken, clientInfo } = credentials;
+      
+      // Use AuthManager for authentication
+      const authResult = await this.authManager.authenticate(
+        username, 
+        password, 
+        mfaToken, 
+        clientInfo
+      );
+      
+      this.logger.info('User authenticated successfully', { 
+        userId: authResult.user.id,
+        method: 'enterprise_auth'
       });
+      
+      return {
+        success: true,
+        user: authResult.user,
+        tokens: authResult.tokens,
+        session: authResult.session
+      };
+      
+    } catch (error) {
+      this.logger.error('Authentication failed', { 
+        error: error.message,
+        username: credentials.username 
+      });
+      
+      return {
+        success: false,
+        error: error.message,
+        code: error.code || 'AUTH_FAILED'
+      };
+    }
+  }
 
+  /**
+   * Validate token using enterprise security framework
+   */
+  async validateToken(token) {
+    try {
+      const decoded = await this.authManager.verifyToken(token);
+      const session = this.authManager.getActiveSession(decoded.userId);
+      
+      if (!session) {
+        throw new Error('Session not found or expired');
+      }
+      
       return {
         valid: true,
-        payload: decoded,
-        userId: decoded.sub,
-        expiresAt: new Date(decoded.exp * 1000)
+        decoded,
+        session,
+        user: session.user
       };
+      
     } catch (error) {
+      this.logger.warn('Token validation failed', { error: error.message });
       return {
         valid: false,
         error: error.message
@@ -127,374 +129,228 @@ export class AuthHandler {
   }
 
   /**
-   * Validate refresh token
-   */
-  validateRefreshToken(refreshToken) {
-    const tokenData = this.refreshTokens.get(refreshToken);
-    
-    if (!tokenData) {
-      return { valid: false, error: 'Invalid refresh token' };
-    }
-
-    if (tokenData.expiresAt < new Date()) {
-      this.refreshTokens.delete(refreshToken);
-      return { valid: false, error: 'Refresh token expired' };
-    }
-
-    return {
-      valid: true,
-      userId: tokenData.userId
-    };
-  }
-
-  /**
-   * Check if user is locked out due to failed login attempts
-   */
-  _isLockedOut(identifier) {
-    const attempts = this.loginAttempts.get(identifier);
-    if (!attempts) return false;
-
-    if (attempts.count >= this.config.maxLoginAttempts) {
-      const lockoutEnd = new Date(attempts.lastAttempt.getTime() + this.config.lockoutDuration);
-      if (new Date() < lockoutEnd) {
-        return true;
-      } else {
-        // Lockout period has expired, reset attempts
-        this.loginAttempts.delete(identifier);
-        return false;
-      }
-    }
-
-    return false;
-  }
-
-  /**
-   * Record failed login attempt
-   */
-  _recordFailedAttempt(identifier) {
-    const attempts = this.loginAttempts.get(identifier) || { count: 0, lastAttempt: null };
-    attempts.count++;
-    attempts.lastAttempt = new Date();
-    this.loginAttempts.set(identifier, attempts);
-
-    this.logger.warn(`Failed login attempt for ${identifier}. Count: ${attempts.count}`);
-  }
-
-  /**
-   * Clear failed login attempts
-   */
-  _clearFailedAttempts(identifier) {
-    this.loginAttempts.delete(identifier);
-  }
-
-  /**
-   * Authenticate user with username/password or API key
-   */
-  async authenticate(credentials) {
-    const { username, password, apiKey } = credentials;
-    const identifier = username || apiKey;
-
-    // Check if user is locked out
-    if (this._isLockedOut(identifier)) {
-      return {
-        success: false,
-        message: 'Account temporarily locked due to too many failed attempts'
-      };
-    }
-
-    try {
-      let user;
-
-      if (apiKey) {
-        // API key authentication
-        user = await this._authenticateWithApiKey(apiKey);
-      } else {
-        // Username/password authentication
-        user = await this._authenticateWithPassword(username, password);
-      }
-
-      if (!user) {
-        this._recordFailedAttempt(identifier);
-        return {
-          success: false,
-          message: 'Invalid credentials'
-        };
-      }
-
-      // Clear failed attempts on successful login
-      this._clearFailedAttempts(identifier);
-
-      // Generate tokens
-      const tokenPayload = {
-        sub: user.id,
-        username: user.username,
-        role: user.role || 'user',
-        permissions: user.permissions || []
-      };
-
-      const token = this.generateToken(tokenPayload);
-      const refreshToken = this.generateRefreshToken(user.id);
-
-      this.logger.info(`User authenticated successfully: ${user.username}`);
-
-      return {
-        success: true,
-        token,
-        refreshToken,
-        expiresIn: this.config.jwtExpiresIn,
-        user: {
-          id: user.id,
-          username: user.username,
-          role: user.role,
-          permissions: user.permissions
-        }
-      };
-
-    } catch (error) {
-      this.logger.error('Authentication error:', error);
-      this._recordFailedAttempt(identifier);
-      return {
-        success: false,
-        message: 'Authentication failed'
-      };
-    }
-  }
-
-  /**
-   * Authenticate with API key (mock implementation)
-   */
-  async _authenticateWithApiKey(apiKey) {
-    // In production, this would query a database
-    const validApiKeys = {
-      'test-api-key-123': {
-        id: 'api-user-1',
-        username: 'api-user',
-        role: 'api',
-        permissions: ['read', 'write']
-      }
-    };
-
-    return validApiKeys[apiKey] || null;
-  }
-
-  /**
-   * Authenticate with username/password (mock implementation)
-   */
-  async _authenticateWithPassword(username, password) {
-    // In production, this would query a database
-    const users = {
-      'admin': {
-        id: 'user-1',
-        username: 'admin',
-        passwordHash: await this.hashPassword('admin123'), // In production, this would be pre-hashed
-        role: 'admin',
-        permissions: ['read', 'write', 'admin']
-      },
-      'user': {
-        id: 'user-2',
-        username: 'user',
-        passwordHash: await this.hashPassword('user123'),
-        role: 'user',
-        permissions: ['read']
-      }
-    };
-
-    const user = users[username];
-    if (!user) return null;
-
-    const isValidPassword = await this.verifyPassword(password, user.passwordHash);
-    if (!isValidPassword) return null;
-
-    return user;
-  }
-
-  /**
-   * Refresh access token
+   * Refresh token using enterprise security framework
    */
   async refreshToken(refreshToken) {
-    const validation = this.validateRefreshToken(refreshToken);
-    
-    if (!validation.valid) {
-      return {
-        success: false,
-        message: validation.error
-      };
-    }
-
     try {
-      // Get user data (in production, query database)
-      const user = await this._getUserById(validation.userId);
-      if (!user) {
-        return {
-          success: false,
-          message: 'User not found'
-        };
-      }
-
-      // Generate new access token
-      const tokenPayload = {
-        sub: user.id,
-        username: user.username,
-        role: user.role,
-        permissions: user.permissions
-      };
-
-      const newToken = this.generateToken(tokenPayload);
-
-      this.logger.info(`Token refreshed for user: ${user.username}`);
-
+      const result = await this.authManager.refreshToken(refreshToken);
+      
+      this.logger.info('Token refreshed successfully', { 
+        userId: result.user.id 
+      });
+      
       return {
         success: true,
-        token: newToken,
-        expiresIn: this.config.jwtExpiresIn
+        tokens: result.tokens,
+        user: result.user
       };
-
+      
     } catch (error) {
-      this.logger.error('Token refresh error:', error);
+      this.logger.error('Token refresh failed', { error: error.message });
       return {
         success: false,
-        message: 'Token refresh failed'
+        error: error.message
       };
     }
   }
 
   /**
-   * Get user by ID (mock implementation)
-   */
-  async _getUserById(userId) {
-    const users = {
-      'user-1': {
-        id: 'user-1',
-        username: 'admin',
-        role: 'admin',
-        permissions: ['read', 'write', 'admin']
-      },
-      'user-2': {
-        id: 'user-2',
-        username: 'user',
-        role: 'user',
-        permissions: ['read']
-      },
-      'api-user-1': {
-        id: 'api-user-1',
-        username: 'api-user',
-        role: 'api',
-        permissions: ['read', 'write']
-      }
-    };
-
-    return users[userId] || null;
-  }
-
-  /**
-   * Revoke token
+   * Revoke token using enterprise security framework
    */
   async revokeToken(token) {
-    this.revokedTokens.add(token);
-    this.logger.info('Token revoked');
+    try {
+      await this.authManager.revokeToken(token);
+      this.logger.info('Token revoked successfully');
+      return { success: true };
+      
+    } catch (error) {
+      this.logger.error('Token revocation failed', { error: error.message });
+      return {
+        success: false,
+        error: error.message
+      };
+    }
   }
 
   /**
-   * Revoke refresh token
+   * Create API key using enterprise security framework
    */
-  async revokeRefreshToken(refreshToken) {
-    this.refreshTokens.delete(refreshToken);
-    this.logger.info('Refresh token revoked');
+  async createApiKey(userId, options = {}) {
+    try {
+      const apiKey = await this.authManager.createApiKey(userId, options);
+      
+      this.logger.info('API key created', { 
+        userId,
+        keyId: apiKey.id 
+      });
+      
+      return {
+        success: true,
+        apiKey
+      };
+      
+    } catch (error) {
+      this.logger.error('API key creation failed', { error: error.message });
+      return {
+        success: false,
+        error: error.message
+      };
+    }
   }
 
   /**
-   * Express middleware for requiring authentication
+   * Validate API key using enterprise security framework
    */
-  requireAuth(permissions = []) {
+  async validateApiKey(apiKey) {
+    try {
+      const keyData = await this.authManager.validateApiKey(apiKey);
+      return {
+        valid: true,
+        keyData,
+        user: keyData.user
+      };
+      
+    } catch (error) {
+      this.logger.warn('API key validation failed', { error: error.message });
+      return {
+        valid: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Express middleware for authentication
+   */
+  requireAuth() {
     return async (req, res, next) => {
       try {
-        const authHeader = req.headers.authorization;
-        
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        const token = this.extractToken(req);
+        if (!token) {
           return res.status(401).json({
-            error: 'Unauthorized',
-            message: 'Authorization header required'
+            error: 'Authentication required',
+            code: 'NO_TOKEN'
           });
         }
 
-        const token = authHeader.substring(7);
-        const validation = await this.verifyToken(token);
-
+        const validation = await this.validateToken(token);
         if (!validation.valid) {
           return res.status(401).json({
-            error: 'Unauthorized',
-            message: validation.error
+            error: 'Invalid token',
+            code: 'INVALID_TOKEN'
           });
         }
 
-        // Check permissions if specified
-        if (permissions.length > 0) {
-          const userPermissions = validation.payload.permissions || [];
-          const hasPermission = permissions.some(permission => 
-            userPermissions.includes(permission) || userPermissions.includes('admin')
-          );
-
-          if (!hasPermission) {
-            return res.status(403).json({
-              error: 'Forbidden',
-              message: 'Insufficient permissions'
-            });
-          }
-        }
-
-        // Add user info to request
-        req.user = {
-          id: validation.userId,
-          username: validation.payload.username,
-          role: validation.payload.role,
-          permissions: validation.payload.permissions
-        };
+        req.user = validation.user;
+        req.session = validation.session;
         req.token = token;
-        req.tokenExpiry = validation.expiresAt;
-
+        
         next();
-
+        
       } catch (error) {
-        this.logger.error('Auth middleware error:', error);
+        this.logger.error('Authentication middleware error', { error: error.message });
         res.status(500).json({
-          error: 'Internal Server Error',
-          message: 'Authentication error'
+          error: 'Authentication error',
+          code: 'AUTH_ERROR'
         });
       }
     };
   }
 
   /**
-   * Validate token (for external use)
+   * Express middleware for API key authentication
    */
-  async validateToken(token) {
-    return this.verifyToken(token);
+  requireApiKey() {
+    return async (req, res, next) => {
+      try {
+        const apiKey = this.extractApiKey(req);
+        if (!apiKey) {
+          return res.status(401).json({
+            error: 'API key required',
+            code: 'NO_API_KEY'
+          });
+        }
+
+        const validation = await this.validateApiKey(apiKey);
+        if (!validation.valid) {
+          return res.status(401).json({
+            error: 'Invalid API key',
+            code: 'INVALID_API_KEY'
+          });
+        }
+
+        req.user = validation.user;
+        req.apiKey = validation.keyData;
+        
+        next();
+        
+      } catch (error) {
+        this.logger.error('API key middleware error', { error: error.message });
+        res.status(500).json({
+          error: 'API key authentication error',
+          code: 'API_KEY_ERROR'
+        });
+      }
+    };
   }
 
   /**
-   * Clean up expired tokens (should be called periodically)
+   * Extract token from request
    */
-  cleanup() {
-    const now = new Date();
-    
-    // Clean up expired refresh tokens
-    for (const [token, data] of this.refreshTokens.entries()) {
-      if (data.expiresAt < now) {
-        this.refreshTokens.delete(token);
-      }
+  extractToken(req) {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      return authHeader.substring(7);
     }
+    return req.query.token || req.body.token;
+  }
 
-    // Clean up old login attempts
-    for (const [identifier, attempts] of this.loginAttempts.entries()) {
-      const cutoff = new Date(now.getTime() - this.config.lockoutDuration * 2);
-      if (attempts.lastAttempt < cutoff) {
-        this.loginAttempts.delete(identifier);
-      }
+  /**
+   * Extract API key from request
+   */
+  extractApiKey(req) {
+    return req.headers['x-api-key'] || 
+           req.query.api_key || 
+           req.body.api_key;
+  }
+
+  /**
+   * Get authentication statistics
+   */
+  getStats() {
+    return this.authManager.getStats();
+  }
+
+  /**
+   * Get health status
+   */
+  async getHealth() {
+    try {
+      const authManagerHealth = await this.authManager.getHealth();
+      return {
+        status: 'healthy',
+        authManager: authManagerHealth,
+        uptime: process.uptime()
+      };
+    } catch (error) {
+      return {
+        status: 'unhealthy',
+        error: error.message
+      };
     }
+  }
 
-    this.logger.debug('Auth cleanup completed');
+  /**
+   * Shutdown handler
+   */
+  async shutdown() {
+    try {
+      await this.authManager.shutdown();
+      this.logger.info('AuthHandler shutdown completed');
+    } catch (error) {
+      this.logger.error('AuthHandler shutdown error', { error: error.message });
+    }
   }
 }
 
 export default AuthHandler;
-
