@@ -1,0 +1,244 @@
+{
+  "linear": {
+    "apiKey": "${LINEAR_API_KEY}",
+    "baseUrl": "https://api.linear.app/graphql",
+    "teamId": "${LINEAR_TEAM_ID}",
+    "webhookSecret": "${LINEAR_WEBHOOK_SECRET}"
+  },
+  
+  "rateLimiting": {
+    "requestsPerMinute": 1000,
+    "burstLimit": 100,
+    "backoffStrategy": "exponential",
+    "maxRetries": 3
+  },
+  
+  "statusMappings": {
+    "task_created": "backlog",
+    "task_assigned": "todo", 
+    "development_started": "in-progress",
+    "pr_created": "in_review",
+    "pr_approved": "ready_for_merge",
+    "deployment_started": "deploying",
+    "deployment_success": "done",
+    "deployment_failed": "failed",
+    "task_blocked": "blocked",
+    "task_cancelled": "cancelled",
+    "build_failed": "failed",
+    "test_failed": "failed",
+    "validation_failed": "in-progress",
+    "manual_review_requested": "in_review",
+    "manual_testing_required": "testing",
+    "manual_hold": "blocked"
+  },
+  
+  "taskMasterIntegration": {
+    "enabled": true,
+    "syncDirection": "bidirectional",
+    "statusMapping": {
+      "pending": "backlog",
+      "in-progress": "in_progress", 
+      "done": "done",
+      "deferred": "blocked",
+      "cancelled": "cancelled"
+    },
+    "autoSync": {
+      "enabled": true,
+      "interval": 300000,
+      "onTaskUpdate": true,
+      "onStatusChange": true
+    }
+  },
+  
+  "conflictResolution": {
+    "strategies": {
+      "priority": {
+        "manual_override": 100,
+        "recent_change": 80,
+        "automation_skip": 60,
+        "merge_changes": 40,
+        "escalate": 20
+      },
+      "timeRules": {
+        "recentChangeThreshold": 300000,
+        "manualOverrideWindow": 1800000,
+        "automationCooldown": 600000
+      },
+      "fieldRules": {
+        "status": {
+          "allowAutomation": true,
+          "manualOverridePriority": true,
+          "conflictThreshold": "immediate"
+        },
+        "assignee": {
+          "allowAutomation": false,
+          "manualOverridePriority": true,
+          "conflictThreshold": "never"
+        },
+        "priority": {
+          "allowAutomation": true,
+          "manualOverridePriority": false,
+          "conflictThreshold": "recent"
+        },
+        "description": {
+          "allowAutomation": false,
+          "manualOverridePriority": true,
+          "conflictThreshold": "never"
+        }
+      }
+    },
+    "escalation": {
+      "triggers": {
+        "repeatedConflicts": 3,
+        "highPriorityIssue": true,
+        "criticalPath": true,
+        "multipleStakeholders": true
+      },
+      "targets": {
+        "assignee": true,
+        "projectLead": true,
+        "teamLead": false,
+        "customWebhook": null
+      },
+      "delays": {
+        "immediate": 0,
+        "quick": 300000,
+        "standard": 1800000,
+        "delayed": 3600000
+      }
+    }
+  },
+  
+  "tracking": {
+    "stateWeights": {
+      "backlog": 0,
+      "todo": 0.1,
+      "in_progress": 0.3,
+      "in_review": 0.7,
+      "ready_for_merge": 0.8,
+      "deploying": 0.9,
+      "done": 1.0,
+      "cancelled": 0,
+      "blocked": 0.2
+    },
+    "priorityWeights": {
+      "0": 0.5,
+      "1": 1.0,
+      "2": 1.5,
+      "3": 2.0,
+      "4": 3.0
+    },
+    "snapshotInterval": 3600000,
+    "reportingInterval": 86400000,
+    "thresholds": {
+      "blocked": 0.1,
+      "overdue": 0.05,
+      "stalled": 0.15
+    }
+  },
+  
+  "webhook": {
+    "port": 3001,
+    "path": "/webhooks/linear",
+    "maxHistorySize": 1000,
+    "enableSignatureVerification": true
+  },
+  
+  "reporting": {
+    "types": {
+      "daily": {
+        "schedule": "0 9 * * *",
+        "recipients": ["team-leads", "project-managers"],
+        "sections": ["summary", "progress", "blockers", "velocity"]
+      },
+      "weekly": {
+        "schedule": "0 9 * * 1",
+        "recipients": ["stakeholders", "executives"],
+        "sections": ["summary", "progress", "trends", "milestones", "recommendations"]
+      },
+      "monthly": {
+        "schedule": "0 9 1 * *",
+        "recipients": ["executives", "board"],
+        "sections": ["executive-summary", "achievements", "metrics", "forecasts"]
+      }
+    },
+    "formats": {
+      "json": true,
+      "markdown": true,
+      "html": false,
+      "pdf": false
+    },
+    "metrics": {
+      "velocity": {
+        "periods": ["1w", "2w", "4w"],
+        "smoothing": true
+      },
+      "burndown": {
+        "includeWeekends": false,
+        "projectionDays": 30
+      },
+      "efficiency": {
+        "cycleTimeThreshold": 7,
+        "leadTimeThreshold": 14
+      }
+    }
+  },
+  
+  "caching": {
+    "progressCacheExpiry": 180000,
+    "stateCacheExpiry": 300000,
+    "reportCacheExpiry": 600000
+  },
+  
+  "integration": {
+    "cicd": {
+      "enableAutomaticStatusUpdates": true,
+      "enableWebhookTriggers": true,
+      "enableProgressTracking": true,
+      "enableConflictResolution": true
+    },
+    "notifications": {
+      "slack": {
+        "enabled": false,
+        "webhookUrl": "${SLACK_WEBHOOK_URL}",
+        "channels": {
+          "alerts": "#alerts",
+          "progress": "#progress",
+          "escalations": "#escalations"
+        }
+      },
+      "email": {
+        "enabled": false,
+        "smtpConfig": {
+          "host": "${SMTP_HOST}",
+          "port": 587,
+          "secure": false,
+          "auth": {
+            "user": "${SMTP_USER}",
+            "pass": "${SMTP_PASS}"
+          }
+        }
+      }
+    }
+  },
+  
+  "monitoring": {
+    "enableMetrics": true,
+    "enableHealthChecks": true,
+    "enablePerformanceTracking": true,
+    "alertThresholds": {
+      "apiErrorRate": 0.05,
+      "responseTime": 5000,
+      "queueDepth": 100
+    }
+  },
+  
+  "security": {
+    "enableRequestValidation": true,
+    "enableRateLimiting": true,
+    "enableAuditLogging": true,
+    "allowedOrigins": ["https://linear.app"],
+    "apiKeyRotationDays": 90
+  }
+}
+
