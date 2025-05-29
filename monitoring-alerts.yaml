@@ -1,0 +1,554 @@
+# TaskMaster Database Monitoring and Alerting Configuration
+# Comprehensive monitoring setup for PostgreSQL with Cloudflare integration
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: taskmaster-monitoring-config
+  namespace: taskmaster
+data:
+  # Prometheus Configuration
+  prometheus_config: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+      external_labels:
+        cluster: 'taskmaster-production'
+        environment: 'production'
+
+    rule_files:
+      - "/etc/prometheus/rules/*.yml"
+
+    scrape_configs:
+      # PostgreSQL Exporter
+      - job_name: 'postgres'
+        static_configs:
+          - targets: ['postgres-exporter:9187']
+        scrape_interval: 30s
+        metrics_path: /metrics
+        params:
+          collect[]:
+            - 'pg_stat_database'
+            - 'pg_stat_user_tables'
+            - 'pg_stat_activity'
+            - 'pg_locks'
+            - 'pg_replication'
+
+      # Node Exporter (System Metrics)
+      - job_name: 'node'
+        static_configs:
+          - targets: ['node-exporter:9100']
+        scrape_interval: 30s
+
+      # Application Metrics
+      - job_name: 'taskmaster-app'
+        static_configs:
+          - targets: ['taskmaster-app:8080']
+        scrape_interval: 15s
+        metrics_path: /metrics
+
+      # Cloudflare Tunnel Metrics
+      - job_name: 'cloudflared'
+        static_configs:
+          - targets: ['cloudflared:8080']
+        scrape_interval: 30s
+        metrics_path: /metrics
+
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets:
+              - alertmanager:9093
+
+  # PostgreSQL Exporter Configuration
+  postgres_exporter_config: |
+    # Connection settings
+    DATA_SOURCE_NAME: "postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}?sslmode=${DB_SSL_MODE}"
+    
+    # Custom queries for TaskMaster specific metrics
+    PG_EXPORTER_EXTEND_QUERY_PATH: "/etc/postgres_exporter/queries.yaml"
+    
+    # Disable default metrics that might be too verbose
+    PG_EXPORTER_DISABLE_DEFAULT_METRICS: "false"
+    PG_EXPORTER_DISABLE_SETTINGS_METRICS: "false"
+
+  # Custom PostgreSQL Queries for TaskMaster Metrics
+  postgres_custom_queries: |
+    # Task-specific metrics
+    task_metrics:
+      query: |
+        SELECT 
+          status,
+          COUNT(*) as count,
+          AVG(complexity_score) as avg_complexity,
+          AVG(EXTRACT(EPOCH FROM (updated_at - created_at))) as avg_duration_seconds
+        FROM tasks 
+        WHERE created_at > NOW() - INTERVAL '1 hour'
+        GROUP BY status
+      metrics:
+        - status:
+            usage: "LABEL"
+            description: "Task status"
+        - count:
+            usage: "GAUGE"
+            description: "Number of tasks by status"
+        - avg_complexity:
+            usage: "GAUGE"
+            description: "Average task complexity score"
+        - avg_duration_seconds:
+            usage: "GAUGE"
+            description: "Average task duration in seconds"
+
+    # Validation metrics
+    validation_metrics:
+      query: |
+        SELECT 
+          validation_type,
+          validation_status,
+          COUNT(*) as count,
+          AVG(validation_score) as avg_score,
+          AVG(execution_time_ms) as avg_execution_time_ms
+        FROM validation_results 
+        WHERE created_at > NOW() - INTERVAL '1 hour'
+        GROUP BY validation_type, validation_status
+      metrics:
+        - validation_type:
+            usage: "LABEL"
+            description: "Type of validation"
+        - validation_status:
+            usage: "LABEL"
+            description: "Validation status"
+        - count:
+            usage: "GAUGE"
+            description: "Number of validations"
+        - avg_score:
+            usage: "GAUGE"
+            description: "Average validation score"
+        - avg_execution_time_ms:
+            usage: "GAUGE"
+            description: "Average execution time in milliseconds"
+
+    # Error metrics
+    error_metrics:
+      query: |
+        SELECT 
+          error_category,
+          error_severity,
+          resolution_status,
+          COUNT(*) as count,
+          SUM(occurrence_count) as total_occurrences
+        FROM error_logs 
+        WHERE created_at > NOW() - INTERVAL '1 hour'
+        GROUP BY error_category, error_severity, resolution_status
+      metrics:
+        - error_category:
+            usage: "LABEL"
+            description: "Error category"
+        - error_severity:
+            usage: "LABEL"
+            description: "Error severity"
+        - resolution_status:
+            usage: "LABEL"
+            description: "Resolution status"
+        - count:
+            usage: "GAUGE"
+            description: "Number of error entries"
+        - total_occurrences:
+            usage: "GAUGE"
+            description: "Total error occurrences"
+
+    # Connection pool metrics
+    pool_metrics:
+      query: |
+        SELECT 
+          'active' as pool_type,
+          COUNT(*) as connections
+        FROM pg_stat_activity 
+        WHERE state = 'active'
+        UNION ALL
+        SELECT 
+          'idle' as pool_type,
+          COUNT(*) as connections
+        FROM pg_stat_activity 
+        WHERE state = 'idle'
+        UNION ALL
+        SELECT 
+          'total' as pool_type,
+          COUNT(*) as connections
+        FROM pg_stat_activity
+      metrics:
+        - pool_type:
+            usage: "LABEL"
+            description: "Connection pool type"
+        - connections:
+            usage: "GAUGE"
+            description: "Number of connections"
+
+  # Alerting Rules
+  alerting_rules: |
+    groups:
+      - name: taskmaster.database
+        rules:
+          # Database Connection Alerts
+          - alert: PostgreSQLDown
+            expr: pg_up == 0
+            for: 1m
+            labels:
+              severity: critical
+              service: database
+            annotations:
+              summary: "PostgreSQL is down"
+              description: "PostgreSQL database is not responding"
+
+          - alert: PostgreSQLTooManyConnections
+            expr: pg_stat_database_numbackends / pg_settings_max_connections * 100 > 80
+            for: 5m
+            labels:
+              severity: warning
+              service: database
+            annotations:
+              summary: "PostgreSQL has too many connections"
+              description: "PostgreSQL is using {{ $value }}% of available connections"
+
+          - alert: PostgreSQLHighConnectionUtilization
+            expr: pg_stat_database_numbackends / pg_settings_max_connections * 100 > 95
+            for: 2m
+            labels:
+              severity: critical
+              service: database
+            annotations:
+              summary: "PostgreSQL connection utilization critical"
+              description: "PostgreSQL is using {{ $value }}% of available connections"
+
+          # Performance Alerts
+          - alert: PostgreSQLSlowQueries
+            expr: rate(pg_stat_database_tup_returned[5m]) / rate(pg_stat_database_tup_fetched[5m]) < 0.1
+            for: 10m
+            labels:
+              severity: warning
+              service: database
+            annotations:
+              summary: "PostgreSQL has slow queries"
+              description: "PostgreSQL query efficiency is {{ $value }}"
+
+          - alert: PostgreSQLHighDiskUsage
+            expr: (node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_free_bytes{mountpoint="/"}) / node_filesystem_size_bytes{mountpoint="/"} * 100 > 85
+            for: 5m
+            labels:
+              severity: warning
+              service: system
+            annotations:
+              summary: "High disk usage"
+              description: "Disk usage is {{ $value }}%"
+
+          - alert: PostgreSQLCriticalDiskUsage
+            expr: (node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_free_bytes{mountpoint="/"}) / node_filesystem_size_bytes{mountpoint="/"} * 100 > 95
+            for: 2m
+            labels:
+              severity: critical
+              service: system
+            annotations:
+              summary: "Critical disk usage"
+              description: "Disk usage is {{ $value }}%"
+
+          # TaskMaster Application Alerts
+          - alert: TaskMasterHighErrorRate
+            expr: rate(error_metrics_count[5m]) > 10
+            for: 5m
+            labels:
+              severity: warning
+              service: application
+            annotations:
+              summary: "High error rate in TaskMaster"
+              description: "Error rate is {{ $value }} errors per second"
+
+          - alert: TaskMasterValidationFailures
+            expr: sum(rate(validation_metrics_count{validation_status="failed"}[5m])) > 5
+            for: 5m
+            labels:
+              severity: warning
+              service: application
+            annotations:
+              summary: "High validation failure rate"
+              description: "Validation failure rate is {{ $value }} failures per second"
+
+          - alert: TaskMasterTaskBacklog
+            expr: sum(task_metrics_count{status="pending"}) > 100
+            for: 10m
+            labels:
+              severity: warning
+              service: application
+            annotations:
+              summary: "High task backlog"
+              description: "{{ $value }} tasks are pending"
+
+          # Cloudflare Tunnel Alerts
+          - alert: CloudflareTunnelDown
+            expr: up{job="cloudflared"} == 0
+            for: 2m
+            labels:
+              severity: critical
+              service: cloudflare
+            annotations:
+              summary: "Cloudflare tunnel is down"
+              description: "Cloudflare tunnel is not responding"
+
+          - alert: CloudflareTunnelHighLatency
+            expr: cloudflared_tunnel_request_duration_seconds{quantile="0.95"} > 1
+            for: 5m
+            labels:
+              severity: warning
+              service: cloudflare
+            annotations:
+              summary: "High Cloudflare tunnel latency"
+              description: "95th percentile latency is {{ $value }} seconds"
+
+      - name: taskmaster.security
+        rules:
+          # Security Alerts
+          - alert: PostgreSQLUnauthorizedAccess
+            expr: increase(pg_stat_database_conflicts[5m]) > 0
+            for: 1m
+            labels:
+              severity: critical
+              service: security
+            annotations:
+              summary: "Potential unauthorized database access"
+              description: "Database conflicts detected, possible unauthorized access attempt"
+
+          - alert: TaskMasterHighFailedLogins
+            expr: rate(error_metrics_count{error_category="authentication"}[5m]) > 5
+            for: 5m
+            labels:
+              severity: warning
+              service: security
+            annotations:
+              summary: "High failed login rate"
+              description: "Failed login rate is {{ $value }} per second"
+
+  # Alertmanager Configuration
+  alertmanager_config: |
+    global:
+      smtp_smarthost: '${SMTP_HOST}:${SMTP_PORT}'
+      smtp_from: '${ALERT_EMAIL_FROM}'
+      smtp_auth_username: '${SMTP_USERNAME}'
+      smtp_auth_password: '${SMTP_PASSWORD}'
+
+    route:
+      group_by: ['alertname', 'cluster', 'service']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 1h
+      receiver: 'default'
+      routes:
+        - match:
+            severity: critical
+          receiver: 'critical-alerts'
+          group_wait: 5s
+          repeat_interval: 5m
+        - match:
+            service: security
+          receiver: 'security-alerts'
+          group_wait: 0s
+          repeat_interval: 1m
+
+    receivers:
+      - name: 'default'
+        email_configs:
+          - to: '${DEFAULT_EMAIL_RECIPIENTS}'
+            subject: '[TaskMaster] {{ .GroupLabels.alertname }}'
+            body: |
+              {{ range .Alerts }}
+              Alert: {{ .Annotations.summary }}
+              Description: {{ .Annotations.description }}
+              Labels: {{ range .Labels.SortedPairs }}{{ .Name }}={{ .Value }} {{ end }}
+              {{ end }}
+
+      - name: 'critical-alerts'
+        email_configs:
+          - to: '${CRITICAL_EMAIL_RECIPIENTS}'
+            subject: '[CRITICAL] TaskMaster Alert: {{ .GroupLabels.alertname }}'
+            body: |
+              CRITICAL ALERT - Immediate attention required!
+              
+              {{ range .Alerts }}
+              Alert: {{ .Annotations.summary }}
+              Description: {{ .Annotations.description }}
+              Severity: {{ .Labels.severity }}
+              Service: {{ .Labels.service }}
+              Time: {{ .StartsAt }}
+              {{ end }}
+        slack_configs:
+          - api_url: '${SLACK_WEBHOOK_URL}'
+            channel: '#alerts-critical'
+            title: 'CRITICAL: TaskMaster Alert'
+            text: |
+              {{ range .Alerts }}
+              🚨 *{{ .Annotations.summary }}*
+              {{ .Annotations.description }}
+              *Severity:* {{ .Labels.severity }}
+              *Service:* {{ .Labels.service }}
+              {{ end }}
+
+      - name: 'security-alerts'
+        email_configs:
+          - to: '${SECURITY_EMAIL_RECIPIENTS}'
+            subject: '[SECURITY] TaskMaster Security Alert: {{ .GroupLabels.alertname }}'
+            body: |
+              SECURITY ALERT - Potential security incident detected!
+              
+              {{ range .Alerts }}
+              Alert: {{ .Annotations.summary }}
+              Description: {{ .Annotations.description }}
+              Time: {{ .StartsAt }}
+              {{ end }}
+        slack_configs:
+          - api_url: '${SECURITY_SLACK_WEBHOOK}'
+            channel: '#security-alerts'
+            title: '🔒 SECURITY ALERT'
+            text: |
+              {{ range .Alerts }}
+              🔒 *{{ .Annotations.summary }}*
+              {{ .Annotations.description }}
+              {{ end }}
+
+    inhibit_rules:
+      - source_match:
+          severity: 'critical'
+        target_match:
+          severity: 'warning'
+        equal: ['alertname', 'cluster', 'service']
+
+  # Grafana Dashboard Configuration
+  grafana_dashboard: |
+    {
+      "dashboard": {
+        "id": null,
+        "title": "TaskMaster Database Monitoring",
+        "tags": ["taskmaster", "postgresql", "database"],
+        "timezone": "browser",
+        "panels": [
+          {
+            "id": 1,
+            "title": "Database Connections",
+            "type": "stat",
+            "targets": [
+              {
+                "expr": "pg_stat_database_numbackends{datname=\"codegen-taskmaster-db\"}",
+                "legendFormat": "Active Connections"
+              }
+            ],
+            "fieldConfig": {
+              "defaults": {
+                "color": {"mode": "thresholds"},
+                "thresholds": {
+                  "steps": [
+                    {"color": "green", "value": null},
+                    {"color": "yellow", "value": 50},
+                    {"color": "red", "value": 80}
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "id": 2,
+            "title": "Query Performance",
+            "type": "timeseries",
+            "targets": [
+              {
+                "expr": "rate(pg_stat_database_tup_returned[5m])",
+                "legendFormat": "Rows Returned/sec"
+              },
+              {
+                "expr": "rate(pg_stat_database_tup_fetched[5m])",
+                "legendFormat": "Rows Fetched/sec"
+              }
+            ]
+          },
+          {
+            "id": 3,
+            "title": "Task Status Distribution",
+            "type": "piechart",
+            "targets": [
+              {
+                "expr": "task_metrics_count",
+                "legendFormat": "{{ status }}"
+              }
+            ]
+          },
+          {
+            "id": 4,
+            "title": "Validation Results",
+            "type": "timeseries",
+            "targets": [
+              {
+                "expr": "rate(validation_metrics_count[5m])",
+                "legendFormat": "{{ validation_type }} - {{ validation_status }}"
+              }
+            ]
+          },
+          {
+            "id": 5,
+            "title": "Error Rate",
+            "type": "timeseries",
+            "targets": [
+              {
+                "expr": "rate(error_metrics_count[5m])",
+                "legendFormat": "{{ error_category }} - {{ error_severity }}"
+              }
+            ]
+          },
+          {
+            "id": 6,
+            "title": "Cloudflare Tunnel Metrics",
+            "type": "timeseries",
+            "targets": [
+              {
+                "expr": "cloudflared_tunnel_request_duration_seconds",
+                "legendFormat": "Request Duration"
+              }
+            ]
+          }
+        ],
+        "time": {
+          "from": "now-1h",
+          "to": "now"
+        },
+        "refresh": "30s"
+      }
+    }
+
+---
+# Environment Variables Template for Monitoring
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: monitoring-env-template
+  namespace: taskmaster
+data:
+  env_template: |
+    # SMTP Configuration for Alerts
+    SMTP_HOST=smtp.gmail.com
+    SMTP_PORT=587
+    SMTP_USERNAME=your_email@gmail.com
+    SMTP_PASSWORD=your_app_password
+    ALERT_EMAIL_FROM=alerts@taskmaster.com
+    
+    # Email Recipients
+    DEFAULT_EMAIL_RECIPIENTS=admin@taskmaster.com
+    CRITICAL_EMAIL_RECIPIENTS=admin@taskmaster.com,oncall@taskmaster.com
+    SECURITY_EMAIL_RECIPIENTS=security@taskmaster.com
+    
+    # Slack Configuration
+    SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK
+    SECURITY_SLACK_WEBHOOK=https://hooks.slack.com/services/YOUR/SECURITY/WEBHOOK
+    
+    # Database Connection for Monitoring
+    DB_USER=monitoring_user
+    DB_PASSWORD=monitoring_password
+    DB_HOST=localhost
+    DB_PORT=5432
+    DB_NAME=codegen-taskmaster-db
+    DB_SSL_MODE=require
+
