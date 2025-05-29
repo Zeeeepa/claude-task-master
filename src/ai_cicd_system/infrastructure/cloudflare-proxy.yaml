@@ -1,0 +1,389 @@
+# Cloudflare Proxy Configuration for TaskMaster Workflow Orchestration
+# Consolidated from PR #63 with workflow-specific enhancements
+# Provides secure database and API access through Cloudflare tunnel
+
+# Tunnel Configuration
+tunnel: ${CLOUDFLARE_TUNNEL_ID}
+credentials-file: /etc/cloudflared/credentials.json
+
+# Ingress Rules for Workflow Orchestration System
+ingress:
+  # Database proxy endpoint
+  - hostname: ${CLOUDFLARE_PROXY_HOSTNAME}
+    service: tcp://localhost:5432
+    originRequest:
+      # TCP keep-alive settings
+      tcpKeepAlive: 30s
+      # Disable TLS verification for internal connections
+      noTLSVerify: false
+      # Connection timeout
+      connectTimeout: 30s
+      # TLS timeout
+      tlsTimeout: 10s
+      # TCP nodelay
+      tcpNodelay: true
+      # HTTP2 origin
+      http2Origin: false
+
+  # Workflow API endpoint
+  - hostname: ${CLOUDFLARE_PROXY_HOSTNAME}
+    path: /api/*
+    service: http://localhost:3000
+    originRequest:
+      httpHostHeader: ${CLOUDFLARE_PROXY_HOSTNAME}
+      connectTimeout: 30s
+      tlsTimeout: 10s
+
+  # Health check endpoint
+  - hostname: ${CLOUDFLARE_PROXY_HOSTNAME}
+    path: /health
+    service: http://localhost:8080/health
+    originRequest:
+      httpHostHeader: ${CLOUDFLARE_PROXY_HOSTNAME}
+
+  # Metrics endpoint (internal)
+  - hostname: ${CLOUDFLARE_PROXY_HOSTNAME}
+    path: /metrics
+    service: http://localhost:8080/metrics
+    originRequest:
+      httpHostHeader: ${CLOUDFLARE_PROXY_HOSTNAME}
+
+  # Workflow dashboard (if enabled)
+  - hostname: ${CLOUDFLARE_PROXY_HOSTNAME}
+    path: /dashboard/*
+    service: http://localhost:3001
+    originRequest:
+      httpHostHeader: ${CLOUDFLARE_PROXY_HOSTNAME}
+
+  # Agent endpoints
+  - hostname: ${CLOUDFLARE_PROXY_HOSTNAME}
+    path: /agents/*
+    service: http://localhost:3002
+    originRequest:
+      httpHostHeader: ${CLOUDFLARE_PROXY_HOSTNAME}
+
+  # Catch-all rule (required)
+  - service: http_status:404
+
+# Logging Configuration
+log-level: ${CLOUDFLARE_LOG_LEVEL:-info}
+log-file: /var/log/cloudflared/tunnel.log
+
+# Metrics Configuration
+metrics: 0.0.0.0:8080
+
+# Auto-update Configuration
+autoupdate-freq: 24h
+
+# Protocol Configuration
+protocol: quic
+
+# Edge Configuration
+edge-ip-version: auto
+
+# Retry Configuration
+retries: 5
+
+# Grace period for shutdown
+grace-period: 30s
+
+# Post-quantum encryption
+post-quantum: true
+
+# Regional configuration
+region: auto
+
+---
+# Cloudflare Access Application Configuration
+# This section defines the Access application for workflow orchestration security
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflare-access-config
+  namespace: taskmaster-workflow
+data:
+  # Access Application Settings
+  application_domain: ${CLOUDFLARE_PROXY_HOSTNAME}
+  team_domain: ${CLOUDFLARE_TEAM_DOMAIN}
+  application_aud: ${CLOUDFLARE_APPLICATION_AUD}
+  
+  # Session Settings
+  session_duration: "24h"
+  auto_redirect_to_identity: "true"
+  
+  # CORS Settings for Workflow API
+  cors_allow_all_origins: "false"
+  cors_allowed_origins: |
+    - https://taskmaster.${CLOUDFLARE_TEAM_DOMAIN}.com
+    - https://api.taskmaster.${CLOUDFLARE_TEAM_DOMAIN}.com
+    - https://dashboard.taskmaster.${CLOUDFLARE_TEAM_DOMAIN}.com
+  
+  # Security Headers
+  security_headers: |
+    X-Frame-Options: DENY
+    X-Content-Type-Options: nosniff
+    X-XSS-Protection: 1; mode=block
+    Strict-Transport-Security: max-age=31536000; includeSubDomains
+    Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'
+    Referrer-Policy: strict-origin-when-cross-origin
+
+  # Access Policies for Workflow System
+  access_policies: |
+    - name: "Workflow Administrators"
+      decision: "allow"
+      rules:
+        - email_domain: ["company.com"]
+        - groups: ["workflow-admins", "devops"]
+      
+    - name: "Workflow Developers"
+      decision: "allow"
+      rules:
+        - email_domain: ["company.com"]
+        - groups: ["developers", "workflow-users"]
+      
+    - name: "API Access"
+      decision: "allow"
+      rules:
+        - service_token: true
+        - ip_ranges: ["10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
+
+---
+# Cloudflare WAF Rules Configuration
+# Custom WAF rules for workflow orchestration protection
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflare-waf-rules
+  namespace: taskmaster-workflow
+data:
+  # SQL Injection Protection for Database Proxy
+  sql_injection_rule: |
+    (http.request.uri.query contains "union" or 
+     http.request.uri.query contains "select" or 
+     http.request.uri.query contains "drop" or 
+     http.request.uri.query contains "delete" or 
+     http.request.body contains "union" or 
+     http.request.body contains "select" or 
+     http.request.body contains "drop" or 
+     http.request.body contains "delete") and 
+    not cf.threat_score le 10
+  
+  # Rate Limiting Rule for API Endpoints
+  api_rate_limiting_rule: |
+    (http.request.uri.path matches "^/api/(workflows|tasks|validations)" and 
+     rate(1m) > 100)
+  
+  # Workflow Execution Rate Limiting
+  workflow_execution_rate_rule: |
+    (http.request.uri.path eq "/api/workflows/execute" and 
+     rate(5m) > 20)
+  
+  # Agent Communication Protection
+  agent_communication_rule: |
+    (http.request.uri.path matches "^/agents/" and 
+     not http.request.headers["X-Agent-Auth"][0] matches "^Bearer [A-Za-z0-9-_]+$")
+  
+  # Geographic Restrictions (if needed)
+  geo_restriction_rule: |
+    ip.geoip.country ne "US" and 
+    ip.geoip.country ne "CA" and 
+    ip.geoip.country ne "GB" and
+    not http.request.headers["X-Service-Token"][0] exists
+  
+  # Bot Protection for Workflow Dashboard
+  bot_protection_rule: |
+    cf.bot_management.score lt 30 and 
+    not cf.bot_management.verified_bot and
+    http.request.uri.path matches "^/dashboard/"
+  
+  # Large Payload Protection
+  large_payload_rule: |
+    http.request.body.size > 10485760 and
+    not http.request.uri.path matches "^/api/(workflows|tasks)/upload"
+
+---
+# Cloudflare Load Balancer Configuration
+# For high availability workflow orchestration access
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflare-load-balancer
+  namespace: taskmaster-workflow
+data:
+  # Load Balancer Pool Configuration
+  pool_config: |
+    name: taskmaster-workflow-pool
+    description: TaskMaster Workflow Orchestration Pool
+    enabled: true
+    minimum_origins: 1
+    monitor: taskmaster-workflow-monitor
+    notification_email: admin@taskmaster.com
+    
+    origins:
+      - name: primary-workflow-api
+        address: ${WORKFLOW_API_HOST_PRIMARY}
+        enabled: true
+        weight: 1
+        header:
+          Host: ${CLOUDFLARE_PROXY_HOSTNAME}
+      
+      - name: secondary-workflow-api
+        address: ${WORKFLOW_API_HOST_SECONDARY}
+        enabled: true
+        weight: 0.5
+        header:
+          Host: ${CLOUDFLARE_PROXY_HOSTNAME}
+  
+  # Database Pool Configuration
+  db_pool_config: |
+    name: taskmaster-db-pool
+    description: TaskMaster Database Pool
+    enabled: true
+    minimum_origins: 1
+    monitor: taskmaster-db-monitor
+    notification_email: admin@taskmaster.com
+    
+    origins:
+      - name: primary-db
+        address: ${DB_HOST_PRIMARY}
+        enabled: true
+        weight: 1
+        header:
+          Host: ${CLOUDFLARE_PROXY_HOSTNAME}
+      
+      - name: secondary-db
+        address: ${DB_HOST_SECONDARY}
+        enabled: true
+        weight: 0.5
+        header:
+          Host: ${CLOUDFLARE_PROXY_HOSTNAME}
+  
+  # Health Monitor Configuration
+  monitor_config: |
+    # API Health Monitor
+    api_monitor:
+      type: http
+      method: GET
+      path: /health
+      port: 3000
+      interval: 60
+      retries: 2
+      timeout: 5
+      expected_codes: "200"
+      expected_body: "healthy"
+      follow_redirects: false
+      allow_insecure: false
+      header:
+        Host: ${CLOUDFLARE_PROXY_HOSTNAME}
+        User-Agent: "Cloudflare-Monitor/1.0"
+    
+    # Database Health Monitor
+    db_monitor:
+      type: tcp
+      port: 5432
+      interval: 60
+      retries: 2
+      timeout: 5
+      method: connection_established
+  
+  # Failover Configuration
+  failover_config: |
+    enabled: true
+    fallback_pool: taskmaster-workflow-fallback-pool
+    session_affinity: "cookie"
+    session_affinity_ttl: 3600
+    adaptive_routing: true
+    location_strategy: "dynamic_latency"
+
+---
+# Cloudflare Page Rules Configuration
+# Performance and security optimizations
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflare-page-rules
+  namespace: taskmaster-workflow
+data:
+  page_rules: |
+    # API Endpoint Optimizations
+    - url: "${CLOUDFLARE_PROXY_HOSTNAME}/api/*"
+      settings:
+        cache_level: "bypass"
+        security_level: "high"
+        ssl: "strict"
+        always_use_https: true
+        browser_cache_ttl: 0
+        edge_cache_ttl: 0
+    
+    # Static Assets Caching
+    - url: "${CLOUDFLARE_PROXY_HOSTNAME}/dashboard/static/*"
+      settings:
+        cache_level: "cache_everything"
+        edge_cache_ttl: 86400
+        browser_cache_ttl: 86400
+        security_level: "medium"
+    
+    # Workflow Execution Endpoints
+    - url: "${CLOUDFLARE_PROXY_HOSTNAME}/api/workflows/execute"
+      settings:
+        cache_level: "bypass"
+        security_level: "high"
+        ssl: "strict"
+        browser_integrity_check: true
+    
+    # Agent Communication
+    - url: "${CLOUDFLARE_PROXY_HOSTNAME}/agents/*"
+      settings:
+        cache_level: "bypass"
+        security_level: "high"
+        ssl: "strict"
+        browser_integrity_check: false
+    
+    # Health Checks
+    - url: "${CLOUDFLARE_PROXY_HOSTNAME}/health"
+      settings:
+        cache_level: "bypass"
+        security_level: "low"
+        browser_cache_ttl: 0
+        edge_cache_ttl: 0
+
+---
+# Environment-specific Configuration
+# Development, staging, and production overrides
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflare-environment-config
+  namespace: taskmaster-workflow
+data:
+  development: |
+    # Development environment settings
+    log_level: debug
+    waf_enabled: false
+    rate_limiting_enabled: false
+    access_policies_enabled: false
+    ssl_mode: "flexible"
+    
+  staging: |
+    # Staging environment settings
+    log_level: info
+    waf_enabled: true
+    rate_limiting_enabled: true
+    access_policies_enabled: true
+    ssl_mode: "full"
+    
+  production: |
+    # Production environment settings
+    log_level: warn
+    waf_enabled: true
+    rate_limiting_enabled: true
+    access_policies_enabled: true
+    ssl_mode: "strict"
+    ddos_protection: "high"
+    bot_fight_mode: true
+
