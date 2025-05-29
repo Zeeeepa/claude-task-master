@@ -1,10 +1,9 @@
 /**
  * index.js
- * Main export point for all Task Master CLI modules
+ * Main export point for AI Development Orchestrator modules
  */
 
-// Export all modules
+// Export essential modules for the orchestrator
 export * from './utils.js';
-export * from './ui.js';
-export * from './task-manager.js';
-export * from './commands.js';
+export * from './config-manager.js';
+

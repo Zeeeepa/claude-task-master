@@ -1,5 +1,34 @@
 # task-master-ai
 
+
+## 0.16.0
+
+### Major Changes
+
+- **BREAKING CHANGE: Architecture Restructuring** - Complete transformation from CLI-based task management system to AI Development Orchestrator
+  
+  **Removed Components:**
+  - ❌ MCP server components and all MCP-related functionality
+  - ❌ Multiple AI provider support (OpenAI, Anthropic, Perplexity, etc.)
+  - ❌ Complex CLI interface and terminal UI components
+  - ❌ Manual configuration management system
+  - ❌ Standalone task management and local JSON storage
+  - ❌ Legacy `.taskmasterconfig` files
+  
+  **New Architecture:**
+  - ✅ AI Development Orchestrator focused on Codegen SDK + Claude Code integration
+  - ✅ AgentAPI middleware for seamless AI agent communication
+  - ✅ Comprehensive database event storage system
+  - ✅ Automated PR deployment and validation on WSL2 instances
+  - ✅ Bidirectional sync with Linear for issue management
+  - ✅ Streamlined package.json (reduced dependencies by ~70%)
+  
+  **Migration Notes:**
+  - This is a complete architectural rewrite. Previous CLI functionality is no longer available.
+  - If you need the legacy task management functionality, please use version 0.15.x or earlier.
+  - New `.orchestratorconfig` configuration format replaces `.taskmasterconfig`.
+  - Focus is now on orchestrating AI development workflows rather than manual task management.
+
 ## 0.15.0
 
 ### Minor Changes
