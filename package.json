@@ -1,9 +1,9 @@
 {
-  "name": "claude-task-master-database",
-  "version": "2.0.0",
-  "description": "Consolidated Database Architecture - Zero Redundancy Implementation",
+  "name": "task-master-ai",
+  "version": "0.15.0",
+  "description": "A task management system for ambitious AI-driven development that doesn't overwhelm and confuse Cursor.",
   "type": "module",
-  "main": "src/database/connection/connection_manager.js",
+  "main": "src/core/orchestrator.js",
   "scripts": {
     "db:migrate": "node src/database/migrations/migration_runner.js migrate",
     "db:rollback": "node src/database/migrations/migration_runner.js rollback",
@@ -53,4 +53,3 @@
   },
   "homepage": "https://github.com/Zeeeepa/claude-task-master#readme"
 }
-
