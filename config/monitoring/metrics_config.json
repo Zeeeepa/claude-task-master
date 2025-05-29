@@ -1,0 +1,353 @@
+{
+  "metrics": {
+    "collection": {
+      "enabled": true,
+      "interval": 60000,
+      "retention_period": 86400000,
+      "sampling_rate": 1.0,
+      "buffer_size": 1000,
+      "flush_interval": 5000
+    },
+    "categories": {
+      "system": {
+        "enabled": true,
+        "metrics": [
+          {
+            "name": "cpu_usage_percent",
+            "type": "gauge",
+            "description": "CPU usage percentage",
+            "unit": "percent",
+            "labels": ["core", "type"]
+          },
+          {
+            "name": "memory_usage_bytes",
+            "type": "gauge",
+            "description": "Memory usage in bytes",
+            "unit": "bytes",
+            "labels": ["type"]
+          },
+          {
+            "name": "memory_usage_percent",
+            "type": "gauge",
+            "description": "Memory usage percentage",
+            "unit": "percent"
+          },
+          {
+            "name": "disk_usage_bytes",
+            "type": "gauge",
+            "description": "Disk usage in bytes",
+            "unit": "bytes",
+            "labels": ["mount_point"]
+          },
+          {
+            "name": "disk_usage_percent",
+            "type": "gauge",
+            "description": "Disk usage percentage",
+            "unit": "percent",
+            "labels": ["mount_point"]
+          },
+          {
+            "name": "network_bytes_sent",
+            "type": "counter",
+            "description": "Network bytes sent",
+            "unit": "bytes",
+            "labels": ["interface"]
+          },
+          {
+            "name": "network_bytes_received",
+            "type": "counter",
+            "description": "Network bytes received",
+            "unit": "bytes",
+            "labels": ["interface"]
+          },
+          {
+            "name": "process_uptime_seconds",
+            "type": "gauge",
+            "description": "Process uptime in seconds",
+            "unit": "seconds"
+          },
+          {
+            "name": "event_loop_lag_milliseconds",
+            "type": "gauge",
+            "description": "Event loop lag in milliseconds",
+            "unit": "milliseconds"
+          }
+        ]
+      },
+      "business": {
+        "enabled": true,
+        "metrics": [
+          {
+            "name": "pipeline_executions_total",
+            "type": "counter",
+            "description": "Total number of pipeline executions",
+            "labels": ["status", "pipeline_type"]
+          },
+          {
+            "name": "pipeline_duration_seconds",
+            "type": "histogram",
+            "description": "Pipeline execution duration in seconds",
+            "unit": "seconds",
+            "labels": ["pipeline_type", "stage"],
+            "buckets": [0.1, 0.5, 1, 2.5, 5, 10, 25, 50, 100, 250, 500, 1000]
+          },
+          {
+            "name": "pipeline_success_rate",
+            "type": "gauge",
+            "description": "Pipeline success rate",
+            "unit": "ratio",
+            "labels": ["pipeline_type"]
+          },
+          {
+            "name": "code_generation_requests_total",
+            "type": "counter",
+            "description": "Total number of code generation requests",
+            "labels": ["request_type", "status"]
+          },
+          {
+            "name": "code_generation_duration_seconds",
+            "type": "histogram",
+            "description": "Code generation duration in seconds",
+            "unit": "seconds",
+            "labels": ["request_type", "complexity"],
+            "buckets": [0.1, 0.5, 1, 2.5, 5, 10, 25, 50, 100]
+          },
+          {
+            "name": "code_generation_lines_per_second",
+            "type": "gauge",
+            "description": "Code generation efficiency in lines per second",
+            "unit": "lines_per_second",
+            "labels": ["request_type"]
+          },
+          {
+            "name": "validation_checks_total",
+            "type": "counter",
+            "description": "Total number of validation checks",
+            "labels": ["check_type", "status"]
+          },
+          {
+            "name": "validation_duration_seconds",
+            "type": "histogram",
+            "description": "Validation duration in seconds",
+            "unit": "seconds",
+            "labels": ["check_type"],
+            "buckets": [0.1, 0.5, 1, 2.5, 5, 10, 25, 50]
+          },
+          {
+            "name": "deployment_attempts_total",
+            "type": "counter",
+            "description": "Total number of deployment attempts",
+            "labels": ["environment", "strategy", "status"]
+          },
+          {
+            "name": "deployment_duration_seconds",
+            "type": "histogram",
+            "description": "Deployment duration in seconds",
+            "unit": "seconds",
+            "labels": ["environment", "strategy"],
+            "buckets": [1, 5, 10, 30, 60, 120, 300, 600, 1200]
+          },
+          {
+            "name": "error_rate_percent",
+            "type": "gauge",
+            "description": "Overall error rate percentage",
+            "unit": "percent",
+            "labels": ["component"]
+          },
+          {
+            "name": "api_requests_total",
+            "type": "counter",
+            "description": "Total number of API requests",
+            "labels": ["method", "endpoint", "status_code"]
+          },
+          {
+            "name": "api_response_time_seconds",
+            "type": "histogram",
+            "description": "API response time in seconds",
+            "unit": "seconds",
+            "labels": ["method", "endpoint"],
+            "buckets": [0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10]
+          }
+        ]
+      },
+      "custom": {
+        "enabled": true,
+        "allow_dynamic_creation": true,
+        "max_custom_metrics": 1000
+      }
+    },
+    "aggregation": {
+      "enabled": true,
+      "window_size": 300000,
+      "functions": ["avg", "min", "max", "sum", "count", "p50", "p95", "p99"]
+    },
+    "export": {
+      "prometheus": {
+        "enabled": true,
+        "port": 8000,
+        "path": "/metrics",
+        "include_timestamp": true
+      },
+      "json": {
+        "enabled": true,
+        "include_metadata": true
+      },
+      "csv": {
+        "enabled": false,
+        "delimiter": ","
+      }
+    }
+  },
+  "alerting": {
+    "enabled": true,
+    "rules": [
+      {
+        "name": "high_cpu_usage",
+        "metric": "cpu_usage_percent",
+        "condition": "greater_than",
+        "threshold": 80,
+        "duration": 300000,
+        "severity": "warning",
+        "message": "High CPU usage detected"
+      },
+      {
+        "name": "high_memory_usage",
+        "metric": "memory_usage_percent",
+        "condition": "greater_than",
+        "threshold": 85,
+        "duration": 300000,
+        "severity": "warning",
+        "message": "High memory usage detected"
+      },
+      {
+        "name": "pipeline_failure_rate",
+        "metric": "pipeline_success_rate",
+        "condition": "less_than",
+        "threshold": 0.9,
+        "duration": 600000,
+        "severity": "critical",
+        "message": "Pipeline success rate below 90%"
+      },
+      {
+        "name": "slow_pipeline_execution",
+        "metric": "pipeline_duration_seconds",
+        "condition": "greater_than",
+        "threshold": 600,
+        "duration": 0,
+        "severity": "warning",
+        "message": "Pipeline execution taking longer than 10 minutes"
+      },
+      {
+        "name": "high_error_rate",
+        "metric": "error_rate_percent",
+        "condition": "greater_than",
+        "threshold": 5,
+        "duration": 300000,
+        "severity": "critical",
+        "message": "Error rate above 5%"
+      },
+      {
+        "name": "slow_api_response",
+        "metric": "api_response_time_seconds",
+        "condition": "greater_than",
+        "threshold": 2,
+        "duration": 0,
+        "severity": "warning",
+        "message": "API response time above 2 seconds"
+      }
+    ],
+    "channels": [
+      {
+        "name": "slack",
+        "type": "webhook",
+        "url": "${SLACK_WEBHOOK_URL}",
+        "enabled": true,
+        "severity_filter": ["warning", "critical"]
+      },
+      {
+        "name": "email",
+        "type": "email",
+        "recipients": ["${ALERT_EMAIL}"],
+        "enabled": false,
+        "severity_filter": ["critical"]
+      }
+    ]
+  },
+  "performance": {
+    "tracking": {
+      "enabled": true,
+      "sampling_rate": 1.0,
+      "max_span_duration": 300000,
+      "max_spans_per_trace": 1000
+    },
+    "analysis": {
+      "enabled": true,
+      "window_size": 3600000,
+      "trend_analysis_period": 86400000,
+      "anomaly_detection_threshold": 2.0,
+      "min_data_points": 10
+    },
+    "bottleneck_detection": {
+      "enabled": true,
+      "slow_operation_threshold": 10000,
+      "high_error_rate_threshold": 0.1,
+      "resource_utilization_threshold": 0.8
+    },
+    "predictive_analysis": {
+      "enabled": true,
+      "prediction_horizon": 3600000,
+      "confidence_threshold": 0.7
+    }
+  },
+  "observability": {
+    "tracing": {
+      "enabled": true,
+      "service_name": "ai-cicd-system",
+      "sampling_rate": 1.0,
+      "enable_baggage": true,
+      "enable_logs_correlation": true,
+      "export_format": "jaeger"
+    },
+    "logging": {
+      "enabled": true,
+      "level": "info",
+      "format": "json",
+      "enable_correlation": true,
+      "enable_buffering": true,
+      "buffer_size": 1000,
+      "flush_interval": 5000,
+      "enable_sampling": false,
+      "sampling_rate": 1.0
+    }
+  },
+  "dashboards": {
+    "enabled": true,
+    "auto_generate": true,
+    "refresh_interval": 30000,
+    "theme": "dark",
+    "grafana": {
+      "enabled": true,
+      "url": "${GRAFANA_URL}",
+      "api_key": "${GRAFANA_API_KEY}",
+      "organization": "ai-cicd"
+    }
+  },
+  "storage": {
+    "metrics": {
+      "backend": "memory",
+      "retention_days": 7,
+      "compression": true
+    },
+    "traces": {
+      "backend": "memory",
+      "retention_days": 3,
+      "compression": true
+    },
+    "logs": {
+      "backend": "memory",
+      "retention_days": 7,
+      "compression": false
+    }
+  }
+}
+

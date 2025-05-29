@@ -1,0 +1,539 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "AI CI/CD System - Comprehensive Monitoring",
+    "description": "Comprehensive monitoring dashboard for AI-driven CI/CD pipeline system",
+    "tags": ["ai-cicd", "monitoring", "performance", "observability"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "System Overview",
+        "type": "row",
+        "collapsed": false,
+        "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 }
+      },
+      {
+        "id": 2,
+        "title": "Pipeline Execution Rate",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(pipeline_executions_total[5m])",
+            "legendFormat": "Executions/sec",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "custom": {
+              "axisLabel": "Executions/sec",
+              "axisPlacement": "auto",
+              "drawStyle": "line",
+              "fillOpacity": 10,
+              "lineWidth": 2,
+              "pointSize": 5,
+              "showPoints": "never"
+            },
+            "unit": "reqps"
+          }
+        },
+        "options": {
+          "legend": { "calcs": [], "displayMode": "list", "placement": "bottom" },
+          "tooltip": { "mode": "single", "sort": "none" }
+        },
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 1 }
+      },
+      {
+        "id": 3,
+        "title": "Pipeline Success Rate",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "avg(pipeline_success_rate)",
+            "legendFormat": "Success Rate",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "max": 1,
+            "min": 0,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "red", "value": null },
+                { "color": "yellow", "value": 0.8 },
+                { "color": "green", "value": 0.95 }
+              ]
+            },
+            "unit": "percentunit"
+          }
+        },
+        "options": {
+          "orientation": "auto",
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "showThresholdLabels": false,
+          "showThresholdMarkers": true
+        },
+        "gridPos": { "h": 8, "w": 6, "x": 12, "y": 1 }
+      },
+      {
+        "id": 4,
+        "title": "Error Rate",
+        "type": "gauge",
+        "targets": [
+          {
+            "expr": "avg(error_rate_percent)",
+            "legendFormat": "Error Rate",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "max": 20,
+            "min": 0,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 5 },
+                { "color": "red", "value": 10 }
+              ]
+            },
+            "unit": "percent"
+          }
+        },
+        "options": {
+          "orientation": "auto",
+          "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+          "showThresholdLabels": false,
+          "showThresholdMarkers": true
+        },
+        "gridPos": { "h": 8, "w": 6, "x": 18, "y": 1 }
+      },
+      {
+        "id": 5,
+        "title": "Pipeline Performance",
+        "type": "row",
+        "collapsed": false,
+        "gridPos": { "h": 1, "w": 24, "x": 0, "y": 9 }
+      },
+      {
+        "id": 6,
+        "title": "Pipeline Duration Distribution",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(pipeline_duration_seconds_bucket[5m]))",
+            "legendFormat": "50th percentile",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(pipeline_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile",
+            "refId": "B"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(pipeline_duration_seconds_bucket[5m]))",
+            "legendFormat": "99th percentile",
+            "refId": "C"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "custom": {
+              "axisLabel": "Duration (seconds)",
+              "axisPlacement": "auto",
+              "drawStyle": "line",
+              "fillOpacity": 10,
+              "lineWidth": 2
+            },
+            "unit": "s"
+          }
+        },
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 10 }
+      },
+      {
+        "id": 7,
+        "title": "Pipeline Stage Breakdown",
+        "type": "barchart",
+        "targets": [
+          {
+            "expr": "avg by (stage) (pipeline_duration_seconds{stage!=\"\"})",
+            "legendFormat": "{{stage}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "custom": {
+              "axisLabel": "Duration (seconds)",
+              "orientation": "horizontal"
+            },
+            "unit": "s"
+          }
+        },
+        "options": {
+          "legend": { "calcs": [], "displayMode": "list", "placement": "bottom" }
+        },
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 10 }
+      },
+      {
+        "id": 8,
+        "title": "Code Generation Performance",
+        "type": "row",
+        "collapsed": false,
+        "gridPos": { "h": 1, "w": 24, "x": 0, "y": 18 }
+      },
+      {
+        "id": 9,
+        "title": "Code Generation Rate",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "rate(code_generation_requests_total[5m])",
+            "legendFormat": "Requests/sec",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "custom": {
+              "axisLabel": "Requests/sec",
+              "drawStyle": "line",
+              "fillOpacity": 10
+            },
+            "unit": "reqps"
+          }
+        },
+        "gridPos": { "h": 8, "w": 8, "x": 0, "y": 19 }
+      },
+      {
+        "id": 10,
+        "title": "Code Generation Duration",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(code_generation_duration_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "custom": {
+              "axisLabel": "Duration (seconds)",
+              "drawStyle": "line"
+            },
+            "unit": "s"
+          }
+        },
+        "gridPos": { "h": 8, "w": 8, "x": 8, "y": 19 }
+      },
+      {
+        "id": 11,
+        "title": "Code Generation Efficiency",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "avg(code_generation_lines_per_second)",
+            "legendFormat": "Lines/sec",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "custom": {
+              "axisLabel": "Lines/sec",
+              "drawStyle": "line"
+            },
+            "unit": "short"
+          }
+        },
+        "gridPos": { "h": 8, "w": 8, "x": 16, "y": 19 }
+      },
+      {
+        "id": 12,
+        "title": "System Resources",
+        "type": "row",
+        "collapsed": false,
+        "gridPos": { "h": 1, "w": 24, "x": 0, "y": 27 }
+      },
+      {
+        "id": 13,
+        "title": "CPU Usage",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "avg(cpu_usage_percent)",
+            "legendFormat": "CPU %",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "custom": {
+              "axisLabel": "CPU %",
+              "drawStyle": "line",
+              "fillOpacity": 20,
+              "thresholdsStyle": { "mode": "area" }
+            },
+            "max": 100,
+            "min": 0,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 70 },
+                { "color": "red", "value": 85 }
+              ]
+            },
+            "unit": "percent"
+          }
+        },
+        "gridPos": { "h": 8, "w": 8, "x": 0, "y": 28 }
+      },
+      {
+        "id": 14,
+        "title": "Memory Usage",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "avg(memory_usage_percent)",
+            "legendFormat": "Memory %",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "custom": {
+              "axisLabel": "Memory %",
+              "drawStyle": "line",
+              "fillOpacity": 20,
+              "thresholdsStyle": { "mode": "area" }
+            },
+            "max": 100,
+            "min": 0,
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 75 },
+                { "color": "red", "value": 90 }
+              ]
+            },
+            "unit": "percent"
+          }
+        },
+        "gridPos": { "h": 8, "w": 8, "x": 8, "y": 28 }
+      },
+      {
+        "id": 15,
+        "title": "Event Loop Lag",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "avg(event_loop_lag_milliseconds)",
+            "legendFormat": "Event Loop Lag",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "thresholds" },
+            "custom": {
+              "axisLabel": "Lag (ms)",
+              "drawStyle": "line",
+              "fillOpacity": 20
+            },
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                { "color": "green", "value": null },
+                { "color": "yellow", "value": 10 },
+                { "color": "red", "value": 50 }
+              ]
+            },
+            "unit": "ms"
+          }
+        },
+        "gridPos": { "h": 8, "w": 8, "x": 16, "y": 28 }
+      },
+      {
+        "id": 16,
+        "title": "API Performance",
+        "type": "row",
+        "collapsed": false,
+        "gridPos": { "h": 1, "w": 24, "x": 0, "y": 36 }
+      },
+      {
+        "id": 17,
+        "title": "API Request Rate",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "sum(rate(api_requests_total[5m])) by (method)",
+            "legendFormat": "{{method}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "custom": {
+              "axisLabel": "Requests/sec",
+              "drawStyle": "line",
+              "fillOpacity": 10
+            },
+            "unit": "reqps"
+          }
+        },
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 37 }
+      },
+      {
+        "id": 18,
+        "title": "API Response Time",
+        "type": "timeseries",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, rate(api_response_time_seconds_bucket[5m]))",
+            "legendFormat": "50th percentile",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.95, rate(api_response_time_seconds_bucket[5m]))",
+            "legendFormat": "95th percentile",
+            "refId": "B"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": { "mode": "palette-classic" },
+            "custom": {
+              "axisLabel": "Response Time (seconds)",
+              "drawStyle": "line"
+            },
+            "unit": "s"
+          }
+        },
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 37 }
+      },
+      {
+        "id": 19,
+        "title": "Alerts & Status",
+        "type": "row",
+        "collapsed": false,
+        "gridPos": { "h": 1, "w": 24, "x": 0, "y": 45 }
+      },
+      {
+        "id": 20,
+        "title": "Active Alerts",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "ALERTS{alertstate=\"firing\"}",
+            "format": "table",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "auto",
+              "displayMode": "auto"
+            }
+          }
+        },
+        "options": {
+          "showHeader": true
+        },
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {
+                "__name__": true,
+                "job": true,
+                "instance": true
+              },
+              "indexByName": {},
+              "renameByName": {
+                "alertname": "Alert",
+                "severity": "Severity",
+                "summary": "Summary"
+              }
+            }
+          }
+        ],
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 46 }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {},
+    "templating": {
+      "list": [
+        {
+          "name": "environment",
+          "type": "query",
+          "query": "label_values(pipeline_executions_total, environment)",
+          "refresh": 1,
+          "includeAll": true,
+          "allValue": ".*",
+          "multi": true
+        },
+        {
+          "name": "pipeline_type",
+          "type": "query",
+          "query": "label_values(pipeline_executions_total, pipeline_type)",
+          "refresh": 1,
+          "includeAll": true,
+          "allValue": ".*",
+          "multi": true
+        }
+      ]
+    },
+    "annotations": {
+      "list": [
+        {
+          "name": "Deployments",
+          "datasource": "prometheus",
+          "expr": "deployment_attempts_total",
+          "titleFormat": "Deployment: {{environment}}",
+          "textFormat": "{{strategy}} deployment to {{environment}}",
+          "iconColor": "blue"
+        }
+      ]
+    },
+    "refresh": "30s",
+    "schemaVersion": 30,
+    "version": 1,
+    "links": [
+      {
+        "title": "System Health Dashboard",
+        "url": "/d/system-health/system-health-overview",
+        "type": "dashboards"
+      },
+      {
+        "title": "Performance Analytics Dashboard",
+        "url": "/d/performance-analytics/performance-analytics",
+        "type": "dashboards"
+      }
+    ]
+  },
+  "overwrite": false
+}
+
