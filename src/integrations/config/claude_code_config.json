@@ -1,0 +1,185 @@
+{
+  "environments": {
+    "development": {
+      "agentAPI": {
+        "baseURL": "http://localhost:3284",
+        "timeout": 30000,
+        "retryAttempts": 3,
+        "retryDelay": 1000,
+        "enableSSE": true
+      },
+      "workspace": {
+        "basePath": "/tmp/workspace-dev",
+        "maxConcurrent": 5,
+        "cleanupAfter": 1800000,
+        "wsl": {
+          "distribution": "Ubuntu-22.04",
+          "user": "ubuntu"
+        }
+      },
+      "claude": {
+        "maxTokens": 4000,
+        "temperature": 0.1,
+        "allowedTools": ["Bash(git*)", "Edit", "Replace", "Create"],
+        "systemPrompt": "You are a helpful AI assistant specialized in code development and task automation."
+      },
+      "monitoring": {
+        "healthCheckInterval": 30000,
+        "errorRateThreshold": 10,
+        "enableMetrics": true,
+        "enableTracing": true
+      }
+    },
+    "production": {
+      "agentAPI": {
+        "baseURL": "${AGENTAPI_URL}",
+        "timeout": 60000,
+        "retryAttempts": 5,
+        "retryDelay": 2000,
+        "enableSSE": true,
+        "apiKey": "${AGENTAPI_API_KEY}"
+      },
+      "workspace": {
+        "basePath": "${WORKSPACE_BASE_PATH}",
+        "maxConcurrent": 20,
+        "cleanupAfter": 3600000,
+        "wsl": {
+          "distribution": "${WSL2_DISTRIBUTION}",
+          "user": "${WSL2_USER}"
+        }
+      },
+      "claude": {
+        "maxTokens": 8000,
+        "temperature": 0.05,
+        "allowedTools": ["Bash(git*)", "Edit", "Replace", "Create", "Search"],
+        "systemPrompt": "You are a professional AI assistant specialized in production code development and automated task execution."
+      },
+      "monitoring": {
+        "healthCheckInterval": 15000,
+        "errorRateThreshold": 5,
+        "enableMetrics": true,
+        "enableTracing": true,
+        "enableAlerting": true
+      },
+      "security": {
+        "enableAuthentication": true,
+        "jwtSecret": "${JWT_SECRET}",
+        "apiKeyRequired": true,
+        "rateLimiting": {
+          "enabled": true,
+          "maxRequests": 100,
+          "windowMs": 60000
+        }
+      }
+    },
+    "testing": {
+      "agentAPI": {
+        "baseURL": "http://localhost:3284",
+        "timeout": 10000,
+        "retryAttempts": 1,
+        "retryDelay": 500,
+        "enableSSE": false
+      },
+      "workspace": {
+        "basePath": "/tmp/workspace-test",
+        "maxConcurrent": 2,
+        "cleanupAfter": 300000,
+        "wsl": {
+          "distribution": "Ubuntu-22.04",
+          "user": "ubuntu"
+        }
+      },
+      "claude": {
+        "maxTokens": 1000,
+        "temperature": 0.0,
+        "allowedTools": ["Edit", "Replace"],
+        "systemPrompt": "You are a test AI assistant. Keep responses brief and focused."
+      },
+      "monitoring": {
+        "healthCheckInterval": 60000,
+        "errorRateThreshold": 20,
+        "enableMetrics": false,
+        "enableTracing": false
+      }
+    }
+  },
+  "taskTypes": {
+    "feature": {
+      "description": "New feature development",
+      "defaultPrompt": "Implement the following feature with proper error handling, testing, and documentation:",
+      "allowedTools": ["Bash(git*)", "Edit", "Replace", "Create", "Search"],
+      "maxTokens": 6000,
+      "temperature": 0.1
+    },
+    "bugfix": {
+      "description": "Bug fixing and issue resolution",
+      "defaultPrompt": "Investigate and fix the following bug. Provide a detailed explanation of the root cause and solution:",
+      "allowedTools": ["Bash(git*)", "Edit", "Replace", "Search"],
+      "maxTokens": 4000,
+      "temperature": 0.05
+    },
+    "enhancement": {
+      "description": "Improvement of existing functionality",
+      "defaultPrompt": "Enhance the existing functionality as described. Maintain backward compatibility where possible:",
+      "allowedTools": ["Bash(git*)", "Edit", "Replace", "Create"],
+      "maxTokens": 5000,
+      "temperature": 0.1
+    },
+    "refactor": {
+      "description": "Code refactoring and optimization",
+      "defaultPrompt": "Refactor the code to improve maintainability, performance, and readability while preserving functionality:",
+      "allowedTools": ["Bash(git*)", "Edit", "Replace"],
+      "maxTokens": 4000,
+      "temperature": 0.05
+    },
+    "documentation": {
+      "description": "Documentation creation and updates",
+      "defaultPrompt": "Create comprehensive documentation for the specified component or feature:",
+      "allowedTools": ["Edit", "Replace", "Create"],
+      "maxTokens": 3000,
+      "temperature": 0.2
+    },
+    "testing": {
+      "description": "Test creation and validation",
+      "defaultPrompt": "Create comprehensive tests for the specified functionality. Include unit tests, integration tests, and edge cases:",
+      "allowedTools": ["Bash(npm*)", "Edit", "Replace", "Create"],
+      "maxTokens": 4000,
+      "temperature": 0.1
+    }
+  },
+  "promptTemplates": {
+    "basic": {
+      "template": "# Task: {{title}}\n\n## Description\n{{description}}\n\n## Requirements\n{{requirements}}\n\n## Instructions\nPlease complete this task following best practices.",
+      "variables": ["title", "description", "requirements"]
+    },
+    "feature": {
+      "template": "# Feature Implementation: {{title}}\n\n## Objective\n{{description}}\n\n## Acceptance Criteria\n{{requirements}}\n\n## Technical Requirements\n{{technical_requirements}}\n\n## Implementation Guidelines\n1. Follow existing code patterns and conventions\n2. Include proper error handling\n3. Add comprehensive tests\n4. Update documentation as needed\n5. Ensure backward compatibility\n\n## Context\n{{context}}",
+      "variables": ["title", "description", "requirements", "technical_requirements", "context"]
+    },
+    "bugfix": {
+      "template": "# Bug Fix: {{title}}\n\n## Problem Description\n{{description}}\n\n## Bug Details\n{{bug_details}}\n\n## Reproduction Steps\n{{reproduction_steps}}\n\n## Expected Behavior\n{{expected_behavior}}\n\n## Investigation Steps\n1. Analyze the code to identify the root cause\n2. Reproduce the issue if possible\n3. Implement a targeted fix\n4. Add tests to prevent regression\n5. Verify the fix resolves the issue\n\n## Additional Context\n{{context}}",
+      "variables": ["title", "description", "bug_details", "reproduction_steps", "expected_behavior", "context"]
+    },
+    "enhancement": {
+      "template": "# Enhancement: {{title}}\n\n## Current State\n{{current_state}}\n\n## Desired Improvements\n{{description}}\n\n## Requirements\n{{requirements}}\n\n## Performance Considerations\n{{performance_notes}}\n\n## Implementation Approach\n1. Analyze existing implementation\n2. Identify improvement opportunities\n3. Implement enhancements incrementally\n4. Maintain backward compatibility\n5. Update tests and documentation\n\n## Context\n{{context}}",
+      "variables": ["title", "current_state", "description", "requirements", "performance_notes", "context"]
+    }
+  },
+  "validation": {
+    "required_fields": ["title", "description", "type"],
+    "max_title_length": 100,
+    "max_description_length": 2000,
+    "valid_types": ["feature", "bugfix", "enhancement", "refactor", "documentation", "testing"],
+    "max_requirements": 20,
+    "max_requirement_length": 200
+  },
+  "defaults": {
+    "timeout": 30000,
+    "maxRetries": 3,
+    "cleanupWorkspace": true,
+    "waitForCompletion": false,
+    "createWorkspace": true,
+    "enableMonitoring": true
+  }
+}
+
