@@ -1,0 +1,43 @@
+{
+  "id": "feature_complex",
+  "name": "Complex Feature Development Template",
+  "type": "feature",
+  "complexity_level": "complex",
+  "version": "1.0.0",
+  "description": "Template for complex feature development with comprehensive requirements",
+  "content": "# Complex Feature Development: {{TASK_TITLE}}\n\n## Feature Overview\n{{TASK_DESCRIPTION}}\n\n## Business Requirements\n{{BUSINESS_REQUIREMENTS}}\n\n## Technical Requirements\n{{TECHNICAL_REQUIREMENTS}}\n\n## Acceptance Criteria\n{{ACCEPTANCE_CRITERIA}}\n\n## Architecture Design\n{{ARCHITECTURE_DESIGN}}\n\n## Implementation Strategy\n{{IMPLEMENTATION_STRATEGY}}\n\n## Database Changes\n{{DATABASE_CHANGES}}\n\n## API Design\n{{API_DESIGN}}\n\n## Dependencies and Integrations\n{{DEPENDENCIES}}\n\n## Security Considerations\n{{SECURITY_CONSIDERATIONS}}\n\n## Performance Requirements\n{{PERFORMANCE_REQUIREMENTS}}\n\n## Scalability Considerations\n{{SCALABILITY_CONSIDERATIONS}}\n\n## Error Handling Strategy\n{{ERROR_HANDLING}}\n\n## Monitoring and Logging\n{{MONITORING_LOGGING}}\n\n## Testing Strategy\n{{TESTING_STRATEGY}}\n\n## Deployment Plan\n{{DEPLOYMENT_PLAN}}\n\n## Rollback Strategy\n{{ROLLBACK_STRATEGY}}\n\n## Documentation Requirements\n{{DOCUMENTATION_REQUIREMENTS}}\n\n## Files to Create/Modify\n{{TARGET_FILES}}\n\n## Migration Strategy\n{{MIGRATION_STRATEGY}}\n\n## Risk Assessment\n{{RISK_ASSESSMENT}}\n\n## Timeline and Milestones\n{{TIMELINE_MILESTONES}}\n\n## Implementation Guidelines\n- Follow SOLID principles and clean architecture patterns\n- Implement comprehensive error handling and validation\n- Ensure proper separation of concerns\n- Use dependency injection where appropriate\n- Implement proper logging and monitoring\n- Follow security best practices\n- Ensure backward compatibility\n- Write comprehensive tests (unit, integration, e2e)\n- Document all public APIs and interfaces\n- Consider performance implications at every step\n- Plan for horizontal scaling\n- Implement proper caching strategies\n- Use feature flags for gradual rollout",
+  "variables": {
+    "BUSINESS_REQUIREMENTS": "Detailed business requirements and objectives",
+    "TECHNICAL_REQUIREMENTS": "Technical specifications and constraints",
+    "ACCEPTANCE_CRITERIA": "Detailed acceptance criteria for feature completion",
+    "ARCHITECTURE_DESIGN": "High-level architecture and design patterns",
+    "IMPLEMENTATION_STRATEGY": "Step-by-step implementation approach",
+    "DATABASE_CHANGES": "Required database schema changes and migrations",
+    "API_DESIGN": "API endpoints, request/response formats, and contracts",
+    "DEPENDENCIES": "External dependencies and integration requirements",
+    "SECURITY_CONSIDERATIONS": "Security requirements and threat mitigation",
+    "PERFORMANCE_REQUIREMENTS": "Performance benchmarks and optimization needs",
+    "SCALABILITY_CONSIDERATIONS": "Scalability requirements and strategies",
+    "ERROR_HANDLING": "Error handling patterns and recovery strategies",
+    "MONITORING_LOGGING": "Monitoring, alerting, and logging requirements",
+    "TESTING_STRATEGY": "Comprehensive testing approach and coverage",
+    "DEPLOYMENT_PLAN": "Deployment strategy and environment considerations",
+    "ROLLBACK_STRATEGY": "Rollback procedures and contingency plans",
+    "DOCUMENTATION_REQUIREMENTS": "Documentation needs and standards",
+    "TARGET_FILES": "Complete list of files to be created or modified",
+    "MIGRATION_STRATEGY": "Data migration and backward compatibility plan",
+    "RISK_ASSESSMENT": "Identified risks and mitigation strategies",
+    "TIMELINE_MILESTONES": "Project timeline and key milestones"
+  },
+  "metadata": {
+    "created_at": "2025-05-28T16:30:00.000Z",
+    "updated_at": "2025-05-28T16:30:00.000Z",
+    "author": "Enhanced Codegen Integrator",
+    "tags": ["feature", "complex", "architecture", "enterprise"],
+    "estimated_complexity": 9,
+    "estimated_time_hours": 40,
+    "requires_review": true,
+    "requires_architecture_approval": true
+  }
+}
+
