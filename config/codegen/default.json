@@ -1,0 +1,178 @@
+{
+  "version": "1.0.0",
+  "description": "Consolidated Codegen SDK Integration Configuration",
+  "lastUpdated": "2024-01-15",
+  
+  "api": {
+    "baseURL": "https://api.codegen.sh",
+    "version": "v1",
+    "timeout": 30000,
+    "retries": 3,
+    "enableMock": false
+  },
+  
+  "authentication": {
+    "validateOnInit": true,
+    "tokenRefreshThreshold": 300000,
+    "autoRefresh": true
+  },
+  
+  "rateLimiting": {
+    "enabled": true,
+    "requestsPerSecond": 2,
+    "requestsPerMinute": 60,
+    "requestsPerHour": 1000,
+    "requestsPerDay": 10000,
+    "burstSize": 5,
+    "maxQueueSize": 100,
+    "enableQueue": true
+  },
+  
+  "errorHandling": {
+    "enabled": true,
+    "maxRetries": 3,
+    "baseDelay": 1000,
+    "maxDelay": 30000,
+    "enableCircuitBreaker": true,
+    "circuitBreakerThreshold": 5,
+    "circuitBreakerTimeout": 60000,
+    "retryableErrors": [
+      "NETWORK_ERROR",
+      "TIMEOUT_ERROR", 
+      "RATE_LIMIT_EXCEEDED",
+      "SERVER_ERROR"
+    ]
+  },
+  
+  "taskAnalyzer": {
+    "maxComplexityScore": 100,
+    "enableDetailedAnalysis": true,
+    "confidenceThreshold": 0.6,
+    "supportedLanguages": [
+      "javascript",
+      "typescript", 
+      "python",
+      "java",
+      "go",
+      "rust",
+      "php",
+      "ruby"
+    ],
+    "supportedFrameworks": [
+      "react",
+      "vue", 
+      "angular",
+      "express",
+      "fastapi",
+      "django",
+      "spring",
+      "rails"
+    ]
+  },
+  
+  "promptGenerator": {
+    "maxPromptLength": 4000,
+    "includeContext": true,
+    "includeExamples": false,
+    "optimizeForCodegen": true,
+    "templateVersion": "1.0",
+    "enableTemplateCache": true
+  },
+  
+  "prWorkflow": {
+    "defaultBranch": "main",
+    "branchPrefix": "codegen/",
+    "enableAutoReview": true,
+    "enableStatusTracking": true,
+    "enableNotifications": true,
+    "maxRetries": 3,
+    "retryDelayMs": 5000,
+    "timeoutMs": 600000,
+    "defaultReviewers": [],
+    "autoMergeEnabled": false
+  },
+  
+  "statusUpdater": {
+    "enableLinearIntegration": true,
+    "enableWebhooks": true,
+    "enableNotifications": true,
+    "updateIntervalMs": 30000,
+    "maxRetries": 3,
+    "retryDelayMs": 5000,
+    "notificationChannels": ["slack"]
+  },
+  
+  "qualityValidation": {
+    "enabled": true,
+    "minQualityScore": 75,
+    "enableCodeAnalysis": true,
+    "enableSecurityAnalysis": true,
+    "enablePerformanceAnalysis": true,
+    "strictMode": false
+  },
+  
+  "monitoring": {
+    "enabled": true,
+    "logLevel": "info",
+    "enableMetrics": true,
+    "enableTracing": false,
+    "metricsInterval": 60000,
+    "enableHealthChecks": true,
+    "healthCheckInterval": 60000
+  },
+  
+  "cache": {
+    "enabled": true,
+    "ttl": 300000,
+    "maxSize": 100,
+    "strategy": "lru"
+  },
+  
+  "environments": {
+    "development": {
+      "api": {
+        "enableMock": true,
+        "timeout": 10000
+      },
+      "rateLimiting": {
+        "enabled": false
+      },
+      "monitoring": {
+        "logLevel": "debug"
+      }
+    },
+    "test": {
+      "api": {
+        "enableMock": true,
+        "timeout": 5000
+      },
+      "rateLimiting": {
+        "enabled": false
+      },
+      "errorHandling": {
+        "enabled": false
+      },
+      "monitoring": {
+        "logLevel": "error"
+      }
+    },
+    "production": {
+      "api": {
+        "enableMock": false
+      },
+      "rateLimiting": {
+        "requestsPerSecond": 1,
+        "requestsPerMinute": 30
+      },
+      "errorHandling": {
+        "maxRetries": 5
+      },
+      "monitoring": {
+        "logLevel": "warn",
+        "enableMetrics": true,
+        "enableTracing": true
+      }
+    }
+  }
+}
+
