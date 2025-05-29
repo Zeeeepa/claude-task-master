@@ -176,7 +176,123 @@ export class SystemConfig {
                 enable_real_time_updates: process.env.ENABLE_REAL_TIME_UPDATES !== 'false',
                 health_check_interval: 30000, // 30 seconds
                 metrics_collection_interval: 60000, // 1 minute
-                enable_performance_tracking: true
+                enable_performance_tracking: true,
+                
+                // Enhanced monitoring features
+                enhanced_alerting: {
+                    enabled: process.env.ENHANCED_ALERTING_ENABLED !== 'false',
+                    intelligent_throttling: true,
+                    predictive_alerting: true,
+                    quality_tracking: true,
+                    trend_analysis: true,
+                    alert_aggregation_window: 60000, // 1 minute
+                    codegen_quality_threshold: 0.7,
+                    validation_success_threshold: 0.8,
+                    workflow_timeout_threshold: 300000, // 5 minutes
+                    performance_degradation_threshold: 0.2
+                },
+                
+                metrics_collection: {
+                    enabled: true,
+                    collection_interval: 30000, // 30 seconds
+                    batch_size: 100,
+                    max_retries: 3,
+                    async_collection: true,
+                    sampling: {
+                        enabled: true,
+                        rate: 0.1, // 10% sampling for high-volume metrics
+                        high_volume_metrics: ['webhook_events', 'api_requests', 'database_queries']
+                    },
+                    compression: {
+                        enabled: true,
+                        threshold_bytes: 1024
+                    },
+                    caching: {
+                        enabled: true,
+                        size: 10000,
+                        ttl: 300000 // 5 minutes
+                    }
+                },
+                
+                performance_monitoring: {
+                    enabled: true,
+                    real_time_monitoring: true,
+                    sampling_interval: 5000, // 5 seconds
+                    retention_period: 86400000, // 24 hours
+                    predictive_analysis: true,
+                    bottleneck_detection: true,
+                    optimization_suggestions: true,
+                    thresholds: {
+                        api_response_time: 2000, // 2 seconds
+                        database_query_time: 1000, // 1 second
+                        workflow_execution_time: 300000, // 5 minutes
+                        memory_usage: 0.8, // 80%
+                        cpu_usage: 0.7, // 70%
+                        error_rate: 0.05 // 5%
+                    }
+                },
+                
+                sla_monitoring: {
+                    enabled: process.env.SLA_MONITORING_ENABLED !== 'false',
+                    real_time_monitoring: true,
+                    trend_analysis: true,
+                    predictive_analysis: true,
+                    retention_period: 7776000000, // 90 days
+                    definitions: {
+                        system_availability: 0.999, // 99.9%
+                        api_availability: 0.995, // 99.5%
+                        database_availability: 0.999, // 99.9%
+                        api_response_time: 2000, // 2 seconds
+                        workflow_completion_time: 300000, // 5 minutes
+                        database_query_time: 1000, // 1 second
+                        codegen_quality: 0.8, // 80%
+                        validation_success_rate: 0.9, // 90%
+                        error_rate: 0.01, // 1%
+                        ai_model_accuracy: 0.85, // 85%
+                        pr_creation_success_rate: 0.95, // 95%
+                        webhook_processing_time: 5000 // 5 seconds
+                    },
+                    alert_thresholds: {
+                        warning: 0.05, // 5% below target
+                        critical: 0.1 // 10% below target
+                    }
+                },
+                
+                dashboards: {
+                    grafana: {
+                        enabled: process.env.GRAFANA_ENABLED !== 'false',
+                        url: process.env.GRAFANA_URL || 'http://localhost:3000',
+                        api_key: process.env.GRAFANA_API_KEY,
+                        auto_import: true,
+                        refresh_interval: '30s'
+                    },
+                    prometheus: {
+                        enabled: process.env.PROMETHEUS_ENABLED !== 'false',
+                        url: process.env.PROMETHEUS_URL || 'http://localhost:9090',
+                        scrape_interval: '15s',
+                        retention: '15d'
+                    }
+                },
+                
+                data_retention: {
+                    metrics: {
+                        raw_data: '24h',
+                        aggregated_1m: '7d',
+                        aggregated_5m: '30d',
+                        aggregated_1h: '90d',
+                        aggregated_1d: '1y'
+                    },
+                    alerts: {
+                        active: '30d',
+                        resolved: '90d',
+                        history: '1y'
+                    },
+                    sla_data: {
+                        violations: '1y',
+                        reports: '2y',
+                        trends: '6m'
+                    }
+                }
             },
 
             // Security
@@ -352,4 +468,3 @@ export class SystemConfig {
 }
 
 export default SystemConfig;
-

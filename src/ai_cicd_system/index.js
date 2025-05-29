@@ -12,6 +12,10 @@ import { ValidationEngine } from './core/validation_engine.js';
 import { WorkflowOrchestrator } from './core/workflow_orchestrator.js';
 import { ContextManager } from './core/context_manager.js';
 import { SystemMonitor } from './monitoring/system_monitor.js';
+import { EnhancedAlertManager } from './monitoring/enhanced_alert_manager.js';
+import { MetricsCollector } from './monitoring/metrics_collector.js';
+import { PerformanceMonitor } from './monitoring/performance_monitor.js';
+import { SLAMonitor } from './monitoring/sla_monitor.js';
 import { log } from '../scripts/modules/utils.js';
 
 /**
@@ -49,7 +53,11 @@ export class AICICDSystem {
                 'codegenIntegrator',
                 'validationEngine',
                 'workflowOrchestrator',
-                'systemMonitor'
+                'systemMonitor',
+                'enhancedAlertManager',
+                'metricsCollector',
+                'performanceMonitor',
+                'slaMonitor'
             ]);
 
             this.isInitialized = true;
@@ -262,7 +270,11 @@ export class AICICDSystem {
                 'codegenIntegrator',
                 'requirementProcessor',
                 'taskStorage',
-                'contextManager'
+                'contextManager',
+                'enhancedAlertManager',
+                'metricsCollector',
+                'performanceMonitor',
+                'slaMonitor'
             ];
 
             for (const componentName of shutdownOrder) {
@@ -295,6 +307,10 @@ export class AICICDSystem {
         this.components.set('validationEngine', new ValidationEngine(this.config.validation));
         this.components.set('workflowOrchestrator', new WorkflowOrchestrator(this.config.workflow));
         this.components.set('systemMonitor', new SystemMonitor(this.config.monitoring));
+        this.components.set('enhancedAlertManager', new EnhancedAlertManager(this.config.alerts));
+        this.components.set('metricsCollector', new MetricsCollector(this.config.metrics));
+        this.components.set('performanceMonitor', new PerformanceMonitor(this.config.performance));
+        this.components.set('slaMonitor', new SLAMonitor(this.config.sla));
     }
 
     /**
@@ -407,4 +423,3 @@ export async function processRequirement(requirement, config = {}) {
 }
 
 export default AICICDSystem;
-

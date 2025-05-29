@@ -1,0 +1,729 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Enhanced AI CI/CD System - Comprehensive Monitoring Dashboard",
+    "description": "Extended monitoring dashboard for AI CI/CD workflows with enhanced AlertManager integration",
+    "tags": ["ai-cicd", "enhanced-monitoring", "alertmanager", "performance", "sla"],
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "templating": {
+      "list": [
+        {
+          "name": "environment",
+          "type": "custom",
+          "options": [
+            {"text": "Production", "value": "prod"},
+            {"text": "Staging", "value": "staging"},
+            {"text": "Development", "value": "dev"}
+          ],
+          "current": {"text": "Production", "value": "prod"}
+        },
+        {
+          "name": "component",
+          "type": "query",
+          "query": "label_values(ai_cicd_component_health, component)",
+          "refresh": 1,
+          "includeAll": true,
+          "allValue": ".*"
+        }
+      ]
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "🎯 SLA Compliance Overview",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "ai_cicd_sla_compliance_overall",
+            "legendFormat": "Overall SLA Compliance"
+          },
+          {
+            "expr": "ai_cicd_sla_availability_system",
+            "legendFormat": "System Availability"
+          },
+          {
+            "expr": "ai_cicd_sla_performance_api_response",
+            "legendFormat": "API Performance"
+          },
+          {
+            "expr": "ai_cicd_sla_quality_codegen",
+            "legendFormat": "Code Quality"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 0},
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 95},
+                {"color": "green", "value": 99}
+              ]
+            },
+            "mappings": [],
+            "displayName": "${__field.labels.legendFormat}"
+          }
+        },
+        "options": {
+          "reduceOptions": {
+            "values": false,
+            "calcs": ["lastNotNull"],
+            "fields": ""
+          },
+          "orientation": "horizontal",
+          "textMode": "auto",
+          "colorMode": "background",
+          "graphMode": "area",
+          "justifyMode": "auto"
+        }
+      },
+      {
+        "id": 2,
+        "title": "🚨 Active Alerts & Violations",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "ai_cicd_active_alerts",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "auto",
+              "displayMode": "auto"
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "severity"},
+              "properties": [
+                {
+                  "id": "custom.displayMode",
+                  "value": "color-background"
+                },
+                {
+                  "id": "mappings",
+                  "value": [
+                    {"options": {"critical": {"color": "red", "index": 0}}, "type": "value"},
+                    {"options": {"warning": {"color": "yellow", "index": 1}}, "type": "value"},
+                    {"options": {"info": {"color": "blue", "index": 2}}, "type": "value"}
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {},
+              "indexByName": {},
+              "renameByName": {
+                "alertname": "Alert",
+                "severity": "Severity",
+                "component": "Component",
+                "message": "Message",
+                "timestamp": "Time"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "📊 AI Workflow Performance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(ai_cicd_codegen_requests_total[5m])",
+            "legendFormat": "Codegen Requests/sec"
+          },
+          {
+            "expr": "rate(ai_cicd_validation_requests_total[5m])",
+            "legendFormat": "Validation Requests/sec"
+          },
+          {
+            "expr": "rate(ai_cicd_workflow_completions_total[5m])",
+            "legendFormat": "Workflow Completions/sec"
+          },
+          {
+            "expr": "rate(ai_cicd_pr_creations_total[5m])",
+            "legendFormat": "PR Creations/sec"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "yAxes": [
+          {
+            "label": "Requests per second",
+            "min": 0
+          }
+        ],
+        "legend": {
+          "avg": true,
+          "current": true,
+          "max": true,
+          "min": false,
+          "show": true,
+          "total": false,
+          "values": true
+        },
+        "tooltip": {
+          "shared": true,
+          "sort": 0,
+          "value_type": "individual"
+        }
+      },
+      {
+        "id": 4,
+        "title": "🎯 Code Generation Quality Metrics",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "ai_cicd_codegen_quality_score",
+            "legendFormat": "Quality Score"
+          },
+          {
+            "expr": "ai_cicd_codegen_success_rate",
+            "legendFormat": "Success Rate"
+          },
+          {
+            "expr": "ai_cicd_pr_creation_success_rate",
+            "legendFormat": "PR Creation Success"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+        "yAxes": [
+          {
+            "label": "Score/Rate",
+            "min": 0,
+            "max": 1,
+            "unit": "percentunit"
+          }
+        ],
+        "thresholds": [
+          {
+            "value": 0.8,
+            "colorMode": "critical",
+            "op": "lt",
+            "fill": true,
+            "line": true,
+            "yaxis": "left"
+          }
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "query": {"queryType": "", "refId": "A"},
+              "reducer": {"type": "avg", "params": []},
+              "evaluator": {"params": [0.7], "type": "lt"}
+            }
+          ],
+          "executionErrorState": "alerting",
+          "for": "5m",
+          "frequency": "10s",
+          "handler": 1,
+          "name": "AI Code Quality Degradation",
+          "noDataState": "no_data",
+          "notifications": []
+        }
+      },
+      {
+        "id": 5,
+        "title": "⚡ Response Time Distribution",
+        "type": "heatmap",
+        "targets": [
+          {
+            "expr": "increase(ai_cicd_response_time_bucket[5m])",
+            "legendFormat": "{{le}}"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+        "heatmap": {
+          "xAxis": {"show": true},
+          "yAxis": {
+            "unit": "ms",
+            "min": 0,
+            "logBase": 2
+          },
+          "colorMode": "spectrum"
+        },
+        "tooltip": {
+          "show": true,
+          "showHistogram": true
+        }
+      },
+      {
+        "id": 6,
+        "title": "🗄️ Database Performance for AI Operations",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.50, ai_cicd_db_query_duration_bucket{operation=~\"ai_.*\"})",
+            "legendFormat": "50th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.95, ai_cicd_db_query_duration_bucket{operation=~\"ai_.*\"})",
+            "legendFormat": "95th percentile"
+          },
+          {
+            "expr": "histogram_quantile(0.99, ai_cicd_db_query_duration_bucket{operation=~\"ai_.*\"})",
+            "legendFormat": "99th percentile"
+          },
+          {
+            "expr": "ai_cicd_db_connections_active",
+            "legendFormat": "Active Connections",
+            "yAxis": 2
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+        "yAxes": [
+          {
+            "label": "Query Duration",
+            "unit": "ms",
+            "min": 0
+          },
+          {
+            "label": "Connections",
+            "unit": "short",
+            "min": 0
+          }
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "query": {"queryType": "", "refId": "B"},
+              "reducer": {"type": "avg", "params": []},
+              "evaluator": {"params": [2000], "type": "gt"}
+            }
+          ],
+          "executionErrorState": "alerting",
+          "for": "2m",
+          "frequency": "10s",
+          "handler": 1,
+          "name": "AI Database Performance Degradation",
+          "noDataState": "no_data",
+          "notifications": []
+        }
+      },
+      {
+        "id": 7,
+        "title": "🤖 Agent Operations & Health",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "ai_cicd_agents_active",
+            "legendFormat": "Active Agents"
+          },
+          {
+            "expr": "ai_cicd_agents_idle",
+            "legendFormat": "Idle Agents"
+          },
+          {
+            "expr": "rate(ai_cicd_agent_requests_total[5m])",
+            "legendFormat": "Agent Requests/sec"
+          },
+          {
+            "expr": "ai_cicd_agent_failure_rate",
+            "legendFormat": "Failure Rate",
+            "yAxis": 2
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+        "yAxes": [
+          {
+            "label": "Count/Rate",
+            "min": 0
+          },
+          {
+            "label": "Failure Rate",
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1
+          }
+        ],
+        "thresholds": [
+          {
+            "value": 0.1,
+            "colorMode": "critical",
+            "op": "gt",
+            "yaxis": "right"
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "🔗 Webhook Processing Performance",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(ai_cicd_webhooks_received_total[5m])",
+            "legendFormat": "Webhooks Received/sec"
+          },
+          {
+            "expr": "rate(ai_cicd_webhooks_processed_total[5m])",
+            "legendFormat": "Webhooks Processed/sec"
+          },
+          {
+            "expr": "ai_cicd_webhook_queue_size",
+            "legendFormat": "Queue Size"
+          },
+          {
+            "expr": "histogram_quantile(0.95, ai_cicd_webhook_processing_time_bucket)",
+            "legendFormat": "95th percentile processing time",
+            "yAxis": 2
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 32},
+        "yAxes": [
+          {
+            "label": "Rate/Count",
+            "min": 0
+          },
+          {
+            "label": "Processing Time",
+            "unit": "ms",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "📈 Predictive Analytics & Trends",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "ai_cicd_predicted_quality_degradation",
+            "legendFormat": "Predicted Quality Degradation"
+          },
+          {
+            "expr": "ai_cicd_predicted_performance_degradation",
+            "legendFormat": "Predicted Performance Degradation"
+          },
+          {
+            "expr": "ai_cicd_trend_analysis_confidence",
+            "legendFormat": "Trend Analysis Confidence"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 32},
+        "yAxes": [
+          {
+            "label": "Risk/Confidence",
+            "unit": "percentunit",
+            "min": 0,
+            "max": 1
+          }
+        ],
+        "thresholds": [
+          {
+            "value": 0.15,
+            "colorMode": "critical",
+            "op": "gt",
+            "fill": true,
+            "line": true
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "💾 System Resource Utilization",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "ai_cicd_memory_usage_percent",
+            "legendFormat": "Memory Usage %"
+          },
+          {
+            "expr": "ai_cicd_cpu_usage_percent",
+            "legendFormat": "CPU Usage %"
+          },
+          {
+            "expr": "ai_cicd_disk_usage_percent",
+            "legendFormat": "Disk Usage %"
+          },
+          {
+            "expr": "ai_cicd_network_io_rate",
+            "legendFormat": "Network I/O Rate",
+            "yAxis": 2
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 40},
+        "yAxes": [
+          {
+            "label": "Usage Percentage",
+            "unit": "percent",
+            "min": 0,
+            "max": 100
+          },
+          {
+            "label": "Network I/O",
+            "unit": "Bps",
+            "min": 0
+          }
+        ],
+        "thresholds": [
+          {
+            "value": 80,
+            "colorMode": "critical",
+            "op": "gt",
+            "yaxis": "left"
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "🔍 Error Analysis & Debugging",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "topk(10, increase(ai_cicd_errors_total[1h]))",
+            "format": "table",
+            "instant": true
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 40},
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "auto",
+              "displayMode": "auto"
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "Value"},
+              "properties": [
+                {
+                  "id": "custom.displayMode",
+                  "value": "gradient-gauge"
+                },
+                {
+                  "id": "color",
+                  "value": {"mode": "continuous-GrYlRd"}
+                }
+              ]
+            }
+          ]
+        },
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {"Time": true, "__name__": true},
+              "indexByName": {},
+              "renameByName": {
+                "component": "Component",
+                "error_type": "Error Type",
+                "Value": "Error Count"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "📋 SLA Compliance Trends",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "ai_cicd_sla_compliance_system_availability",
+            "legendFormat": "System Availability SLA"
+          },
+          {
+            "expr": "ai_cicd_sla_compliance_api_performance",
+            "legendFormat": "API Performance SLA"
+          },
+          {
+            "expr": "ai_cicd_sla_compliance_code_quality",
+            "legendFormat": "Code Quality SLA"
+          },
+          {
+            "expr": "ai_cicd_sla_compliance_validation_success",
+            "legendFormat": "Validation Success SLA"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 48},
+        "yAxes": [
+          {
+            "label": "SLA Compliance",
+            "unit": "percentunit",
+            "min": 0.9,
+            "max": 1
+          }
+        ],
+        "thresholds": [
+          {
+            "value": 0.95,
+            "colorMode": "critical",
+            "op": "lt",
+            "fill": true,
+            "line": true
+          },
+          {
+            "value": 0.99,
+            "colorMode": "warning",
+            "op": "lt",
+            "fill": false,
+            "line": true
+          }
+        ],
+        "legend": {
+          "avg": true,
+          "current": true,
+          "max": true,
+          "min": true,
+          "show": true,
+          "total": false,
+          "values": true
+        }
+      },
+      {
+        "id": 13,
+        "title": "🎛️ Alert Manager Statistics",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "ai_cicd_alert_manager_active_alerts",
+            "legendFormat": "Active Alerts"
+          },
+          {
+            "expr": "ai_cicd_alert_manager_rules_count",
+            "legendFormat": "Alert Rules"
+          },
+          {
+            "expr": "ai_cicd_alert_manager_notifications_sent_total",
+            "legendFormat": "Notifications Sent"
+          },
+          {
+            "expr": "ai_cicd_alert_aggregation_efficiency",
+            "legendFormat": "Aggregation Efficiency"
+          }
+        ],
+        "gridPos": {"h": 6, "w": 12, "x": 0, "y": 56},
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 10},
+                {"color": "red", "value": 50}
+              ]
+            }
+          },
+          "overrides": [
+            {
+              "matcher": {"id": "byName", "options": "Aggregation Efficiency"},
+              "properties": [
+                {"id": "unit", "value": "percentunit"},
+                {"id": "min", "value": 0},
+                {"id": "max", "value": 1}
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": 14,
+        "title": "🔄 Workflow Execution Analysis",
+        "type": "heatmap",
+        "targets": [
+          {
+            "expr": "increase(ai_cicd_workflow_duration_bucket[10m])",
+            "legendFormat": "{{le}}"
+          }
+        ],
+        "gridPos": {"h": 6, "w": 12, "x": 12, "y": 56},
+        "heatmap": {
+          "xAxis": {"show": true},
+          "yAxis": {
+            "unit": "s",
+            "min": 0,
+            "logBase": 2
+          },
+          "colorMode": "spectrum"
+        }
+      },
+      {
+        "id": 15,
+        "title": "📊 Performance Optimization Suggestions",
+        "type": "text",
+        "targets": [],
+        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 62},
+        "options": {
+          "mode": "html",
+          "content": "<div style=\"padding: 10px; font-family: Arial, sans-serif;\">\n  <h3>🚀 AI CI/CD Performance Optimization Recommendations</h3>\n  <div id=\"optimization-suggestions\">\n    <p><strong>Real-time suggestions will appear here based on current system performance:</strong></p>\n    <ul>\n      <li>✅ System performance is optimal</li>\n      <li>⚠️ Monitor database query performance during peak hours</li>\n      <li>💡 Consider implementing caching for frequently accessed AI models</li>\n      <li>🔧 Optimize webhook processing queue management</li>\n    </ul>\n  </div>\n  <div style=\"margin-top: 15px; padding: 10px; background-color: #f0f8ff; border-left: 4px solid #0066cc;\">\n    <strong>📈 Trend Analysis:</strong> System performance has improved by 15% over the last 24 hours.\n  </div>\n</div>"
+        }
+      }
+    ],
+    "annotations": {
+      "list": [
+        {
+          "name": "Deployments",
+          "datasource": "prometheus",
+          "enable": true,
+          "expr": "ai_cicd_deployment_events",
+          "iconColor": "green",
+          "titleFormat": "Deployment: {{version}}",
+          "textFormat": "{{description}}"
+        },
+        {
+          "name": "SLA Violations",
+          "datasource": "prometheus",
+          "enable": true,
+          "expr": "ai_cicd_sla_violations",
+          "iconColor": "red",
+          "titleFormat": "SLA Violation: {{sla_name}}",
+          "textFormat": "{{violation_description}}"
+        },
+        {
+          "name": "Alert Escalations",
+          "datasource": "prometheus",
+          "enable": true,
+          "expr": "ai_cicd_alert_escalations",
+          "iconColor": "orange",
+          "titleFormat": "Alert Escalated: {{alert_name}}",
+          "textFormat": "{{escalation_reason}}"
+        }
+      ]
+    },
+    "links": [
+      {
+        "title": "AI CI/CD System Documentation",
+        "url": "/docs/monitoring-guide",
+        "type": "link",
+        "icon": "doc",
+        "tooltip": "View monitoring documentation"
+      },
+      {
+        "title": "Alert Manager Configuration",
+        "url": "/config/alert-manager",
+        "type": "link",
+        "icon": "bolt",
+        "tooltip": "Configure alert rules and notifications"
+      },
+      {
+        "title": "SLA Management",
+        "url": "/sla/dashboard",
+        "type": "link",
+        "icon": "heart",
+        "tooltip": "Manage SLA definitions and reports"
+      }
+    ]
+  },
+  "overwrite": false,
+  "message": "Enhanced AI CI/CD monitoring dashboard with AlertManager integration",
+  "version": 2
+}
+

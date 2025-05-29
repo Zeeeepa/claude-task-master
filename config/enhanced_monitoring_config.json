@@ -1,0 +1,546 @@
+{
+  "enhanced_monitoring": {
+    "description": "Enhanced monitoring configuration for AI CI/CD system with AlertManager integration",
+    "version": "2.0.0",
+    "extends": "base_monitoring_config",
+    
+    "alert_manager": {
+      "enabled": true,
+      "extends_pr_24": true,
+      "ai_specific_features": {
+        "intelligent_throttling": true,
+        "predictive_alerting": true,
+        "quality_tracking": true,
+        "trend_analysis": true
+      },
+      "thresholds": {
+        "codegen_quality": 0.7,
+        "validation_success_rate": 0.8,
+        "workflow_timeout": 300000,
+        "error_rate_window": 300000,
+        "performance_degradation": 0.2,
+        "alert_aggregation_window": 60000
+      },
+      "notification_channels": {
+        "console": {
+          "enabled": true,
+          "severity_filter": ["info", "warning", "critical"]
+        },
+        "ai_quality_channel": {
+          "enabled": true,
+          "severity_filter": ["warning", "critical"],
+          "components": ["codegen", "validation", "quality"]
+        },
+        "performance_channel": {
+          "enabled": true,
+          "severity_filter": ["warning", "critical"],
+          "components": ["performance", "database", "api"]
+        },
+        "escalation_channel": {
+          "enabled": true,
+          "severity_filter": ["critical"],
+          "escalation_delay": 300000
+        },
+        "email": {
+          "enabled": false,
+          "smtp_server": "${SMTP_SERVER}",
+          "recipients": ["${ALERT_EMAIL_RECIPIENTS}"],
+          "severity_filter": ["critical"]
+        },
+        "slack": {
+          "enabled": false,
+          "webhook_url": "${SLACK_WEBHOOK_URL}",
+          "channel": "#ai-cicd-alerts",
+          "severity_filter": ["warning", "critical"]
+        },
+        "pagerduty": {
+          "enabled": false,
+          "integration_key": "${PAGERDUTY_INTEGRATION_KEY}",
+          "severity_filter": ["critical"]
+        }
+      },
+      "escalation_policies": {
+        "critical_ai_failure": {
+          "steps": [
+            {
+              "delay": 300000,
+              "severity": "critical",
+              "channels": ["escalation_channel", "email"]
+            },
+            {
+              "delay": 900000,
+              "severity": "critical",
+              "channels": ["escalation_channel", "email", "pagerduty"]
+            }
+          ]
+        },
+        "performance_degradation": {
+          "steps": [
+            {
+              "delay": 600000,
+              "severity": "warning",
+              "channels": ["performance_channel"]
+            },
+            {
+              "delay": 1800000,
+              "severity": "critical",
+              "channels": ["escalation_channel", "email"]
+            }
+          ]
+        }
+      }
+    },
+    
+    "metrics_collector": {
+      "enabled": true,
+      "collection_interval": 30000,
+      "batch_size": 100,
+      "max_retries": 3,
+      "retry_delay": 1000,
+      "async_collection": true,
+      "sampling": {
+        "enabled": true,
+        "rate": 0.1,
+        "high_volume_metrics": ["webhook_events", "api_requests", "database_queries"]
+      },
+      "compression": {
+        "enabled": true,
+        "algorithm": "gzip",
+        "threshold_bytes": 1024
+      },
+      "caching": {
+        "enabled": true,
+        "size": 10000,
+        "ttl": 300000
+      },
+      "retention": {
+        "max_age": 3600000,
+        "cleanup_interval": 600000
+      },
+      "component_collectors": {
+        "codegen": {
+          "enabled": true,
+          "collection_interval": 15000,
+          "metrics": [
+            "requests_total",
+            "requests_successful", 
+            "requests_failed",
+            "avg_response_time_ms",
+            "quality_score",
+            "code_lines_generated",
+            "pr_creation_rate"
+          ]
+        },
+        "database": {
+          "enabled": true,
+          "collection_interval": 30000,
+          "metrics": [
+            "connections_active",
+            "connections_idle",
+            "query_time_avg_ms",
+            "query_time_p95_ms",
+            "queries_per_second",
+            "slow_queries_count",
+            "deadlocks_count",
+            "cache_hit_rate"
+          ]
+        },
+        "validation": {
+          "enabled": true,
+          "collection_interval": 30000,
+          "metrics": [
+            "validations_total",
+            "validations_successful",
+            "validations_failed",
+            "avg_validation_time_ms",
+            "security_issues_found",
+            "performance_issues_found",
+            "code_quality_score",
+            "test_coverage_avg"
+          ]
+        },
+        "workflow": {
+          "enabled": true,
+          "collection_interval": 45000,
+          "metrics": [
+            "workflows_active",
+            "workflows_completed",
+            "workflows_failed",
+            "avg_workflow_duration_ms",
+            "step_success_rate",
+            "parallel_execution_efficiency",
+            "rollback_count"
+          ]
+        },
+        "system": {
+          "enabled": true,
+          "collection_interval": 15000,
+          "metrics": [
+            "memory_heap_used_mb",
+            "memory_heap_total_mb",
+            "memory_external_mb",
+            "cpu_user_ms",
+            "cpu_system_ms",
+            "uptime_seconds",
+            "event_loop_lag_ms",
+            "gc_collections"
+          ]
+        },
+        "agents": {
+          "enabled": true,
+          "collection_interval": 30000,
+          "metrics": [
+            "agents_active",
+            "agents_idle",
+            "agent_requests_total",
+            "agent_requests_successful",
+            "agent_requests_failed",
+            "avg_agent_response_time_ms",
+            "agent_failure_rate",
+            "agent_queue_size"
+          ]
+        },
+        "webhooks": {
+          "enabled": true,
+          "collection_interval": 20000,
+          "metrics": [
+            "webhooks_received",
+            "webhooks_processed",
+            "webhooks_failed",
+            "avg_processing_time_ms",
+            "webhook_queue_size",
+            "retry_count",
+            "timeout_count"
+          ]
+        }
+      }
+    },
+    
+    "performance_monitor": {
+      "enabled": true,
+      "real_time_monitoring": true,
+      "sampling_interval": 5000,
+      "retention_period": 86400000,
+      "predictive_analysis": true,
+      "bottleneck_detection": true,
+      "optimization_suggestions": true,
+      "thresholds": {
+        "api_response_time": 2000,
+        "database_query_time": 1000,
+        "workflow_execution_time": 300000,
+        "memory_usage": 0.8,
+        "cpu_usage": 0.7,
+        "error_rate": 0.05
+      },
+      "baseline_establishment": {
+        "enabled": true,
+        "learning_period": 604800000,
+        "confidence_threshold": 0.8
+      },
+      "trend_analysis": {
+        "enabled": true,
+        "window_size": 3600000,
+        "prediction_horizon": 86400000,
+        "confidence_threshold": 0.7
+      }
+    },
+    
+    "sla_monitor": {
+      "enabled": true,
+      "real_time_monitoring": true,
+      "trend_analysis": true,
+      "predictive_analysis": true,
+      "retention_period": 7776000000,
+      "sla_definitions": {
+        "system_availability": {
+          "target": 0.999,
+          "measurement": "uptime_percentage",
+          "window": "monthly"
+        },
+        "api_availability": {
+          "target": 0.995,
+          "measurement": "successful_requests_percentage",
+          "window": "daily"
+        },
+        "database_availability": {
+          "target": 0.999,
+          "measurement": "connection_success_percentage",
+          "window": "daily"
+        },
+        "api_response_time": {
+          "target": 2000,
+          "measurement": "p95_response_time_ms",
+          "window": "hourly"
+        },
+        "workflow_completion_time": {
+          "target": 300000,
+          "measurement": "p95_completion_time_ms",
+          "window": "daily"
+        },
+        "database_query_time": {
+          "target": 1000,
+          "measurement": "p95_query_time_ms",
+          "window": "hourly"
+        },
+        "codegen_quality": {
+          "target": 0.8,
+          "measurement": "avg_quality_score",
+          "window": "daily"
+        },
+        "validation_success_rate": {
+          "target": 0.9,
+          "measurement": "success_percentage",
+          "window": "daily"
+        },
+        "error_rate": {
+          "target": 0.01,
+          "measurement": "error_percentage",
+          "window": "hourly"
+        },
+        "ai_model_accuracy": {
+          "target": 0.85,
+          "measurement": "prediction_accuracy",
+          "window": "daily"
+        },
+        "pr_creation_success_rate": {
+          "target": 0.95,
+          "measurement": "success_percentage",
+          "window": "daily"
+        },
+        "webhook_processing_time": {
+          "target": 5000,
+          "measurement": "p95_processing_time_ms",
+          "window": "hourly"
+        }
+      },
+      "reporting_periods": {
+        "real_time": 300000,
+        "hourly": 3600000,
+        "daily": 86400000,
+        "weekly": 604800000,
+        "monthly": 2592000000
+      },
+      "alert_thresholds": {
+        "warning": 0.05,
+        "critical": 0.1
+      },
+      "violation_handling": {
+        "auto_resolution": false,
+        "escalation_enabled": true,
+        "notification_channels": ["sla_violations", "email"]
+      }
+    },
+    
+    "dashboards": {
+      "grafana": {
+        "enabled": true,
+        "url": "${GRAFANA_URL}",
+        "api_key": "${GRAFANA_API_KEY}",
+        "dashboards": [
+          {
+            "name": "ai_cicd_enhanced_dashboard",
+            "file": "src/ai_cicd_system/dashboards/ai_cicd_dashboard.json",
+            "auto_import": true,
+            "refresh_interval": "30s"
+          }
+        ],
+        "data_sources": [
+          {
+            "name": "prometheus",
+            "type": "prometheus",
+            "url": "${PROMETHEUS_URL}",
+            "access": "proxy"
+          },
+          {
+            "name": "ai_cicd_metrics",
+            "type": "postgres",
+            "url": "${DATABASE_URL}",
+            "database": "ai_cicd_metrics"
+          }
+        ],
+        "alerts": {
+          "enabled": true,
+          "notification_channels": [
+            {
+              "name": "ai-cicd-alerts",
+              "type": "slack",
+              "settings": {
+                "url": "${SLACK_WEBHOOK_URL}",
+                "channel": "#ai-cicd-alerts"
+              }
+            }
+          ]
+        }
+      },
+      "prometheus": {
+        "enabled": true,
+        "url": "${PROMETHEUS_URL}",
+        "scrape_interval": "15s",
+        "evaluation_interval": "15s",
+        "retention": "15d",
+        "scrape_configs": [
+          {
+            "job_name": "ai-cicd-system",
+            "static_configs": [
+              {
+                "targets": ["localhost:8000"]
+              }
+            ],
+            "scrape_interval": "15s",
+            "metrics_path": "/metrics"
+          }
+        ],
+        "rule_files": [
+          "config/prometheus_rules.yml"
+        ]
+      }
+    },
+    
+    "data_retention": {
+      "metrics": {
+        "raw_data": "24h",
+        "aggregated_1m": "7d",
+        "aggregated_5m": "30d",
+        "aggregated_1h": "90d",
+        "aggregated_1d": "1y"
+      },
+      "alerts": {
+        "active": "30d",
+        "resolved": "90d",
+        "history": "1y"
+      },
+      "sla_data": {
+        "violations": "1y",
+        "reports": "2y",
+        "trends": "6m"
+      },
+      "performance_data": {
+        "detailed": "7d",
+        "aggregated": "30d",
+        "baselines": "1y"
+      }
+    },
+    
+    "optimization": {
+      "auto_scaling": {
+        "enabled": false,
+        "metrics_threshold": 0.8,
+        "scale_up_cooldown": 300000,
+        "scale_down_cooldown": 600000
+      },
+      "caching": {
+        "enabled": true,
+        "redis_url": "${REDIS_URL}",
+        "ttl": 300000,
+        "max_memory": "256mb"
+      },
+      "compression": {
+        "enabled": true,
+        "algorithm": "gzip",
+        "level": 6
+      },
+      "batching": {
+        "enabled": true,
+        "batch_size": 100,
+        "flush_interval": 30000
+      }
+    },
+    
+    "security": {
+      "authentication": {
+        "enabled": true,
+        "method": "jwt",
+        "secret": "${MONITORING_JWT_SECRET}"
+      },
+      "authorization": {
+        "enabled": true,
+        "roles": {
+          "admin": ["read", "write", "configure"],
+          "operator": ["read", "write"],
+          "viewer": ["read"]
+        }
+      },
+      "encryption": {
+        "enabled": true,
+        "algorithm": "AES-256-GCM",
+        "key": "${MONITORING_ENCRYPTION_KEY}"
+      },
+      "audit_logging": {
+        "enabled": true,
+        "log_file": "logs/monitoring_audit.log",
+        "retention": "1y"
+      }
+    },
+    
+    "integration": {
+      "external_systems": {
+        "pagerduty": {
+          "enabled": false,
+          "integration_key": "${PAGERDUTY_INTEGRATION_KEY}",
+          "severity_mapping": {
+            "critical": "critical",
+            "warning": "warning",
+            "info": "info"
+          }
+        },
+        "datadog": {
+          "enabled": false,
+          "api_key": "${DATADOG_API_KEY}",
+          "app_key": "${DATADOG_APP_KEY}",
+          "tags": ["env:${ENVIRONMENT}", "service:ai-cicd"]
+        },
+        "newrelic": {
+          "enabled": false,
+          "license_key": "${NEWRELIC_LICENSE_KEY}",
+          "app_name": "AI-CICD-System"
+        }
+      },
+      "webhooks": {
+        "enabled": true,
+        "endpoints": [
+          {
+            "name": "alert_webhook",
+            "url": "${ALERT_WEBHOOK_URL}",
+            "events": ["alert.fired", "alert.resolved"],
+            "authentication": {
+              "type": "bearer",
+              "token": "${WEBHOOK_AUTH_TOKEN}"
+            }
+          }
+        ]
+      }
+    },
+    
+    "feature_flags": {
+      "enhanced_alerting": true,
+      "predictive_analysis": true,
+      "auto_remediation": false,
+      "ml_anomaly_detection": false,
+      "custom_metrics": true,
+      "real_time_dashboards": true,
+      "sla_automation": true,
+      "performance_optimization": true
+    },
+    
+    "environment_overrides": {
+      "development": {
+        "alert_manager.thresholds.codegen_quality": 0.5,
+        "metrics_collector.collection_interval": 60000,
+        "sla_monitor.enabled": false,
+        "dashboards.grafana.enabled": false
+      },
+      "staging": {
+        "alert_manager.thresholds.codegen_quality": 0.6,
+        "sla_monitor.sla_definitions.system_availability.target": 0.99,
+        "data_retention.metrics.raw_data": "12h"
+      },
+      "production": {
+        "alert_manager.notification_channels.email.enabled": true,
+        "alert_manager.notification_channels.pagerduty.enabled": true,
+        "security.authentication.enabled": true,
+        "security.encryption.enabled": true
+      }
+    }
+  }
+}
+
