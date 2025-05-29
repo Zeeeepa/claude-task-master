@@ -1,0 +1,181 @@
+{
+  "name": "@taskmaster/workflow-orchestration",
+  "version": "1.0.0",
+  "description": "Unified Workflow Orchestration Engine - Consolidation of PRs #50 and #63",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:integration": "jest --testPathPattern=integration",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "db:migrate": "node scripts/migrate.js",
+    "db:seed": "node scripts/seed.js",
+    "db:reset": "node scripts/reset.js",
+    "build": "npm run lint && npm run test",
+    "docker:build": "docker build -t taskmaster/workflow-orchestration .",
+    "docker:run": "docker run -p 3000:3000 taskmaster/workflow-orchestration",
+    "docs:generate": "jsdoc -c jsdoc.conf.json",
+    "health:check": "node scripts/health-check.js",
+    "metrics:export": "node scripts/export-metrics.js"
+  },
+  "keywords": [
+    "workflow",
+    "orchestration",
+    "ai",
+    "automation",
+    "cicd",
+    "taskmaster",
+    "claude-code",
+    "codegen",
+    "aider",
+    "goose"
+  ],
+  "author": "TaskMaster Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "pg": "^8.11.3",
+    "pg-pool": "^3.6.1",
+    "jsonwebtoken": "^9.0.2",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "helmet": "^7.0.0",
+    "compression": "^1.7.4",
+    "express-rate-limit": "^6.10.0",
+    "express-validator": "^7.0.1",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.0",
+    "winston": "^3.10.0",
+    "winston-daily-rotate-file": "^4.7.1",
+    "prom-client": "^14.2.0",
+    "node-cron": "^3.0.2",
+    "axios": "^1.5.0",
+    "uuid": "^9.0.0",
+    "dotenv": "^16.3.1",
+    "joi": "^17.9.2",
+    "lodash": "^4.17.21",
+    "moment": "^2.29.4",
+    "redis": "^4.6.8",
+    "ioredis": "^5.3.2",
+    "bull": "^4.11.3",
+    "ws": "^8.13.0",
+    "eventemitter3": "^5.0.1"
+  },
+  "devDependencies": {
+    "jest": "^29.6.2",
+    "supertest": "^6.3.3",
+    "eslint": "^8.47.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-jest": "^27.2.3",
+    "prettier": "^3.0.2",
+    "nodemon": "^3.0.1",
+    "jsdoc": "^4.0.2",
+    "husky": "^8.0.3",
+    "lint-staged": "^14.0.1",
+    "@types/node": "^20.5.0",
+    "typescript": "^5.1.6"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "collectCoverageFrom": [
+      "**/*.js",
+      "!**/node_modules/**",
+      "!**/coverage/**",
+      "!**/docs/**",
+      "!jest.config.js"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 80,
+        "functions": 80,
+        "lines": 80,
+        "statements": 80
+      }
+    },
+    "testMatch": [
+      "**/__tests__/**/*.js",
+      "**/?(*.)+(spec|test).js"
+    ],
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setup.js"
+    ]
+  },
+  "eslintConfig": {
+    "env": {
+      "node": true,
+      "es2022": true,
+      "jest": true
+    },
+    "extends": [
+      "eslint:recommended",
+      "prettier"
+    ],
+    "parserOptions": {
+      "ecmaVersion": "latest",
+      "sourceType": "module"
+    },
+    "rules": {
+      "no-console": "warn",
+      "no-unused-vars": "error",
+      "prefer-const": "error",
+      "no-var": "error"
+    }
+  },
+  "prettier": {
+    "semi": true,
+    "trailingComma": "es5",
+    "singleQuote": true,
+    "printWidth": 100,
+    "tabWidth": 2
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged",
+      "pre-push": "npm run test"
+    }
+  },
+  "lint-staged": {
+    "*.js": [
+      "eslint --fix",
+      "prettier --write",
+      "git add"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Zeeeepa/claude-task-master.git",
+    "directory": "src/ai_cicd_system"
+  },
+  "bugs": {
+    "url": "https://github.com/Zeeeepa/claude-task-master/issues"
+  },
+  "homepage": "https://github.com/Zeeeepa/claude-task-master#readme",
+  "files": [
+    "config/",
+    "workflows/",
+    "database/",
+    "infrastructure/",
+    "examples/",
+    "docs/",
+    "index.js",
+    "README.md"
+  ],
+  "exports": {
+    ".": "./index.js",
+    "./config": "./config/workflow_config.js",
+    "./workflows": "./workflows/workflow_engine.js",
+    "./database": "./database/database_manager.js",
+    "./examples": "./examples/workflow_examples.js"
+  }
+}
+
