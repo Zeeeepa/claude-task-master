@@ -1,0 +1,137 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Task Master Database Configuration",
+  "description": "Database configuration for Task Master orchestrator event storage",
+  "type": "object",
+  "properties": {
+    "connection": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["postgresql", "sqlite", "mysql"],
+          "default": "postgresql",
+          "description": "Database type"
+        },
+        "host": {
+          "type": "string",
+          "default": "localhost",
+          "description": "Database host"
+        },
+        "port": {
+          "type": "integer",
+          "default": 5432,
+          "description": "Database port"
+        },
+        "database": {
+          "type": "string",
+          "default": "taskmaster",
+          "description": "Database name"
+        },
+        "username": {
+          "type": "string",
+          "description": "Database username"
+        },
+        "password": {
+          "type": "string",
+          "description": "Database password"
+        },
+        "ssl": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable SSL connection"
+        },
+        "pool": {
+          "type": "object",
+          "properties": {
+            "min": {
+              "type": "integer",
+              "default": 2,
+              "description": "Minimum pool size"
+            },
+            "max": {
+              "type": "integer",
+              "default": 10,
+              "description": "Maximum pool size"
+            },
+            "idle": {
+              "type": "integer",
+              "default": 10000,
+              "description": "Idle timeout in milliseconds"
+            }
+          }
+        }
+      },
+      "required": ["type", "host", "database"]
+    },
+    "migrations": {
+      "type": "object",
+      "properties": {
+        "directory": {
+          "type": "string",
+          "default": "./src/database/migrations",
+          "description": "Directory containing migration files"
+        },
+        "tableName": {
+          "type": "string",
+          "default": "migrations",
+          "description": "Migration tracking table name"
+        },
+        "autoRun": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically run migrations on startup"
+        }
+      }
+    },
+    "logging": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable database query logging"
+        },
+        "level": {
+          "type": "string",
+          "enum": ["debug", "info", "warn", "error"],
+          "default": "info",
+          "description": "Logging level"
+        },
+        "slowQueryThreshold": {
+          "type": "integer",
+          "default": 1000,
+          "description": "Slow query threshold in milliseconds"
+        }
+      }
+    },
+    "backup": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable automatic backups"
+        },
+        "schedule": {
+          "type": "string",
+          "default": "0 2 * * *",
+          "description": "Backup schedule (cron format)"
+        },
+        "retention": {
+          "type": "integer",
+          "default": 7,
+          "description": "Backup retention in days"
+        },
+        "location": {
+          "type": "string",
+          "default": "./backups",
+          "description": "Backup storage location"
+        }
+      }
+    }
+  },
+  "required": ["connection"],
+  "additionalProperties": false
+}
+

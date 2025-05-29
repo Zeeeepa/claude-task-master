@@ -1,0 +1,243 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Task Master Integrations Configuration",
+  "description": "API configurations for Task Master orchestrator integrations",
+  "type": "object",
+  "properties": {
+    "codegen": {
+      "type": "object",
+      "description": "Codegen SDK configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Codegen SDK integration"
+        },
+        "apiKey": {
+          "type": "string",
+          "description": "Codegen API key"
+        },
+        "organizationId": {
+          "type": "string",
+          "description": "Codegen organization ID"
+        },
+        "baseUrl": {
+          "type": "string",
+          "default": "https://api.codegen.sh",
+          "description": "Codegen API base URL"
+        },
+        "timeout": {
+          "type": "integer",
+          "default": 30000,
+          "description": "Request timeout in milliseconds"
+        },
+        "retryAttempts": {
+          "type": "integer",
+          "default": 3,
+          "description": "Number of retry attempts for failed requests"
+        }
+      },
+      "required": ["apiKey", "organizationId"]
+    },
+    "agentapi": {
+      "type": "object",
+      "description": "AgentAPI middleware configuration for Claude Code",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable AgentAPI middleware"
+        },
+        "baseUrl": {
+          "type": "string",
+          "default": "http://localhost:8080",
+          "description": "AgentAPI base URL"
+        },
+        "apiKey": {
+          "type": "string",
+          "description": "AgentAPI authentication key"
+        },
+        "timeout": {
+          "type": "integer",
+          "default": 60000,
+          "description": "Request timeout in milliseconds"
+        },
+        "maxConcurrentRequests": {
+          "type": "integer",
+          "default": 5,
+          "description": "Maximum concurrent requests to AgentAPI"
+        },
+        "claude": {
+          "type": "object",
+          "properties": {
+            "model": {
+              "type": "string",
+              "default": "claude-3-5-sonnet-20241022",
+              "description": "Claude model to use"
+            },
+            "maxTokens": {
+              "type": "integer",
+              "default": 4096,
+              "description": "Maximum tokens per request"
+            },
+            "temperature": {
+              "type": "number",
+              "default": 0.1,
+              "description": "Temperature for Claude responses"
+            }
+          }
+        }
+      },
+      "required": ["baseUrl"]
+    },
+    "linear": {
+      "type": "object",
+      "description": "Linear integration configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Linear integration"
+        },
+        "apiKey": {
+          "type": "string",
+          "description": "Linear API key"
+        },
+        "baseUrl": {
+          "type": "string",
+          "default": "https://api.linear.app/graphql",
+          "description": "Linear GraphQL API URL"
+        },
+        "teamId": {
+          "type": "string",
+          "description": "Default Linear team ID"
+        },
+        "webhookSecret": {
+          "type": "string",
+          "description": "Linear webhook secret for verification"
+        },
+        "sync": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable bidirectional sync"
+            },
+            "interval": {
+              "type": "integer",
+              "default": 300000,
+              "description": "Sync interval in milliseconds"
+            },
+            "createSubIssues": {
+              "type": "boolean",
+              "default": true,
+              "description": "Automatically create sub-issues for tasks"
+            }
+          }
+        }
+      },
+      "required": ["apiKey"]
+    },
+    "github": {
+      "type": "object",
+      "description": "GitHub integration configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable GitHub integration"
+        },
+        "token": {
+          "type": "string",
+          "description": "GitHub personal access token"
+        },
+        "baseUrl": {
+          "type": "string",
+          "default": "https://api.github.com",
+          "description": "GitHub API base URL"
+        },
+        "organization": {
+          "type": "string",
+          "description": "GitHub organization name"
+        },
+        "repository": {
+          "type": "string",
+          "description": "Default repository name"
+        },
+        "webhookSecret": {
+          "type": "string",
+          "description": "GitHub webhook secret for verification"
+        },
+        "pr": {
+          "type": "object",
+          "properties": {
+            "autoCreate": {
+              "type": "boolean",
+              "default": true,
+              "description": "Automatically create PRs for completed tasks"
+            },
+            "defaultBranch": {
+              "type": "string",
+              "default": "main",
+              "description": "Default base branch for PRs"
+            },
+            "branchPrefix": {
+              "type": "string",
+              "default": "taskmaster/",
+              "description": "Prefix for automatically created branches"
+            }
+          }
+        }
+      },
+      "required": ["token"]
+    },
+    "wsl2": {
+      "type": "object",
+      "description": "WSL2 deployment configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable WSL2 deployment validation"
+        },
+        "distribution": {
+          "type": "string",
+          "default": "Ubuntu",
+          "description": "WSL2 distribution name"
+        },
+        "workingDirectory": {
+          "type": "string",
+          "default": "/mnt/c/projects",
+          "description": "Working directory in WSL2"
+        },
+        "deployment": {
+          "type": "object",
+          "properties": {
+            "autoValidate": {
+              "type": "boolean",
+              "default": true,
+              "description": "Automatically validate deployments"
+            },
+            "timeout": {
+              "type": "integer",
+              "default": 600000,
+              "description": "Deployment timeout in milliseconds"
+            },
+            "healthCheckUrl": {
+              "type": "string",
+              "description": "Health check URL for deployment validation"
+            },
+            "rollbackOnFailure": {
+              "type": "boolean",
+              "default": true,
+              "description": "Automatically rollback on deployment failure"
+            }
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}
+

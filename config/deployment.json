@@ -1,0 +1,333 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Task Master Deployment Configuration",
+  "description": "WSL2 and deployment settings for Task Master orchestrator",
+  "type": "object",
+  "properties": {
+    "environment": {
+      "type": "string",
+      "enum": ["development", "staging", "production"],
+      "default": "development",
+      "description": "Deployment environment"
+    },
+    "wsl2": {
+      "type": "object",
+      "description": "WSL2 specific configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable WSL2 deployment features"
+        },
+        "distribution": {
+          "type": "string",
+          "default": "Ubuntu-22.04",
+          "description": "WSL2 distribution to use"
+        },
+        "user": {
+          "type": "string",
+          "default": "ubuntu",
+          "description": "WSL2 user for operations"
+        },
+        "paths": {
+          "type": "object",
+          "properties": {
+            "projects": {
+              "type": "string",
+              "default": "/mnt/c/projects",
+              "description": "Projects directory in WSL2"
+            },
+            "logs": {
+              "type": "string",
+              "default": "/var/log/taskmaster",
+              "description": "Log directory in WSL2"
+            },
+            "temp": {
+              "type": "string",
+              "default": "/tmp/taskmaster",
+              "description": "Temporary directory in WSL2"
+            }
+          }
+        },
+        "services": {
+          "type": "object",
+          "properties": {
+            "docker": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": true,
+                  "description": "Enable Docker in WSL2"
+                },
+                "registry": {
+                  "type": "string",
+                  "description": "Docker registry URL"
+                },
+                "namespace": {
+                  "type": "string",
+                  "default": "taskmaster",
+                  "description": "Docker namespace"
+                }
+              }
+            },
+            "nginx": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean",
+                  "default": false,
+                  "description": "Enable Nginx reverse proxy"
+                },
+                "configPath": {
+                  "type": "string",
+                  "default": "/etc/nginx/sites-available/taskmaster",
+                  "description": "Nginx configuration path"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "pipeline": {
+      "type": "object",
+      "description": "Deployment pipeline configuration",
+      "properties": {
+        "stages": {
+          "type": "array",
+          "description": "Deployment pipeline stages",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Stage name"
+              },
+              "type": {
+                "type": "string",
+                "enum": ["build", "test", "deploy", "validate", "cleanup"],
+                "description": "Stage type"
+              },
+              "enabled": {
+                "type": "boolean",
+                "default": true,
+                "description": "Enable this stage"
+              },
+              "timeout": {
+                "type": "integer",
+                "default": 300000,
+                "description": "Stage timeout in milliseconds"
+              },
+              "retryAttempts": {
+                "type": "integer",
+                "default": 2,
+                "description": "Number of retry attempts"
+              },
+              "commands": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Commands to execute in this stage"
+              }
+            },
+            "required": ["name", "type"]
+          },
+          "default": [
+            {
+              "name": "build",
+              "type": "build",
+              "commands": ["npm ci", "npm run build"]
+            },
+            {
+              "name": "test",
+              "type": "test",
+              "commands": ["npm test"]
+            },
+            {
+              "name": "deploy",
+              "type": "deploy",
+              "commands": ["docker build -t taskmaster .", "docker run -d taskmaster"]
+            },
+            {
+              "name": "validate",
+              "type": "validate",
+              "commands": ["curl -f http://localhost:3000/health"]
+            }
+          ]
+        },
+        "notifications": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable deployment notifications"
+            },
+            "channels": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": ["linear", "slack", "email", "webhook"]
+              },
+              "default": ["linear"],
+              "description": "Notification channels"
+            },
+            "onSuccess": {
+              "type": "boolean",
+              "default": true,
+              "description": "Notify on successful deployment"
+            },
+            "onFailure": {
+              "type": "boolean",
+              "default": true,
+              "description": "Notify on deployment failure"
+            }
+          }
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "description": "Deployment validation configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable deployment validation"
+        },
+        "healthChecks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Health check name"
+              },
+              "url": {
+                "type": "string",
+                "description": "Health check URL"
+              },
+              "method": {
+                "type": "string",
+                "enum": ["GET", "POST", "HEAD"],
+                "default": "GET",
+                "description": "HTTP method"
+              },
+              "timeout": {
+                "type": "integer",
+                "default": 5000,
+                "description": "Request timeout in milliseconds"
+              },
+              "expectedStatus": {
+                "type": "integer",
+                "default": 200,
+                "description": "Expected HTTP status code"
+              },
+              "retryAttempts": {
+                "type": "integer",
+                "default": 3,
+                "description": "Number of retry attempts"
+              },
+              "retryDelay": {
+                "type": "integer",
+                "default": 1000,
+                "description": "Delay between retries in milliseconds"
+              }
+            },
+            "required": ["name", "url"]
+          },
+          "default": [
+            {
+              "name": "api_health",
+              "url": "http://localhost:3000/health"
+            },
+            {
+              "name": "database_connection",
+              "url": "http://localhost:3000/health/db"
+            }
+          ]
+        },
+        "rollback": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable automatic rollback on validation failure"
+            },
+            "strategy": {
+              "type": "string",
+              "enum": ["previous_version", "blue_green", "canary"],
+              "default": "previous_version",
+              "description": "Rollback strategy"
+            },
+            "timeout": {
+              "type": "integer",
+              "default": 120000,
+              "description": "Rollback timeout in milliseconds"
+            }
+          }
+        }
+      }
+    },
+    "monitoring": {
+      "type": "object",
+      "description": "Deployment monitoring configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable deployment monitoring"
+        },
+        "metrics": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true,
+              "description": "Enable metrics collection"
+            },
+            "endpoint": {
+              "type": "string",
+              "default": "/metrics",
+              "description": "Metrics endpoint path"
+            },
+            "interval": {
+              "type": "integer",
+              "default": 30000,
+              "description": "Metrics collection interval in milliseconds"
+            }
+          }
+        },
+        "logging": {
+          "type": "object",
+          "properties": {
+            "level": {
+              "type": "string",
+              "enum": ["debug", "info", "warn", "error"],
+              "default": "info",
+              "description": "Logging level"
+            },
+            "format": {
+              "type": "string",
+              "enum": ["json", "text"],
+              "default": "json",
+              "description": "Log format"
+            },
+            "retention": {
+              "type": "integer",
+              "default": 7,
+              "description": "Log retention in days"
+            }
+          }
+        }
+      }
+    }
+  },
+  "required": ["environment"],
+  "additionalProperties": false
+}
+

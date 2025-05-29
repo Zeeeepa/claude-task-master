@@ -1,7 +1,7 @@
 {
 	"name": "task-master-ai",
 	"version": "0.15.0",
-	"description": "A task management system for ambitious AI-driven development that doesn't overwhelm and confuse Cursor.",
+	"description": "A comprehensive AI-driven development orchestrator with dual AI coordination, database event storage, Linear integration, and automated WSL2 deployment.",
 	"main": "index.js",
 	"type": "module",
 	"bin": {
