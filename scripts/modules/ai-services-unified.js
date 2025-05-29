@@ -24,13 +24,7 @@ import {
 import { log, resolveEnvVariable, findProjectRoot } from './utils.js';
 
 import * as anthropic from '../../src/ai-providers/anthropic.js';
-import * as perplexity from '../../src/ai-providers/perplexity.js';
-import * as google from '../../src/ai-providers/google.js';
-import * as openai from '../../src/ai-providers/openai.js';
-import * as xai from '../../src/ai-providers/xai.js';
-import * as openrouter from '../../src/ai-providers/openrouter.js';
-import * as ollama from '../../src/ai-providers/ollama.js';
-// TODO: Import other provider modules when implemented (ollama, etc.)
+// Removed deprecated AI providers - keeping only Anthropic for Claude Code integration
 
 // Helper function to get cost for a specific model
 function _getCostForModel(providerName, modelId) {
@@ -69,42 +63,7 @@ const PROVIDER_FUNCTIONS = {
 		generateText: anthropic.generateAnthropicText,
 		streamText: anthropic.streamAnthropicText,
 		generateObject: anthropic.generateAnthropicObject
-	},
-	perplexity: {
-		generateText: perplexity.generatePerplexityText,
-		streamText: perplexity.streamPerplexityText,
-		generateObject: perplexity.generatePerplexityObject
-	},
-	google: {
-		// Add Google entry
-		generateText: google.generateGoogleText,
-		streamText: google.streamGoogleText,
-		generateObject: google.generateGoogleObject
-	},
-	openai: {
-		// ADD: OpenAI entry
-		generateText: openai.generateOpenAIText,
-		streamText: openai.streamOpenAIText,
-		generateObject: openai.generateOpenAIObject
-	},
-	xai: {
-		// ADD: xAI entry
-		generateText: xai.generateXaiText,
-		streamText: xai.streamXaiText,
-		generateObject: xai.generateXaiObject // Note: Object generation might be unsupported
-	},
-	openrouter: {
-		// ADD: OpenRouter entry
-		generateText: openrouter.generateOpenRouterText,
-		streamText: openrouter.streamOpenRouterText,
-		generateObject: openrouter.generateOpenRouterObject
-	},
-	ollama: {
-		generateText: ollama.generateOllamaText,
-		streamText: ollama.streamOllamaText,
-		generateObject: ollama.generateOllamaObject
 	}
-	// TODO: Add entries for ollama, etc. when implemented
 };
 
 // --- Configuration for Retries ---
@@ -183,32 +142,20 @@ function _extractErrorMessage(error) {
  */
 function _resolveApiKey(providerName, session, projectRoot = null) {
 	const keyMap = {
-		openai: 'OPENAI_API_KEY',
-		anthropic: 'ANTHROPIC_API_KEY',
-		google: 'GOOGLE_API_KEY',
-		perplexity: 'PERPLEXITY_API_KEY',
-		mistral: 'MISTRAL_API_KEY',
-		azure: 'AZURE_OPENAI_API_KEY',
-		openrouter: 'OPENROUTER_API_KEY',
-		xai: 'XAI_API_KEY',
-		ollama: 'OLLAMA_API_KEY'
+		anthropic: 'ANTHROPIC_API_KEY'
+		// Removed deprecated providers - keeping only Anthropic
 	};
 
 	const envVarName = keyMap[providerName];
 	if (!envVarName) {
 		throw new Error(
-			`Unknown provider '${providerName}' for API key resolution.`
+			`Unknown provider '${providerName}' for API key resolution. Only 'anthropic' is supported.`
 		);
 	}
 
 	const apiKey = resolveEnvVariable(envVarName, session, projectRoot);
 
-	// Special handling for Ollama - API key is optional
-	if (providerName === 'ollama') {
-		return apiKey || null;
-	}
-
-	// For all other providers, API key is required
+	// For Anthropic, API key is required
 	if (!apiKey) {
 		throw new Error(
 			`Required API key ${envVarName} for provider '${providerName}' is not set in environment, session, or .env file.`
