@@ -1,0 +1,126 @@
+{
+  "version": "1.0.0",
+  "global": {
+    "agentApiUrl": "http://localhost:3284",
+    "timeout": 30000,
+    "retryAttempts": 3,
+    "retryDelay": 1000,
+    "maxConcurrentSessions": 10,
+    "enableMetrics": true,
+    "enableHealthChecks": true,
+    "logLevel": "info",
+    "heartbeatInterval": 30000
+  },
+  "agents": {
+    "claude": {
+      "enabled": true,
+      "maxSessions": 3,
+      "model": "claude-3-5-sonnet-20241022",
+      "allowedTools": ["Bash", "Edit", "Replace", "Create"],
+      "maxTokens": 4096,
+      "temperature": 0.1,
+      "systemPrompt": null,
+      "autoCommit": false
+    },
+    "goose": {
+      "enabled": true,
+      "maxSessions": 3,
+      "provider": "anthropic",
+      "model": "claude-3-5-sonnet-20241022",
+      "profile": "default",
+      "toolkits": ["developer", "screen"],
+      "planMode": "auto"
+    },
+    "aider": {
+      "enabled": true,
+      "maxSessions": 3,
+      "model": "claude-3-5-sonnet-20241022",
+      "editFormat": "diff",
+      "autoCommit": true,
+      "gitRepo": true,
+      "showDiffs": true,
+      "mapTokens": 1024,
+      "cachePrompts": true
+    },
+    "codex": {
+      "enabled": true,
+      "maxSessions": 3,
+      "model": "gpt-4",
+      "maxTokens": 2048,
+      "temperature": 0.1,
+      "completionMode": "code",
+      "language": "auto",
+      "stopSequences": ["\\n\\n", "```"],
+      "includeContext": true,
+      "formatOutput": true
+    }
+  },
+  "middleware": {
+    "enableAuthentication": true,
+    "enableAuthorization": true,
+    "enableRateLimit": true,
+    "enableCors": true,
+    "enableCompression": true,
+    "cors": {
+      "origin": ["http://localhost:3000", "http://localhost:3001"],
+      "credentials": true,
+      "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+      "allowedHeaders": ["Content-Type", "Authorization"]
+    },
+    "rateLimit": {
+      "windowMs": 60000,
+      "max": 100,
+      "message": "Too many requests, please try again later"
+    },
+    "security": {
+      "enableHelmet": true,
+      "enableHsts": true,
+      "enableXssFilter": true,
+      "enableNoSniff": true
+    }
+  },
+  "wsl2": {
+    "enabled": true,
+    "maxInstances": 5,
+    "instanceTimeout": 3600000,
+    "workspaceRoot": "/tmp/claude-deployments",
+    "distribution": "Ubuntu-22.04",
+    "resourceLimits": {
+      "memory": "4GB",
+      "cpu": 2,
+      "disk": "20GB"
+    },
+    "networkConfig": {
+      "isolateNetworking": true,
+      "allowedPorts": [22, 80, 443, 3000, 8000, 8080, 9000],
+      "dnsServers": ["8.8.8.8", "1.1.1.1"]
+    }
+  },
+  "webhooks": {
+    "enabled": true,
+    "port": 3002,
+    "secret": "",
+    "enableSignatureValidation": true,
+    "endpoints": {
+      "github": "/webhooks/github",
+      "linear": "/webhooks/linear"
+    }
+  },
+  "monitoring": {
+    "healthCheckInterval": 30000,
+    "metricsRetentionPeriod": 86400000,
+    "alertThreshold": 3,
+    "enableAlerts": true,
+    "alertChannels": {
+      "slack": {
+        "enabled": false,
+        "webhookUrl": ""
+      },
+      "email": {
+        "enabled": false,
+        "recipients": []
+      }
+    }
+  }
+}
+
