@@ -1,4 +1,4 @@
-# Task Master [![GitHub stars](https://img.shields.io/github/stars/eyaltoledano/claude-task-master?style=social)](https://github.com/eyaltoledano/claude-task-master/stargazers)
+# AI Development Orchestrator [![GitHub stars](https://img.shields.io/github/stars/eyaltoledano/claude-task-master?style=social)](https://github.com/eyaltoledano/claude-task-master/stargazers)
 
 [![CI](https://github.com/eyaltoledano/claude-task-master/actions/workflows/ci.yml/badge.svg)](https://github.com/eyaltoledano/claude-task-master/actions/workflows/ci.yml) [![npm version](https://badge.fury.io/js/task-master-ai.svg)](https://badge.fury.io/js/task-master-ai) [![Discord](https://dcbadge.limes.pink/api/server/https://discord.gg/taskmasterai?style=flat)](https://discord.gg/taskmasterai) [![License: MIT with Commons Clause](https://img.shields.io/badge/license-MIT%20with%20Commons%20Clause-blue.svg)](LICENSE)
 
@@ -7,229 +7,167 @@
 [![Twitter Follow](https://img.shields.io/twitter/follow/eyaltoledano?style=flat)](https://x.com/eyaltoledano)
 [![Twitter Follow](https://img.shields.io/twitter/follow/RalphEcom?style=flat)](https://x.com/RalphEcom)
 
-A task management system for AI-driven development with Claude, designed to work seamlessly with Cursor AI.
+**AI Development Orchestrator** - A comprehensive system that bridges Codegen SDK and Claude Code through AgentAPI middleware, providing automated development lifecycle management from requirements analysis to deployment validation.
 
-## Requirements
+## 🎯 Overview
 
-Taskmaster utilizes AI across several commands, and those require a separate API key. You can use a variety of models from different AI providers provided you add your API keys. For example, if you want to use Claude 3.7, you'll need an Anthropic API key.
+This project has been restructured from a CLI-based task management system into a cutting-edge AI development orchestrator that:
 
-You can define 3 types of models to be used: the main model, the research model, and the fallback model (in case either the main or research fail). Whatever model you use, its provider API key must be present in either mcp.json or .env.
+- **Integrates Codegen SDK** (token + org_id) with **Claude Code** (webClientConfirmation)
+- **Uses AgentAPI** as middleware for seamless AI agent communication
+- **Implements comprehensive database** event storage for all development activities
+- **Provides automated PR deployment** and validation on WSL2 instances
+- **Maintains bidirectional sync** with Linear for issue management
 
-At least one (1) of the following is required:
+## 🏗️ Architecture
 
-- Anthropic API key (Claude API)
-- OpenAI API key
-- Google Gemini API key
-- Perplexity API key (for research model)
-- xAI API Key (for research or main model)
-- OpenRouter API Key (for research or main model)
+### Core Components
 
-Using the research model is optional but highly recommended. You will need at least ONE API key. Adding all API keys enables you to seamlessly switch between model providers at will.
+1. **Orchestrator Engine** - Central coordination system
+2. **AgentAPI Middleware** - Communication layer between AI agents
+3. **Dual AI Integration** - Codegen SDK + Claude Code coordination
+4. **Event Storage System** - Comprehensive logging and state persistence
+5. **Linear Integration** - Issue management and synchronization
+6. **WSL2 Deployment** - Automated PR validation and deployment
 
-## Quick Start
+### Current Status: Phase 1.1 Complete ✅
 
-### Option 1: MCP (Recommended)
+**What's Been Removed:**
+- ❌ MCP server components and dependencies
+- ❌ Multiple AI provider support (OpenAI, Anthropic, Perplexity, etc.)
+- ❌ Complex CLI interface and terminal UI components
+- ❌ Manual configuration management system
+- ❌ Standalone task management and local JSON storage
+- ❌ Legacy `.taskmasterconfig` files
 
-MCP (Model Control Protocol) lets you run Task Master directly from your editor.
+**What's Been Simplified:**
+- ✅ Streamlined package.json (reduced dependencies by ~70%)
+- ✅ Basic orchestrator CLI entry point
+- ✅ Simplified configuration system focused on core integrations
+- ✅ Clean codebase architecture ready for new components
 
-#### 1. Add your MCP config at the following path depending on your editor
+## 🚀 Quick Start
 
-| Editor       | Scope   | Linux/macOS Path                      | Windows Path                                      | Key          |
-| ------------ | ------- | ------------------------------------- | ------------------------------------------------- | ------------ |
-| **Cursor**   | Global  | `~/.cursor/mcp.json`                  | `%USERPROFILE%\.cursor\mcp.json`                  | `mcpServers` |
-|              | Project | `<project_folder>/.cursor/mcp.json`   | `<project_folder>\.cursor\mcp.json`               | `mcpServers` |
-| **Windsurf** | Global  | `~/.codeium/windsurf/mcp_config.json` | `%USERPROFILE%\.codeium\windsurf\mcp_config.json` | `mcpServers` |
-| **VS Code**  | Project | `<project_folder>/.vscode/mcp.json`   | `<project_folder>\.vscode\mcp.json`               | `servers`    |
-
-##### Cursor & Windsurf (`mcpServers`)
-
-```jsonc
-{
-	"mcpServers": {
-		"taskmaster-ai": {
-			"command": "npx",
-			"args": ["-y", "--package=task-master-ai", "task-master-ai"],
-			"env": {
-				"ANTHROPIC_API_KEY": "YOUR_ANTHROPIC_API_KEY_HERE",
-				"PERPLEXITY_API_KEY": "YOUR_PERPLEXITY_API_KEY_HERE",
-				"OPENAI_API_KEY": "YOUR_OPENAI_KEY_HERE",
-				"GOOGLE_API_KEY": "YOUR_GOOGLE_KEY_HERE",
-				"MISTRAL_API_KEY": "YOUR_MISTRAL_KEY_HERE",
-				"OPENROUTER_API_KEY": "YOUR_OPENROUTER_KEY_HERE",
-				"XAI_API_KEY": "YOUR_XAI_KEY_HERE",
-				"AZURE_OPENAI_API_KEY": "YOUR_AZURE_KEY_HERE",
-				"OLLAMA_API_KEY": "YOUR_OLLAMA_API_KEY_HERE"
-			}
-		}
-	}
-}
-```
-
-> 🔑 Replace `YOUR_…_KEY_HERE` with your real API keys. You can remove keys you don't use.
-
-##### VS Code (`servers` + `type`)
-
-```jsonc
-{
-	"servers": {
-		"taskmaster-ai": {
-			"command": "npx",
-			"args": ["-y", "--package=task-master-ai", "task-master-ai"],
-			"env": {
-				"ANTHROPIC_API_KEY": "YOUR_ANTHROPIC_API_KEY_HERE",
-				"PERPLEXITY_API_KEY": "YOUR_PERPLEXITY_API_KEY_HERE",
-				"OPENAI_API_KEY": "YOUR_OPENAI_KEY_HERE",
-				"GOOGLE_API_KEY": "YOUR_GOOGLE_KEY_HERE",
-				"MISTRAL_API_KEY": "YOUR_MISTRAL_KEY_HERE",
-				"OPENROUTER_API_KEY": "YOUR_OPENROUTER_KEY_HERE",
-				"XAI_API_KEY": "YOUR_XAI_KEY_HERE",
-				"AZURE_OPENAI_API_KEY": "YOUR_AZURE_KEY_HERE"
-			},
-			"type": "stdio"
-		}
-	}
-}
-```
-
-> 🔑 Replace `YOUR_…_KEY_HERE` with your real API keys. You can remove keys you don't use.
-
-#### 2. (Cursor-only) Enable Taskmaster MCP
-
-Open Cursor Settings (Ctrl+Shift+J) ➡ Click on MCP tab on the left ➡ Enable task-master-ai with the toggle
-
-#### 3. (Optional) Configure the models you want to use
-
-In your editor’s AI chat pane, say:
-
-```txt
-Change the main, research and fallback models to <model_name>, <model_name> and <model_name> respectively.
-```
-
-[Table of available models](docs/models.md)
-
-#### 4. Initialize Task Master
-
-In your editor’s AI chat pane, say:
-
-```txt
-Initialize taskmaster-ai in my project
-```
-
-#### 5. Make sure you have a PRD in `<project_folder>/scripts/prd.txt`
-
-An example of a PRD is located into `<project_folder>/scripts/example_prd.txt`.
-
-**Always start with a detailed PRD.**
-
-The more detailed your PRD, the better the generated tasks will be.
-
-#### 6. Common Commands
-
-Use your AI assistant to:
-
-- Parse requirements: `Can you parse my PRD at scripts/prd.txt?`
-- Plan next step: `What’s the next task I should work on?`
-- Implement a task: `Can you help me implement task 3?`
-- Expand a task: `Can you help me expand task 4?`
-
-[More examples on how to use Task Master in chat](docs/examples.md)
-
-### Option 2: Using Command Line
-
-#### Installation
+### Installation
 
 ```bash
-# Install globally
 npm install -g task-master-ai
-
-# OR install locally within your project
-npm install task-master-ai
 ```
 
-#### Initialize a new project
+### Basic Usage
 
 ```bash
-# If installed globally
-task-master init
+# Start the orchestrator (placeholder - implementation pending)
+task-master orchestrate
 
-# If installed locally
-npx task-master init
+# Check system status
+task-master status
+
+# Configure integrations
+task-master config
+
+# View logs
+task-master logs
 ```
 
-This will prompt you for project details and set up a new project with the necessary files and structure.
+## ⚙️ Configuration
 
-#### Common Commands
+The orchestrator uses `.orchestratorconfig` for configuration:
 
-```bash
-# Initialize a new project
-task-master init
-
-# Parse a PRD and generate tasks
-task-master parse-prd your-prd.txt
-
-# List all tasks
-task-master list
-
-# Show the next task to work on
-task-master next
-
-# Generate task files
-task-master generate
+```json
+{
+  "codegen": {
+    "token": "your-codegen-token",
+    "orgId": "your-org-id",
+    "apiUrl": "https://api.codegen.sh"
+  },
+  "claude": {
+    "webClientConfirmation": "your-confirmation-token",
+    "apiKey": "your-claude-api-key"
+  },
+  "agentapi": {
+    "baseUrl": "http://localhost:8000",
+    "enabled": true
+  },
+  "linear": {
+    "apiKey": "your-linear-api-key",
+    "teamId": "your-team-id"
+  },
+  "wsl2": {
+    "enabled": true,
+    "instanceName": "default"
+  },
+  "database": {
+    "type": "sqlite",
+    "path": "./orchestrator.db"
+  }
+}
 ```
 
-## Documentation
+## 🛣️ Roadmap
 
-For more detailed information, check out the documentation in the `docs` directory:
+### Phase 1: Core Infrastructure ⏳
+- [x] **Phase 1.1** - Remove deprecated components & clean architecture
+- [ ] **Phase 1.2** - Implement orchestrator core engine
+- [ ] **Phase 1.3** - Set up AgentAPI middleware integration
+- [ ] **Phase 1.4** - Implement database event storage system
 
-- [Configuration Guide](docs/configuration.md) - Set up environment variables and customize Task Master
-- [Tutorial](docs/tutorial.md) - Step-by-step guide to getting started with Task Master
-- [Command Reference](docs/command-reference.md) - Complete list of all available commands
-- [Task Structure](docs/task-structure.md) - Understanding the task format and features
-- [Example Interactions](docs/examples.md) - Common Cursor AI interaction examples
+### Phase 2: AI Coordination ⏳
+- [ ] **Phase 2.1** - Codegen SDK integration
+- [ ] **Phase 2.2** - Claude Code integration  
+- [ ] **Phase 2.3** - Dual agent coordination system
+- [ ] **Phase 2.4** - Intelligent routing and load balancing
 
-## Troubleshooting
+### Phase 3: Advanced Features ⏳
+- [ ] **Phase 3.1** - Linear integration and issue sync
+- [ ] **Phase 3.2** - WSL2 deployment automation
+- [ ] **Phase 3.3** - Real-time monitoring and alerting
+- [ ] **Phase 3.4** - Advanced workflow orchestration
 
-### If `task-master init` doesn't respond:
+### Phase 4: Optimization & Testing ⏳
+- [ ] **Phase 4.1** - Performance optimization
+- [ ] **Phase 4.2** - Comprehensive testing suite
+- [ ] **Phase 4.3** - Documentation and examples
+- [ ] **Phase 4.4** - Production deployment guides
 
-Try running it with Node directly:
+## 🔧 Development
 
-```bash
-node node_modules/claude-task-master/scripts/init.js
+### Project Structure
+
+```
+├── bin/
+│   └── task-master.js          # CLI entry point
+├── scripts/
+│   └── modules/
+│       ├── config-manager.js   # Configuration management
+│       ├── utils.js           # Utility functions
+│       └── index.js           # Module exports
+├── src/
+│   ├── constants/             # Application constants
+│   └── utils/                 # Core utilities
+├── index.js                   # Main package entry
+└── package.json              # Simplified dependencies
 ```
 
-Or clone the repository and run:
+### Contributing
 
-```bash
-git clone https://github.com/eyaltoledano/claude-task-master.git
-cd claude-task-master
-node scripts/init.js
-```
+This project is in active restructuring. Current focus:
 
-## Contributors
+1. **Phase 1.1 Complete** ✅ - Architecture cleanup finished
+2. **Phase 1.2 Next** - Implementing orchestrator core engine
+3. **Looking for contributors** for AgentAPI middleware integration
 
-<a href="https://github.com/eyaltoledano/claude-task-master/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=eyaltoledano/claude-task-master" alt="Task Master project contributors" />
-</a>
+## 📄 License
 
-## Star History
+MIT License with Commons Clause - see [LICENSE](LICENSE) for details.
 
-[![Star History Chart](https://api.star-history.com/svg?repos=eyaltoledano/claude-task-master&type=Timeline)](https://www.star-history.com/#eyaltoledano/claude-task-master&Timeline)
+## 🤝 Support
 
-## Licensing
+- **Discord**: [Join our community](https://discord.gg/taskmasterai)
+- **Issues**: [GitHub Issues](https://github.com/eyaltoledano/claude-task-master/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/eyaltoledano/claude-task-master/discussions)
 
-Task Master is licensed under the MIT License with Commons Clause. This means you can:
+---
 
-✅ **Allowed**:
+**Note**: This is a major architectural restructuring. The previous CLI-based task management functionality has been removed in favor of the new orchestrator-based system. If you need the legacy functionality, please use version 0.14.x or earlier.
 
-- Use Task Master for any purpose (personal, commercial, academic)
-- Modify the code
-- Distribute copies
-- Create and sell products built using Task Master
-
-❌ **Not Allowed**:
-
-- Sell Task Master itself
-- Offer Task Master as a hosted service
-- Create competing products based on Task Master
-
-See the [LICENSE](LICENSE) file for the complete license text and [licensing details](docs/licensing.md) for more information.
