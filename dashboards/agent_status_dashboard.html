@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentAPI Middleware - Real-time Agent Status Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .dashboard {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        .status-healthy { background-color: #4CAF50; }
+        .status-degraded { background-color: #FF9800; }
+        .status-unhealthy { background-color: #F44336; }
+        .status-unknown { background-color: #9E9E9E; }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .main-content {
+            padding: 30px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            border-left: 5px solid #4facfe;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .metric-card h3 {
+            color: #4facfe;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .metric-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .metric-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .agents-section {
+            margin-top: 30px;
+        }
+
+        .section-title {
+            font-size: 1.8em;
+            color: #333;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #4facfe;
+        }
+
+        .agents-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .agent-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease;
+        }
+
+        .agent-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .agent-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .agent-name {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .agent-status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .agent-status.healthy {
+            background-color: #E8F5E8;
+            color: #4CAF50;
+        }
+
+        .agent-status.degraded {
+            background-color: #FFF3E0;
+            color: #FF9800;
+        }
+
+        .agent-status.unhealthy {
+            background-color: #FFEBEE;
+            color: #F44336;
+        }
+
+        .agent-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .agent-metric {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .agent-metric-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #4facfe;
+        }
+
+        .agent-metric-label {
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .alerts-section {
+            margin-top: 30px;
+            background: #fff;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .alert-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            border-left: 4px solid;
+        }
+
+        .alert-error {
+            background-color: #FFEBEE;
+            border-left-color: #F44336;
+        }
+
+        .alert-warning {
+            background-color: #FFF3E0;
+            border-left-color: #FF9800;
+        }
+
+        .alert-info {
+            background-color: #E3F2FD;
+            border-left-color: #2196F3;
+        }
+
+        .alert-icon {
+            margin-right: 15px;
+            font-size: 1.2em;
+        }
+
+        .alert-content {
+            flex: 1;
+        }
+
+        .alert-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .alert-time {
+            font-size: 0.8em;
+            color: #666;
+        }
+
+        .refresh-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(79, 172, 254, 0.9);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 0.9em;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            transition: opacity 0.3s ease;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #FFEBEE;
+            color: #F44336;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .chart-container {
+            margin-top: 20px;
+            height: 200px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+        }
+
+        @media (max-width: 768px) {
+            .metrics-grid,
+            .agents-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .agent-metrics {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <div class="header">
+            <h1>🌐 AgentAPI Middleware Dashboard</h1>
+            <p>Real-time monitoring of AI agent status and performance</p>
+            <div style="margin-top: 15px;">
+                <span class="status-indicator status-healthy" id="overall-status"></span>
+                <span id="overall-status-text">System Status: Loading...</span>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <!-- System Metrics -->
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <h3>🔄 Active Sessions</h3>
+                    <div class="metric-value" id="active-sessions">-</div>
+                    <div class="metric-label">Currently running</div>
+                </div>
+                <div class="metric-card">
+                    <h3>📊 Total Messages</h3>
+                    <div class="metric-value" id="total-messages">-</div>
+                    <div class="metric-label">Processed today</div>
+                </div>
+                <div class="metric-card">
+                    <h3>⚡ Avg Response Time</h3>
+                    <div class="metric-value" id="avg-response-time">-</div>
+                    <div class="metric-label">Milliseconds</div>
+                </div>
+                <div class="metric-card">
+                    <h3>🎯 Success Rate</h3>
+                    <div class="metric-value" id="success-rate">-</div>
+                    <div class="metric-label">Last 24 hours</div>
+                </div>
+            </div>
+
+            <!-- Agents Section -->
+            <div class="agents-section">
+                <h2 class="section-title">🤖 Agent Status</h2>
+                <div class="agents-grid" id="agents-grid">
+                    <!-- Agent cards will be populated here -->
+                </div>
+            </div>
+
+            <!-- Alerts Section -->
+            <div class="alerts-section">
+                <h2 class="section-title">🚨 System Alerts</h2>
+                <div id="alerts-container">
+                    <div class="alert-item alert-info">
+                        <div class="alert-icon">ℹ️</div>
+                        <div class="alert-content">
+                            <div class="alert-title">Dashboard Initialized</div>
+                            <div class="alert-time">Monitoring started</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="refresh-indicator" id="refresh-indicator">
+        <div class="loading"></div>
+        Updating...
+    </div>
+
+    <script>
+        class AgentDashboard {
+            constructor() {
+                this.apiBaseUrl = 'http://localhost:3284';
+                this.refreshInterval = 5000; // 5 seconds
+                this.isLoading = false;
+                this.lastUpdate = null;
+                
+                this.init();
+            }
+
+            async init() {
+                console.log('🚀 Initializing Agent Dashboard...');
+                await this.loadData();
+                this.startAutoRefresh();
+            }
+
+            async loadData() {
+                if (this.isLoading) return;
+                
+                this.isLoading = true;
+                this.showRefreshIndicator();
+
+                try {
+                    // Simulate API calls - replace with actual API endpoints
+                    const [systemMetrics, agentStatus, alerts] = await Promise.all([
+                        this.fetchSystemMetrics(),
+                        this.fetchAgentStatus(),
+                        this.fetchAlerts()
+                    ]);
+
+                    this.updateSystemMetrics(systemMetrics);
+                    this.updateAgentStatus(agentStatus);
+                    this.updateAlerts(alerts);
+                    this.updateOverallStatus(systemMetrics, agentStatus);
+                    
+                    this.lastUpdate = new Date();
+                    console.log('✅ Dashboard updated successfully');
+
+                } catch (error) {
+                    console.error('❌ Failed to load dashboard data:', error);
+                    this.showError('Failed to load dashboard data. Please check your connection.');
+                } finally {
+                    this.isLoading = false;
+                    this.hideRefreshIndicator();
+                }
+            }
+
+            async fetchSystemMetrics() {
+                // Simulate API response - replace with actual API call
+                return new Promise(resolve => {
+                    setTimeout(() => {
+                        resolve({
+                            activeSessions: Math.floor(Math.random() * 20) + 5,
+                            totalMessages: Math.floor(Math.random() * 10000) + 5000,
+                            avgResponseTime: Math.floor(Math.random() * 2000) + 500,
+                            successRate: (Math.random() * 0.2 + 0.8) * 100
+                        });
+                    }, 500);
+                });
+            }
+
+            async fetchAgentStatus() {
+                // Simulate API response - replace with actual API call
+                return new Promise(resolve => {
+                    setTimeout(() => {
+                        const agents = ['claude', 'goose', 'aider', 'codex'];
+                        const statuses = ['healthy', 'degraded', 'unhealthy'];
+                        
+                        resolve(agents.map(agent => ({
+                            name: agent,
+                            status: statuses[Math.floor(Math.random() * statuses.length)],
+                            activeSessions: Math.floor(Math.random() * 5),
+                            totalSessions: Math.floor(Math.random() * 100) + 50,
+                            avgResponseTime: Math.floor(Math.random() * 3000) + 200,
+                            successRate: (Math.random() * 0.3 + 0.7) * 100,
+                            uptime: Math.floor(Math.random() * 86400) + 3600 // 1-24 hours
+                        })));
+                    }, 300);
+                });
+            }
+
+            async fetchAlerts() {
+                // Simulate API response - replace with actual API call
+                return new Promise(resolve => {
+                    setTimeout(() => {
+                        const alertTypes = ['error', 'warning', 'info'];
+                        const messages = [
+                            'High response time detected on Claude agent',
+                            'Goose agent session limit reached',
+                            'Aider agent successfully recovered',
+                            'System performance within normal parameters',
+                            'New agent configuration loaded'
+                        ];
+                        
+                        const alerts = [];
+                        for (let i = 0; i < Math.floor(Math.random() * 5) + 1; i++) {
+                            alerts.push({
+                                type: alertTypes[Math.floor(Math.random() * alertTypes.length)],
+                                title: messages[Math.floor(Math.random() * messages.length)],
+                                time: new Date(Date.now() - Math.random() * 3600000).toLocaleTimeString()
+                            });
+                        }
+                        
+                        resolve(alerts);
+                    }, 200);
+                });
+            }
+
+            updateSystemMetrics(metrics) {
+                document.getElementById('active-sessions').textContent = metrics.activeSessions;
+                document.getElementById('total-messages').textContent = metrics.totalMessages.toLocaleString();
+                document.getElementById('avg-response-time').textContent = `${metrics.avgResponseTime}ms`;
+                document.getElementById('success-rate').textContent = `${metrics.successRate.toFixed(1)}%`;
+            }
+
+            updateAgentStatus(agents) {
+                const agentsGrid = document.getElementById('agents-grid');
+                agentsGrid.innerHTML = '';
+
+                agents.forEach(agent => {
+                    const agentCard = this.createAgentCard(agent);
+                    agentsGrid.appendChild(agentCard);
+                });
+            }
+
+            createAgentCard(agent) {
+                const card = document.createElement('div');
+                card.className = 'agent-card';
+                
+                const statusClass = agent.status;
+                const statusEmoji = {
+                    healthy: '✅',
+                    degraded: '⚠️',
+                    unhealthy: '❌'
+                }[agent.status] || '❓';
+
+                const uptimeHours = Math.floor(agent.uptime / 3600);
+                const uptimeMinutes = Math.floor((agent.uptime % 3600) / 60);
+
+                card.innerHTML = `
+                    <div class="agent-header">
+                        <div class="agent-name">${statusEmoji} ${agent.name.toUpperCase()}</div>
+                        <div class="agent-status ${statusClass}">${agent.status}</div>
+                    </div>
+                    <div class="agent-metrics">
+                        <div class="agent-metric">
+                            <div class="agent-metric-value">${agent.activeSessions}</div>
+                            <div class="agent-metric-label">Active Sessions</div>
+                        </div>
+                        <div class="agent-metric">
+                            <div class="agent-metric-value">${agent.totalSessions}</div>
+                            <div class="agent-metric-label">Total Sessions</div>
+                        </div>
+                        <div class="agent-metric">
+                            <div class="agent-metric-value">${agent.avgResponseTime}ms</div>
+                            <div class="agent-metric-label">Avg Response</div>
+                        </div>
+                        <div class="agent-metric">
+                            <div class="agent-metric-value">${agent.successRate.toFixed(1)}%</div>
+                            <div class="agent-metric-label">Success Rate</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 15px; text-align: center; color: #666; font-size: 0.9em;">
+                        Uptime: ${uptimeHours}h ${uptimeMinutes}m
+                    </div>
+                `;
+
+                return card;
+            }
+
+            updateAlerts(alerts) {
+                const alertsContainer = document.getElementById('alerts-container');
+                alertsContainer.innerHTML = '';
+
+                if (alerts.length === 0) {
+                    alertsContainer.innerHTML = `
+                        <div class="alert-item alert-info">
+                            <div class="alert-icon">✅</div>
+                            <div class="alert-content">
+                                <div class="alert-title">No Active Alerts</div>
+                                <div class="alert-time">All systems operating normally</div>
+                            </div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                alerts.forEach(alert => {
+                    const alertElement = document.createElement('div');
+                    alertElement.className = `alert-item alert-${alert.type}`;
+                    
+                    const alertIcon = {
+                        error: '❌',
+                        warning: '⚠️',
+                        info: 'ℹ️'
+                    }[alert.type] || 'ℹ️';
+
+                    alertElement.innerHTML = `
+                        <div class="alert-icon">${alertIcon}</div>
+                        <div class="alert-content">
+                            <div class="alert-title">${alert.title}</div>
+                            <div class="alert-time">${alert.time}</div>
+                        </div>
+                    `;
+
+                    alertsContainer.appendChild(alertElement);
+                });
+            }
+
+            updateOverallStatus(systemMetrics, agentStatus) {
+                const healthyAgents = agentStatus.filter(agent => agent.status === 'healthy').length;
+                const totalAgents = agentStatus.length;
+                const healthRatio = healthyAgents / totalAgents;
+
+                let overallStatus, statusText, statusClass;
+
+                if (healthRatio >= 0.8 && systemMetrics.successRate >= 90) {
+                    overallStatus = 'healthy';
+                    statusText = 'All Systems Operational';
+                    statusClass = 'status-healthy';
+                } else if (healthRatio >= 0.5 && systemMetrics.successRate >= 70) {
+                    overallStatus = 'degraded';
+                    statusText = 'System Performance Degraded';
+                    statusClass = 'status-degraded';
+                } else {
+                    overallStatus = 'unhealthy';
+                    statusText = 'System Issues Detected';
+                    statusClass = 'status-unhealthy';
+                }
+
+                const statusIndicator = document.getElementById('overall-status');
+                const statusTextElement = document.getElementById('overall-status-text');
+
+                statusIndicator.className = `status-indicator ${statusClass}`;
+                statusTextElement.textContent = `System Status: ${statusText}`;
+            }
+
+            showRefreshIndicator() {
+                const indicator = document.getElementById('refresh-indicator');
+                indicator.style.opacity = '1';
+            }
+
+            hideRefreshIndicator() {
+                const indicator = document.getElementById('refresh-indicator');
+                indicator.style.opacity = '0';
+            }
+
+            showError(message) {
+                const mainContent = document.querySelector('.main-content');
+                const existingError = document.querySelector('.error-message');
+                
+                if (existingError) {
+                    existingError.remove();
+                }
+
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.textContent = message;
+                
+                mainContent.insertBefore(errorDiv, mainContent.firstChild);
+
+                // Remove error message after 5 seconds
+                setTimeout(() => {
+                    if (errorDiv.parentNode) {
+                        errorDiv.remove();
+                    }
+                }, 5000);
+            }
+
+            startAutoRefresh() {
+                setInterval(() => {
+                    this.loadData();
+                }, this.refreshInterval);
+            }
+        }
+
+        // Initialize dashboard when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new AgentDashboard();
+        });
+
+        // Handle page visibility changes to pause/resume updates
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                console.log('📱 Dashboard paused (tab not visible)');
+            } else {
+                console.log('👁️ Dashboard resumed (tab visible)');
+            }
+        });
+    </script>
+</body>
+</html>
+
