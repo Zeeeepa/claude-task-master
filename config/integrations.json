@@ -1,0 +1,50 @@
+{
+  "codegen": {
+    "apiBaseUrl": "https://api.codegen.sh",
+    "sdkVersion": "latest",
+    "requestTimeout": 30000,
+    "retryAttempts": 3,
+    "rateLimitDelay": 1000,
+    "features": {
+      "taskSubmission": true,
+      "repositoryOperations": true,
+      "pullRequestCreation": true,
+      "codeAnalysis": true
+    }
+  },
+  "claude": {
+    "codePath": "/usr/local/bin/claude-code",
+    "workingDirectory": null,
+    "timeout": 30000,
+    "confirmationMode": "web",
+    "features": {
+      "codeGeneration": true,
+      "fileOperations": true,
+      "codeAnalysis": true,
+      "messageProcessing": true
+    }
+  },
+  "linear": {
+    "apiBaseUrl": "https://api.linear.app",
+    "requestTimeout": 15000,
+    "retryAttempts": 3,
+    "features": {
+      "issueCreation": true,
+      "issueUpdates": true,
+      "commentCreation": true,
+      "webhooks": true
+    }
+  },
+  "github": {
+    "apiBaseUrl": "https://api.github.com",
+    "requestTimeout": 15000,
+    "retryAttempts": 3,
+    "features": {
+      "repositoryAccess": true,
+      "pullRequestCreation": true,
+      "issueManagement": true,
+      "webhooks": true
+    }
+  }
+}
+

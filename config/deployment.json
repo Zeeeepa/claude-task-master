@@ -1,0 +1,65 @@
+{
+  "wsl2": {
+    "host": "localhost",
+    "sshPort": 22,
+    "username": "taskmaster",
+    "workingDirectory": "/home/taskmaster/deployments",
+    "features": {
+      "autoDeployment": true,
+      "healthChecks": true,
+      "rollback": true,
+      "monitoring": true
+    },
+    "deployment": {
+      "strategy": "blue-green",
+      "timeout": 300000,
+      "healthCheckInterval": 30000,
+      "maxRetries": 3
+    }
+  },
+  "agentapi": {
+    "port": 3001,
+    "host": "localhost",
+    "allowedOrigins": [
+      "http://localhost:3000",
+      "http://localhost:3001"
+    ],
+    "cors": {
+      "credentials": true,
+      "maxAge": 86400
+    },
+    "security": {
+      "helmet": true,
+      "rateLimiting": {
+        "windowMs": 900000,
+        "max": 100
+      }
+    },
+    "websocket": {
+      "enabled": true,
+      "path": "/ws",
+      "heartbeatInterval": 30000
+    }
+  },
+  "system": {
+    "logLevel": "info",
+    "nodeEnv": "development",
+    "healthCheckInterval": 30000,
+    "staleThreshold": 300000,
+    "monitoring": {
+      "enabled": true,
+      "metricsInterval": 60000,
+      "alertThresholds": {
+        "memoryUsage": 0.8,
+        "cpuUsage": 0.8,
+        "errorRate": 0.1
+      }
+    },
+    "clustering": {
+      "enabled": false,
+      "workers": "auto",
+      "restartDelay": 5000
+    }
+  }
+}
+

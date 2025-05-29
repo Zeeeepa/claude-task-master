@@ -1,0 +1,26 @@
+{
+  "type": "sqlite",
+  "filename": "taskmaster.db",
+  "connectionTimeout": 10000,
+  "maxConnections": 10,
+  "enableWAL": true,
+  "enableForeignKeys": true,
+  "busyTimeout": 30000,
+  "migrations": {
+    "directory": "src/database/migrations",
+    "autoRun": true
+  },
+  "backup": {
+    "enabled": true,
+    "interval": 3600000,
+    "maxBackups": 24,
+    "directory": "backups"
+  },
+  "performance": {
+    "cacheSize": 2000,
+    "tempStore": "memory",
+    "journalMode": "WAL",
+    "synchronous": "NORMAL"
+  }
+}
+
