@@ -1,0 +1,292 @@
+# Consolidated Cloudflare Tunnel Configuration
+# Consolidates tunnel configurations from PRs #41,42,53,59,62,64,65,69,70,74,79,81
+# Version: 2.0.0 - Zero Redundancy Implementation
+
+tunnel: codegen-taskmaster-db-tunnel
+credentials-file: /etc/cloudflared/credentials.json
+
+# Ingress rules for comprehensive database and API access
+ingress:
+  # PostgreSQL database access with optimized settings
+  - hostname: db.codegen-taskmaster.your-domain.com
+    service: tcp://localhost:5432
+    originRequest:
+      # TCP proxy optimization for PostgreSQL
+      tcpKeepAlive: 30s
+      connectTimeout: 30s
+      tlsTimeout: 30s
+      http2Origin: false
+      # Enhanced connection pooling
+      keepAliveConnections: 100
+      keepAliveTimeout: 90s
+      # Buffer settings for high-throughput operations
+      bufferSize: 512kb
+      # Proxy settings
+      proxyConnectTimeout: 30s
+      proxyTLSTimeout: 30s
+
+  # Health check endpoint with fast response
+  - hostname: health.codegen-taskmaster.your-domain.com
+    service: http://localhost:3000/health
+    originRequest:
+      connectTimeout: 10s
+      tlsTimeout: 10s
+      httpHostHeader: localhost
+      # Enable compression for health responses
+      compression: gzip
+
+  # Main API access with comprehensive settings
+  - hostname: api.codegen-taskmaster.your-domain.com
+    service: http://localhost:3000
+    originRequest:
+      connectTimeout: 30s
+      tlsTimeout: 30s
+      httpHostHeader: localhost
+      # Performance optimizations
+      compression: gzip
+      keepAliveConnections: 50
+      keepAliveTimeout: 60s
+      # Request handling
+      noTLSVerify: false
+      originServerName: localhost
+
+  # Database metrics and monitoring endpoint
+  - hostname: metrics.codegen-taskmaster.your-domain.com
+    service: http://localhost:3000/metrics
+    originRequest:
+      connectTimeout: 15s
+      tlsTimeout: 15s
+      httpHostHeader: localhost
+      compression: gzip
+
+  # AgentAPI middleware endpoint
+  - hostname: agentapi.codegen-taskmaster.your-domain.com
+    service: http://localhost:3002
+    originRequest:
+      connectTimeout: 30s
+      tlsTimeout: 30s
+      httpHostHeader: localhost
+      compression: gzip
+      # WebSocket support for real-time communication
+      upgradeWebsocket: true
+
+  # Webhook processing endpoint
+  - hostname: webhooks.codegen-taskmaster.your-domain.com
+    service: http://localhost:3000/webhooks
+    originRequest:
+      connectTimeout: 20s
+      tlsTimeout: 20s
+      httpHostHeader: localhost
+      # Webhook-specific settings
+      noChunkedEncoding: true
+
+  # Catch-all rule (required)
+  - service: http_status:404
+
+# Enhanced logging configuration
+logLevel: info
+logFile: /var/log/cloudflared/tunnel.log
+logDirectory: /var/log/cloudflared
+
+# Metrics and monitoring
+metrics: 0.0.0.0:8080
+metricsUpdateFreq: 30s
+
+# Connection settings with reliability focus
+retries: 3
+grace-period: 30s
+heartbeatInterval: 5s
+heartbeatCount: 5
+
+# TLS and security settings
+originServerName: localhost
+protocol: auto
+edgeIPVersion: auto
+
+# Connection pool settings for high availability
+connectionPoolSize: 4
+maxConcurrentStreams: 100
+
+# DNS and network settings
+dnsResolverIPs:
+  - 1.1.1.1
+  - 1.0.0.1
+  - 8.8.8.8
+  - 8.8.4.4
+
+# Regional settings for optimal performance
+region: auto
+
+# Load balancing configuration
+loadBalancer:
+  pool: default
+  sessionAffinity: none
+  healthCheck:
+    enabled: true
+    interval: 30s
+    timeout: 10s
+    path: /health
+
+# Comprehensive security settings
+security:
+  # DDoS protection
+  ddosProtection: true
+  
+  # Rate limiting configuration
+  rateLimit:
+    threshold: 1000
+    period: 60s
+    burst: 100
+  
+  # IP access control (configure based on your needs)
+  # allowedIPs:
+  #   - 192.168.1.0/24    # Your office network
+  #   - 10.0.0.0/8        # Your VPC network
+  #   - 172.16.0.0/12     # Private networks
+  
+  # Geographic restrictions (optional)
+  # allowedCountries:
+  #   - US
+  #   - CA
+  #   - GB
+  #   - DE
+  
+  # WAF settings
+  waf:
+    enabled: true
+    mode: block
+    rules:
+      - sql_injection
+      - xss
+      - rfi
+      - lfi
+      - command_injection
+  
+  # Bot management
+  botManagement:
+    enabled: false  # Set to true if needed
+    mode: challenge
+  
+  # SSL/TLS settings
+  ssl:
+    mode: strict
+    minVersion: "1.2"
+    cipherSuites:
+      - ECDHE-RSA-AES128-GCM-SHA256
+      - ECDHE-RSA-AES256-GCM-SHA384
+      - ECDHE-RSA-CHACHA20-POLY1305
+
+# Monitoring and alerting configuration
+monitoring:
+  enabled: true
+  
+  # Health check settings
+  healthCheck:
+    interval: 30s
+    timeout: 10s
+    path: /health
+    expectedStatus: 200
+  
+  # Metrics collection
+  metrics:
+    enabled: true
+    port: 8080
+    path: /metrics
+    interval: 60s
+  
+  # Performance monitoring
+  performance:
+    responseTimeThreshold: 5000  # 5 seconds
+    errorRateThreshold: 5        # 5%
+    connectionThreshold: 80      # 80% of max connections
+  
+  # Alerting (configure webhooks/notifications as needed)
+  alerts:
+    enabled: true
+    # webhook: https://your-monitoring-system.com/webhook
+    # email: admin@your-domain.com
+
+# Backup tunnel configuration (optional)
+# backup:
+#   tunnel: codegen-taskmaster-db-tunnel-backup
+#   credentials-file: /etc/cloudflared/backup-credentials.json
+#   enabled: false
+
+# Advanced features
+features:
+  # HTTP/2 support
+  http2: true
+  
+  # Compression
+  compression: true
+  
+  # Keep-alive settings
+  keepAlive: true
+  keepAliveTimeout: 90s
+  
+  # Request buffering
+  requestBuffering: true
+  bufferSize: 512kb
+  
+  # Connection reuse
+  connectionReuse: true
+  maxIdleConns: 100
+  maxIdleConnsPerHost: 10
+
+# Environment-specific overrides
+environments:
+  development:
+    logLevel: debug
+    metrics: 127.0.0.1:8080
+    security:
+      rateLimit:
+        threshold: 100
+        period: 60s
+  
+  staging:
+    logLevel: info
+    security:
+      rateLimit:
+        threshold: 500
+        period: 60s
+  
+  production:
+    logLevel: warn
+    security:
+      rateLimit:
+        threshold: 2000
+        period: 60s
+      waf:
+        enabled: true
+        mode: block
+
+# Maintenance and operational settings
+maintenance:
+  # Graceful shutdown timeout
+  shutdownTimeout: 30s
+  
+  # Configuration reload
+  configReload: true
+  
+  # Log rotation
+  logRotation:
+    enabled: true
+    maxSize: 100MB
+    maxAge: 30
+    maxBackups: 10
+
+# Performance tuning
+performance:
+  # Connection limits
+  maxConnections: 1000
+  maxConnectionsPerHost: 100
+  
+  # Timeout settings
+  readTimeout: 60s
+  writeTimeout: 60s
+  idleTimeout: 120s
+  
+  # Buffer sizes
+  readBufferSize: 64kb
+  writeBufferSize: 64kb
+
