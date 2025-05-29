@@ -144,7 +144,7 @@ describe('Commands Module', () => {
 			mockJoin.mockReturnValue('package.json');
 
 			const program = setupCLI();
-			const version = program._version();
+			const version = program._version;
 			expect(mockReadFileSync).toHaveBeenCalledWith('package.json', 'utf8');
 			expect(version).toBe('1.0.0');
 		});
@@ -153,7 +153,7 @@ describe('Commands Module', () => {
 			mockExistsSync.mockReturnValue(false);
 
 			const program = setupCLI();
-			const version = program._version();
+			const version = program._version;
 			expect(mockReadFileSync).not.toHaveBeenCalled();
 			expect(version).toBe('unknown');
 		});
@@ -165,7 +165,7 @@ describe('Commands Module', () => {
 			});
 
 			const program = setupCLI();
-			const version = program._version();
+			const version = program._version;
 			expect(mockReadFileSync).toHaveBeenCalled();
 			expect(version).toBe('unknown');
 		});
