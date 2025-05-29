@@ -10,7 +10,7 @@ import { AuthManager } from './auth_manager.js';
 import { RBACController } from './rbac_controller.js';
 import { InputValidator } from './input_validator.js';
 import { AuditLogger } from './audit_logger.js';
-import { SimpleLogger } from '../utils/simple_logger.js';
+import { log } from '../utils/simple_logger.js';
 
 /**
  * Unified Security Middleware

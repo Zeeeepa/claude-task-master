@@ -3,7 +3,7 @@
  * @description Advanced template generation for code scaffolding and structure creation
  */
 
-import { log } from '../utils/logger.js';
+import { log } from '../utils/simple_logger.js';
 
 /**
  * Template Engine for generating code templates and structures

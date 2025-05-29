@@ -3,7 +3,7 @@
  * @description Advanced requirement extraction for natural language processing
  */
 
-import { log } from '../utils/logger.js';
+import { log } from '../utils/simple_logger.js';
 
 /**
  * Requirement Extractor for natural language tasks

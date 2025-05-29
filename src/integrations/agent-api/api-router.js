@@ -6,7 +6,7 @@
  */
 
 import { Router } from 'express';
-import { SimpleLogger } from '../../ai_cicd_system/utils/simple_logger.js';
+import { log } from '../../ai_cicd_system/utils/simple_logger.js';
 
 export class APIRouter {
   constructor(options = {}) {

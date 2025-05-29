@@ -6,7 +6,7 @@
 import { EventEmitter } from 'events';
 import jwt from 'jsonwebtoken';
 import { AuthManager } from '../../ai_cicd_system/security/auth_manager.js';
-import { SimpleLogger } from '../../ai_cicd_system/utils/simple_logger.js';
+import { log } from '../../ai_cicd_system/utils/simple_logger.js';
 
 /**
  * Unified Authentication Handler

@@ -22,7 +22,7 @@ import { APIRouter } from './api-router.js';
 import { AuthHandler } from './auth-handler.js';
 import { DataTransformer } from './data-transformer.js';
 import { RateLimiter } from './rate-limiter.js';
-import { SimpleLogger } from '../../ai_cicd_system/utils/simple_logger.js';
+import { log } from '../../ai_cicd_system/utils/simple_logger.js';
 
 export class MiddlewareServer {
   constructor(config = {}) {

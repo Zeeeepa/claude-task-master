@@ -5,7 +5,7 @@
  */
 
 import { MiddlewareServer, getEnvironmentConfig } from './index.js';
-import { SimpleLogger } from '../../ai_cicd_system/utils/simple_logger.js';
+import { log } from '../../ai_cicd_system/utils/simple_logger.js';
 
 const logger = new SimpleLogger('AgentAPIExample');
 

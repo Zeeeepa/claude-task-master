@@ -3,7 +3,7 @@
  * @description Advanced analysis of coding intent and complexity estimation
  */
 
-import { log } from '../utils/logger.js';
+import { log } from '../utils/simple_logger.js';
 
 /**
  * Code Intent Analyzer for understanding coding requirements

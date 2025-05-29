@@ -3,7 +3,7 @@
  * @description Advanced status tracking and Linear integration for workflow updates
  */
 
-import { log } from '../utils/logger.js';
+import { log } from '../utils/simple_logger.js';
 
 /**
  * Status Updater for tracking and updating workflow status

@@ -3,7 +3,7 @@
  * @description Advanced PR creation and formatting for Codegen-generated code
  */
 
-import { log } from '../../utils/logger.js';
+import { log } from '../../utils/simple_logger.js';
 
 /**
  * PR Creator for formatting and managing Codegen-generated PRs

@@ -3,7 +3,7 @@
  * @description Advanced prompt generation system for optimal Codegen API requests
  */
 
-import { log } from '../../utils/logger.js';
+import { log } from '../../utils/simple_logger.js';
 
 /**
  * Prompt Generator for Codegen API optimization

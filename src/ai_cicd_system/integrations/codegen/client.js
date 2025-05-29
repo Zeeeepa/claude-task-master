@@ -6,7 +6,7 @@
 import { EventEmitter } from 'events';
 import { AuthManager } from '../../security/auth_manager.js';
 import { AuditLogger } from '../../security/audit_logger.js';
-import { SimpleLogger } from '../../utils/simple_logger.js';
+import { log } from '../../utils/simple_logger.js';
 
 /**
  * Secure Codegen Client

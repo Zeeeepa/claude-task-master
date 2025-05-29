@@ -3,7 +3,7 @@
  * @description Advanced task processing engine with Codegen integration
  */
 
-import { log } from '../utils/logger.js';
+import { log } from '../utils/simple_logger.js';
 import { TaskAnalyzer } from '../integrations/codegen/task_analyzer.js';
 import { PromptGenerator } from '../integrations/codegen/prompt_generator.js';
 import { CodegenClient } from '../integrations/codegen/client.js';

@@ -3,7 +3,7 @@
  * @description Intelligent analysis of natural language tasks for Codegen integration
  */
 
-import { log } from '../../utils/logger.js';
+import { log } from '../../utils/simple_logger.js';
 
 /**
  * Task Analyzer for extracting requirements and coding intent

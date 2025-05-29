@@ -3,7 +3,7 @@
  * @description Advanced context management for intelligent code generation
  */
 
-import { log } from '../../utils/logger.js';
+import { log } from '../../utils/simple_logger.js';
 
 /**
  * Context Manager for Codegen integration

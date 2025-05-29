@@ -3,7 +3,7 @@
  * @description Advanced workflow orchestration for PR creation and management
  */
 
-import { log } from '../utils/logger.js';
+import { log } from '../utils/simple_logger.js';
 import { PRCreator } from '../integrations/codegen/pr_creator.js';
 import { TaskProcessor } from './task_processor.js';
 
