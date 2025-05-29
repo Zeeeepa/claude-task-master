@@ -1,445 +1,448 @@
-# PostgreSQL Database Implementation
-
-This directory contains the production-ready PostgreSQL database implementation for the TaskMaster AI CI/CD System.
+# PostgreSQL Database Implementation for AI CI/CD System
 
 ## Overview
 
-The database implementation provides:
+This directory contains the complete PostgreSQL database implementation for the AI CI/CD task management system, featuring:
 
-- **Production-ready PostgreSQL integration** with connection pooling and health monitoring
-- **Comprehensive schema** with proper indexing, constraints, and audit trails
-- **Migration system** for schema version management
-- **Data models** with validation and business logic
-- **Performance optimization** with query monitoring and caching
-- **Error handling and resilience** with retry logic and graceful degradation
+- **Scalable Schema Design**: Optimized for high-throughput operations
+- **Security-First Architecture**: Row-level security, API authentication, and encryption
+- **Cloudflare Integration**: Secure external access with DDoS protection and WAF
+- **Advanced Connection Pooling**: Multiple pools for different operation types
+- **Comprehensive Monitoring**: Real-time metrics and performance tracking
+- **Automated Setup**: One-command deployment and configuration
+
+## Quick Start
+
+### Prerequisites
+
+- PostgreSQL 13+ with extensions: `uuid-ossp`, `pgcrypto`, `pg_stat_statements`
+- Node.js 18+ with ES modules support
+- Environment variables configured (see Configuration section)
+
+### Installation
+
+1. **Set Environment Variables**:
+```bash
+export DB_HOST=localhost
+export DB_PORT=5432
+export DB_NAME=taskmaster_db
+export DB_USER=taskmaster_user
+export DB_PASSWORD=secure_password
+export NODE_ENV=development
+```
+
+2. **Run Database Setup**:
+```bash
+node src/ai_cicd_system/database/setup.js
+```
+
+3. **Verify Installation**:
+```bash
+# Check database health
+curl -H "X-API-Key: your_api_key" http://localhost:3000/api/database/health
+```
 
 ## Architecture
 
+### Core Components
+
 ```
-database/
-├── connection.js          # Database connection manager with pooling
-├── models/               # Data models with validation
-│   ├── Task.js          # Task model with business logic
-│   └── TaskContext.js   # Context model for metadata
-├── migrations/          # Database schema migrations
-│   ├── 001_initial_schema.sql  # Initial schema creation
-│   └── runner.js        # Migration runner and management
-└── README.md           # This file
+src/ai_cicd_system/database/
+├── schema.sql                 # Complete database schema
+├── connection.js             # Basic database connection
+├── connection_pool.js        # Enhanced connection pooling
+├── cloudflare_config.js      # Cloudflare integration
+├── setup.js                  # Automated setup script
+├── migrations/
+│   ├── 001_initial_schema.sql
+│   ├── 002_enhanced_cicd_schema.sql
+│   └── runner.js
+└── models/
+    ├── Task.js
+    └── TaskContext.js
 ```
 
-## Database Schema
+### Database Schema
 
-### Core Tables
+#### Core Tables
+- **tasks**: Primary task management
+- **task_contexts**: Contextual information and metadata
+- **task_dependencies**: Task relationship management
+- **workflow_states**: Workflow execution tracking
+- **audit_logs**: Complete audit trail
 
-#### `tasks`
-Main tasks table storing all task information:
-- `id` (UUID) - Primary key
-- `title` (VARCHAR) - Task title
-- `description` (TEXT) - Task description
-- `type` (VARCHAR) - Task type (bug, feature, enhancement)
-- `status` (VARCHAR) - Task status (pending, in_progress, completed, failed, cancelled)
-- `priority` (INTEGER) - Priority level (0-10)
-- `complexity_score` (INTEGER) - Complexity rating (1-10)
-- `affected_files` (JSONB) - List of affected files
-- `requirements` (JSONB) - Task requirements
-- `acceptance_criteria` (JSONB) - Acceptance criteria
-- `parent_task_id` (UUID) - Parent task reference
-- `assigned_to` (VARCHAR) - Assignee identifier
-- `tags` (JSONB) - Task tags
-- `estimated_hours` (DECIMAL) - Estimated effort
-- `actual_hours` (DECIMAL) - Actual effort
-- `created_at` (TIMESTAMP) - Creation timestamp
-- `updated_at` (TIMESTAMP) - Last update timestamp
-- `completed_at` (TIMESTAMP) - Completion timestamp
-- `metadata` (JSONB) - Additional metadata
+#### CI/CD Tables
+- **deployment_scripts**: Script management and execution
+- **error_logs**: Comprehensive error tracking
+- **webhook_events**: External system integration
 
-#### `task_contexts`
-Contextual information and metadata for tasks:
-- `id` (UUID) - Primary key
-- `task_id` (UUID) - Foreign key to tasks
-- `context_type` (VARCHAR) - Type of context
-- `context_data` (JSONB) - Context data
-- `created_at` (TIMESTAMP) - Creation timestamp
-- `updated_at` (TIMESTAMP) - Last update timestamp
-- `metadata` (JSONB) - Additional metadata
+#### Security Tables
+- **api_keys**: Authentication and authorization
+- **api_access_logs**: Security monitoring
+- **configuration_settings**: Dynamic configuration
 
-#### `workflow_states`
-Workflow execution states and progress tracking:
-- `id` (UUID) - Primary key
-- `workflow_id` (VARCHAR) - Workflow identifier
-- `task_id` (UUID) - Associated task
-- `step` (VARCHAR) - Workflow step
-- `status` (VARCHAR) - Step status
-- `result` (JSONB) - Step result
-- `started_at` (TIMESTAMP) - Start timestamp
-- `completed_at` (TIMESTAMP) - Completion timestamp
-- `error_message` (TEXT) - Error details
-- `retry_count` (INTEGER) - Retry attempts
-- `metadata` (JSONB) - Additional metadata
+#### Monitoring Tables
+- **system_metrics**: Performance and health metrics
+- **performance_metrics**: Legacy metrics (maintained for compatibility)
 
-#### `audit_logs`
-Audit trail for all database changes:
-- `id` (UUID) - Primary key
-- `entity_type` (VARCHAR) - Type of entity
-- `entity_id` (UUID) - Entity identifier
-- `action` (VARCHAR) - Action performed
-- `old_values` (JSONB) - Previous values
-- `new_values` (JSONB) - New values
-- `user_id` (VARCHAR) - User identifier
-- `session_id` (VARCHAR) - Session identifier
-- `ip_address` (INET) - IP address
-- `user_agent` (TEXT) - User agent
-- `timestamp` (TIMESTAMP) - Action timestamp
-- `metadata` (JSONB) - Additional metadata
+### Connection Pooling Strategy
 
-#### `task_dependencies`
-Task dependency relationships:
-- `id` (UUID) - Primary key
-- `parent_task_id` (UUID) - Parent task
-- `child_task_id` (UUID) - Child task
-- `dependency_type` (VARCHAR) - Dependency type
-- `created_at` (TIMESTAMP) - Creation timestamp
-- `metadata` (JSONB) - Additional metadata
+The system uses multiple specialized connection pools:
 
-### Indexes
-
-The schema includes comprehensive indexes for performance:
-
-- **Tasks**: status, priority, assigned_to, parent_task_id, created_at, updated_at, type, complexity_score
-- **Task Contexts**: task_id, context_type, created_at
-- **Workflow States**: workflow_id, task_id, status, started_at
-- **Audit Logs**: entity_type + entity_id, timestamp, user_id, action
-- **Task Dependencies**: parent_task_id, child_task_id
-
-### Triggers
-
-Automatic triggers for:
-- **Updated timestamps** - Automatically update `updated_at` fields
-- **Audit logging** - Automatically log all changes to audit_logs table
+```javascript
+// Pool configurations
+const pools = {
+    primary: { min: 2, max: 10 },    // General operations
+    readonly: { min: 1, max: 5 },    // Analytics and reporting
+    priority: { min: 1, max: 3 },    // Critical operations
+    background: { min: 1, max: 2 }   // Background tasks
+};
+```
 
 ## Configuration
 
 ### Environment Variables
 
+#### Required Database Settings
 ```bash
-# Database Connection
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=codegen-taskmaster-db
-DB_USER=software_developer
-DB_PASSWORD=password
-DB_SSL_MODE=disable
-
-# Connection Pool
-DB_POOL_MIN=2
-DB_POOL_MAX=10
-DB_POOL_IDLE_TIMEOUT=10000
-DB_POOL_ACQUIRE_TIMEOUT=30000
-
-# Performance
-DB_QUERY_TIMEOUT=60000
-DB_SLOW_QUERY_THRESHOLD=1000
-DB_LOG_SLOW_QUERIES=true
-
-# Health Monitoring
-DB_HEALTH_CHECK_ENABLED=true
-DB_HEALTH_CHECK_INTERVAL=30000
-
-# Audit
-DB_AUDIT_ENABLED=true
-DB_AUDIT_RETENTION_DAYS=90
+DB_HOST=localhost                    # Database host
+DB_PORT=5432                        # Database port
+DB_NAME=taskmaster_db               # Database name
+DB_USER=taskmaster_user             # Database user
+DB_PASSWORD=secure_password         # Database password
 ```
 
-### TaskStorageManager Configuration
-
-```javascript
-const taskStorage = new TaskStorageManager({
-    enable_mock: false,              // Use real database
-    auto_migrate: true,              // Run migrations automatically
-    enable_audit: true,              // Enable audit logging
-    enable_performance_tracking: true // Track performance metrics
-});
+#### Optional Database Settings
+```bash
+DB_SSL_MODE=require                 # SSL mode (off, require, prefer)
+DB_POOL_MIN=2                       # Minimum pool connections
+DB_POOL_MAX=10                      # Maximum pool connections
+DB_QUERY_TIMEOUT=60000              # Query timeout (ms)
+DB_HEALTH_CHECK_ENABLED=true        # Enable health checks
 ```
 
-## Usage
-
-### Basic Operations
-
-```javascript
-import { TaskStorageManager } from './core/task_storage_manager.js';
-
-// Initialize
-const taskStorage = new TaskStorageManager();
-await taskStorage.initialize();
-
-// Store a task
-const taskId = await taskStorage.storeTask({
-    title: 'Implement feature X',
-    description: 'Add new functionality',
-    type: 'feature',
-    priority: 7,
-    complexity_score: 8,
-    requirements: ['Requirement 1', 'Requirement 2'],
-    acceptance_criteria: ['Criteria 1', 'Criteria 2']
-});
-
-// Retrieve a task
-const task = await taskStorage.getTask(taskId);
-
-// Update task status
-await taskStorage.updateTaskStatus(taskId, 'in_progress', {
-    started_by: 'developer-123',
-    notes: 'Starting implementation'
-});
-
-// List tasks with filters
-const pendingTasks = await taskStorage.listTasks({
-    status: 'pending',
-    priority: 8,
-    sort_by: 'created_at',
-    sort_order: 'DESC',
-    limit: 50
-});
-
-// Store context
-await taskStorage.storeTaskContext(taskId, 'codebase', {
-    files_analyzed: ['file1.js', 'file2.js'],
-    complexity_metrics: { cyclomatic: 5 }
-});
-
-// Get full context
-const fullContext = await taskStorage.getTaskFullContext(taskId);
+#### Cloudflare Configuration
+```bash
+CLOUDFLARE_ACCESS_ENABLED=true      # Enable Cloudflare Access
+CLOUDFLARE_ACCESS_APP_ID=your_app_id
+CLOUDFLARE_ACCESS_DOMAIN=your_domain
+CLOUDFLARE_API_RATE_LIMIT=100       # Requests per minute
+CLOUDFLARE_WAF_ENABLED=true         # Enable WAF protection
 ```
 
-### Advanced Operations
+#### Setup Options
+```bash
+CREATE_ADMIN_API_KEY=true           # Create admin API key
+ADMIN_USER_ID=admin@company.com     # Admin user identifier
+GENERATE_CLOUDFLARE_CONFIG=true     # Generate CF deployment files
+NODE_ENV=development                # Environment (development/production)
+```
+
+## API Usage
+
+### Authentication
+
+All API endpoints require authentication via API key:
+
+```bash
+# Include API key in header
+curl -H "X-API-Key: ctm_your_api_key_here" \
+     -H "Content-Type: application/json" \
+     http://localhost:3000/api/database/health
+```
+
+### Core Endpoints
+
+#### Health Check
+```bash
+GET /api/database/health
+```
+
+#### Task Management
+```bash
+# List tasks with filtering
+GET /api/database/tasks?status=pending&page=1&limit=20
+
+# Get task details
+GET /api/database/tasks/{task_id}
+
+# Create new task
+POST /api/database/tasks
+{
+    "title": "Implement feature X",
+    "description": "Detailed description",
+    "priority": 5,
+    "assigned_to": "developer@company.com"
+}
+
+# Update task status
+PATCH /api/database/tasks/{task_id}/status
+{
+    "status": "in_progress",
+    "notes": "Started implementation"
+}
+```
+
+#### System Monitoring
+```bash
+# Get system metrics
+GET /api/database/metrics
+
+# Execute custom query (admin only)
+POST /api/database/query
+{
+    "sql": "SELECT COUNT(*) FROM tasks WHERE status = 'pending'",
+    "pool": "readonly"
+}
+```
+
+## Security Features
+
+### API Key Management
+
+Generate API keys programmatically:
 
 ```javascript
-// Store AI interaction
-await taskStorage.storeAIInteraction(taskId, 'claude-3', {
-    type: 'code_generation',
-    request: { prompt: 'Generate function' },
-    response: { code: 'function test() {}' },
-    execution_time_ms: 1500,
-    success: true
-});
+import { getPoolManager } from './connection_pool.js';
 
-// Add task dependency
-await taskStorage.addTaskDependency(parentTaskId, childTaskId, 'blocks');
-
-// Store validation result
-await taskStorage.storeValidationResult(
-    taskId,
-    'code_quality',
-    'eslint',
-    'passed',
-    85,
-    { issues: 2, warnings: 1 },
-    { improve_naming: true }
+const poolManager = getPoolManager();
+const result = await poolManager.query(
+    'SELECT generate_api_key($1, $2, $3)',
+    ['My API Key', 'user@company.com', JSON.stringify(['read:tasks'])]
 );
 
-// Get metrics
-const metrics = await taskStorage.getTaskMetrics();
-console.log(`Total tasks: ${metrics.total_tasks}`);
-console.log(`Completion rate: ${(metrics.completed_tasks / metrics.total_tasks * 100).toFixed(1)}%`);
+console.log('API Key:', result.rows[0].generate_api_key.api_key);
 ```
 
-## Migration Management
+### Permission System
 
-### Running Migrations
+Available permissions:
+- `read:tasks`: Read task information
+- `write:tasks`: Create and update tasks
+- `read:metrics`: Access system metrics
+- `admin`: Full administrative access
 
-```javascript
-import { MigrationRunner } from './database/migrations/runner.js';
-import { getConnection } from './database/connection.js';
+### Row Level Security
 
-const connection = await getConnection();
-await connection.initialize();
+RLS policies ensure users can only access their own data:
 
-const migrationRunner = new MigrationRunner(connection);
-
-// Run all pending migrations
-await migrationRunner.runMigrations();
-
-// Check migration status
-const status = await migrationRunner.getMigrationStatus();
-console.log(`Applied: ${status.applied}, Pending: ${status.pending}`);
-
-// Validate migrations
-const validation = await migrationRunner.validateMigrations();
-if (!validation.valid) {
-    console.error('Migration validation failed:', validation.errors);
-}
+```sql
+-- Users can only see their own API keys
+CREATE POLICY api_keys_user_policy ON api_keys
+    FOR ALL TO authenticated_users
+    USING (user_id = current_setting('app.current_user_id', true));
 ```
 
-### Creating New Migrations
+## Cloudflare Integration
 
-```javascript
-const migrationRunner = new MigrationRunner(connection);
-const migrationPath = await migrationRunner.createMigration('add_new_feature_table');
-console.log(`Created migration: ${migrationPath}`);
-```
+### Security Configuration
 
-## Performance Optimization
+The system includes comprehensive Cloudflare integration:
 
-### Connection Pooling
+- **Access Control**: Email domain and service token authentication
+- **Rate Limiting**: Configurable per-endpoint rate limits
+- **WAF Protection**: Custom rules for database security
+- **DDoS Protection**: Automatic threat detection and mitigation
 
-The database connection uses PostgreSQL connection pooling with:
-- **Min connections**: 2
-- **Max connections**: 10
-- **Idle timeout**: 10 seconds
-- **Acquire timeout**: 30 seconds
+### Deployment
 
-### Query Optimization
-
-- **Comprehensive indexing** on frequently queried columns
-- **Query monitoring** with slow query logging
-- **Performance metrics** tracking
-- **Connection pool monitoring**
-
-### Caching Strategy
-
-- **Connection pooling** for database connections
-- **Query result caching** for frequently accessed data
-- **Performance metrics** for monitoring
-
-## Error Handling
-
-### Resilience Features
-
-- **Automatic retry** with exponential backoff
-- **Connection health monitoring** with automatic recovery
-- **Graceful degradation** to mock mode on database failure
-- **Transaction rollback** on errors
-- **Comprehensive error logging**
-
-### Error Recovery
-
-```javascript
-// Automatic fallback to mock mode
-const taskStorage = new TaskStorageManager({
-    enable_mock: false // Will fallback to mock if database fails
-});
-
-try {
-    await taskStorage.initialize();
-} catch (error) {
-    // Will automatically switch to mock mode
-    console.log('Database failed, using mock mode');
-}
-```
-
-## Testing
-
-### Unit Tests
+Generate Cloudflare configuration files:
 
 ```bash
-npm test tests/database/task_storage_manager.test.js
+GENERATE_CLOUDFLARE_CONFIG=true node src/ai_cicd_system/database/setup.js
 ```
 
-### Integration Tests
+This creates:
+- `cloudflare-terraform.json`: Terraform configuration
+- `cloudflare-docker.json`: Docker deployment configuration
+
+## Monitoring and Maintenance
+
+### Health Monitoring
+
+The system provides comprehensive health monitoring:
+
+```javascript
+// Get system health dashboard
+const health = await poolManager.query(
+    'SELECT * FROM system_health_dashboard'
+);
+
+// Get performance metrics
+const performance = await poolManager.query(
+    'SELECT * FROM performance_monitoring'
+);
+```
+
+### Automated Maintenance
+
+Built-in maintenance functions:
+
+```sql
+-- Clean up old logs (90 days retention)
+SELECT cleanup_old_logs(90);
+
+-- Refresh materialized views
+SELECT refresh_materialized_views();
+
+-- Get task statistics
+SELECT * FROM get_task_statistics();
+```
+
+### Performance Optimization
+
+Monitor and optimize performance:
+
+```sql
+-- Check slow queries
+SELECT query, calls, total_time, mean_time 
+FROM pg_stat_statements 
+ORDER BY total_time DESC 
+LIMIT 10;
+
+-- Monitor connection usage
+SELECT state, count(*) 
+FROM pg_stat_activity 
+GROUP BY state;
+```
+
+## Development
+
+### Running Tests
 
 ```bash
-# Requires DB_TEST_URL environment variable
-export DB_TEST_URL=postgresql://test_user:test_password@localhost:5432/test_db
+# Run database integration tests
+npm test tests/database/
+
+# Run specific test suite
 npm test tests/database/integration.test.js
 ```
 
-### Performance Tests
+### Adding New Migrations
 
+1. Create migration file:
 ```bash
-# Requires DB_TEST_URL environment variable
-export DB_TEST_URL=postgresql://test_user:test_password@localhost:5432/test_db
-npm test tests/database/performance.test.js
+touch src/ai_cicd_system/database/migrations/003_new_feature.sql
 ```
 
-## Monitoring and Health Checks
+2. Add migration content:
+```sql
+-- Migration: 003_new_feature.sql
+-- Description: Add new feature tables
 
-### Health Status
+CREATE TABLE new_feature (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Update migration record
+INSERT INTO schema_migrations (version, description, checksum) 
+VALUES ('003', 'Add new feature tables', 'new_feature_v1_0_0');
+```
+
+3. Run migration:
+```bash
+node src/ai_cicd_system/database/setup.js
+```
+
+### Custom API Endpoints
+
+Add new endpoints to `src/ai_cicd_system/api/database_endpoints.js`:
 
 ```javascript
-const health = await taskStorage.getHealth();
-console.log('Database status:', health.status);
-console.log('Connection pool:', health.database.poolStats);
-console.log('Query performance:', health.query_performance);
+// New endpoint example
+router.get('/custom-endpoint',
+    checkPermission('read:custom'),
+    async (req, res) => {
+        try {
+            const result = await poolManager.query(
+                'SELECT * FROM custom_table',
+                [],
+                { poolName: 'readonly' }
+            );
+            res.json({ data: result.rows });
+        } catch (error) {
+            res.status(500).json({ error: 'Query failed' });
+        }
+    }
+);
 ```
-
-### Performance Metrics
-
-```javascript
-const metrics = await taskStorage.getTaskMetrics();
-console.log('Task metrics:', {
-    total: metrics.total_tasks,
-    pending: metrics.pending_tasks,
-    completed: metrics.completed_tasks,
-    avgComplexity: metrics.avg_complexity,
-    estimationAccuracy: metrics.avg_estimation_accuracy
-});
-```
-
-## Security Considerations
-
-### Data Protection
-
-- **SSL/TLS encryption** for database connections
-- **Input validation** and sanitization
-- **SQL injection prevention** through parameterized queries
-- **Audit logging** for all data changes
-- **Access control** through database permissions
-
-### Configuration Security
-
-- **Environment variables** for sensitive configuration
-- **Connection string masking** in logs
-- **Password encryption** in configuration
-- **SSL certificate validation**
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Connection Timeout**
-   - Check database server status
-   - Verify network connectivity
-   - Review connection pool settings
+#### Connection Pool Exhaustion
+```bash
+# Check pool status
+curl -H "X-API-Key: your_key" http://localhost:3000/api/database/metrics
 
-2. **Migration Failures**
-   - Check database permissions
-   - Verify schema compatibility
-   - Review migration logs
-
-3. **Performance Issues**
-   - Monitor slow query logs
-   - Check index usage
-   - Review connection pool metrics
-
-4. **Memory Leaks**
-   - Monitor connection pool size
-   - Check for unclosed connections
-   - Review query result caching
-
-### Debug Mode
-
-```javascript
-const taskStorage = new TaskStorageManager({
-    enable_mock: false,
-    monitoring: {
-        log_queries: true,
-        log_slow_queries: true
-    }
-});
+# Increase pool size
+export DB_POOL_MAX=20
 ```
 
-## Contributing
+#### Slow Queries
+```sql
+-- Identify slow queries
+SELECT query, calls, total_time, mean_time 
+FROM pg_stat_statements 
+WHERE mean_time > 5000
+ORDER BY total_time DESC;
 
-When contributing to the database implementation:
+-- Check missing indexes
+SELECT schemaname, tablename, attname, n_distinct, correlation
+FROM pg_stats
+WHERE schemaname = 'public'
+AND n_distinct > 100;
+```
 
-1. **Follow schema conventions** - Use proper naming and constraints
-2. **Add comprehensive tests** - Unit, integration, and performance tests
-3. **Update migrations** - Create migration scripts for schema changes
-4. **Document changes** - Update this README and code comments
-5. **Test performance** - Ensure changes don't degrade performance
-6. **Validate security** - Review for security implications
+#### High Memory Usage
+```sql
+-- Check table sizes
+SELECT schemaname, tablename, 
+       pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) as size
+FROM pg_tables 
+WHERE schemaname = 'public'
+ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
+```
 
-## License
+### Error Codes
 
-This database implementation is part of the TaskMaster AI CI/CD System and follows the same license terms.
+Common API error codes:
+- `MISSING_API_KEY`: API key not provided
+- `INVALID_API_KEY`: API key not found or invalid
+- `INSUFFICIENT_PERMISSIONS`: User lacks required permissions
+- `RATE_LIMIT_EXCEEDED`: Too many requests
+- `VALIDATION_ERROR`: Request validation failed
+- `QUERY_EXECUTION_ERROR`: Database query failed
 
+### Support
+
+For additional support:
+
+1. Check the [main documentation](../../../docs/database_schema.md)
+2. Review system logs and metrics
+3. Consult the troubleshooting section above
+4. Contact the development team with specific error details
+
+## Performance Benchmarks
+
+### Expected Performance
+
+- **Connection Pool**: 2-10 connections per pool
+- **Query Response**: <100ms for simple queries, <1s for complex
+- **API Throughput**: 100+ requests/minute per API key
+- **Database Size**: Scales to 100GB+ with proper maintenance
+
+### Optimization Tips
+
+1. **Use Appropriate Pools**: readonly for analytics, priority for critical ops
+2. **Implement Caching**: Cache frequently accessed data
+3. **Monitor Metrics**: Regular performance monitoring
+4. **Optimize Queries**: Use EXPLAIN ANALYZE for query optimization
+5. **Regular Maintenance**: Run cleanup functions regularly
+
+---
+
+*This implementation provides a production-ready database solution for AI CI/CD task management with enterprise-grade security, monitoring, and scalability features.*
