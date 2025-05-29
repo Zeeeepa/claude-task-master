@@ -1,78 +1,115 @@
 /**
  * @fileoverview System Monitor
- * @description Comprehensive system monitoring and metrics collection
+ * @description Comprehensive system monitoring and metrics collection - Enhanced Version
  */
 
 import { log } from '../../scripts/modules/utils.js';
+import { MetricsCollector } from './metrics_collector.js';
+import { PerformanceAnalyzer } from './performance_analyzer.js';
+import { HealthChecker } from './health_checker.js';
+import { AlertManager } from './alert_manager.js';
+import { DashboardAPI } from './dashboard_api.js';
+import { MonitoringConfig } from '../config/monitoring_config.js';
 
 /**
- * System monitor for comprehensive health tracking and metrics
+ * Enhanced system monitor with comprehensive monitoring capabilities
  */
 export class SystemMonitor {
     constructor(config = {}) {
-        this.config = {
-            enable_metrics: config.enable_metrics !== false,
-            prometheus_port: config.prometheus_port || 8000,
-            enable_real_time_updates: config.enable_real_time_updates !== false,
-            health_check_interval: config.health_check_interval || 30000, // 30 seconds
-            metrics_collection_interval: config.metrics_collection_interval || 60000, // 1 minute
-            enable_performance_tracking: config.enable_performance_tracking !== false,
-            ...config
-        };
+        // Create monitoring configuration
+        this.monitoringConfig = new MonitoringConfig(config);
+        this.config = this.monitoringConfig.getAll();
         
+        // Initialize monitoring components
+        this.metricsCollector = new MetricsCollector(this.config);
+        this.performanceAnalyzer = new PerformanceAnalyzer(this.config);
+        this.healthChecker = new HealthChecker(this.config);
+        this.alertManager = new AlertManager(this.config);
+        this.dashboardAPI = this.config.dashboard.enabled ? new DashboardAPI(this.config) : null;
+        
+        // Connect components
+        this.performanceAnalyzer.setMetricsStorage(this.metricsCollector.storage);
+        this.alertManager.setMetricsCollector(this.metricsCollector);
+        
+        // State tracking
         this.isMonitoring = false;
-        this.healthCheckInterval = null;
-        this.metricsInterval = null;
+        this.startTime = null;
+        
+        // Legacy compatibility
         this.systemMetrics = new Map();
         this.componentHealth = new Map();
-        this.performanceMetrics = new PerformanceTracker(this.config);
-        this.alertManager = new AlertManager(this.config);
+        this.performanceMetrics = this.performanceAnalyzer; // Alias for compatibility
+        this.alertManager = this.alertManager; // Already assigned above
+        
+        log('info', 'Enhanced System Monitor initialized');
     }
 
     /**
      * Initialize the system monitor
      */
     async initialize() {
-        log('debug', 'Initializing system monitor...');
+        log('debug', 'Initializing enhanced system monitor...');
         
-        if (!this.config.enable_metrics) {
+        if (!this.config.enabled) {
             log('info', 'System monitoring disabled');
             return;
         }
         
-        await this.performanceMetrics.initialize();
-        await this.alertManager.initialize();
-        
-        log('debug', 'System monitor initialized');
+        try {
+            // Initialize storage
+            await this.metricsCollector.storage.initializeDatabase();
+            
+            log('debug', 'Enhanced system monitor initialized successfully');
+        } catch (error) {
+            log('error', `Failed to initialize system monitor: ${error.message}`);
+            throw error;
+        }
     }
 
     /**
-     * Start monitoring
+     * Start comprehensive monitoring
      */
     async startMonitoring() {
-        if (!this.config.enable_metrics || this.isMonitoring) {
+        if (this.isMonitoring) {
+            log('warning', 'System monitoring already running');
             return;
         }
-        
-        log('info', 'Starting system monitoring...');
-        
-        this.isMonitoring = true;
-        
-        // Start health checks
-        this.healthCheckInterval = setInterval(async () => {
-            await this._performHealthCheck();
-        }, this.config.health_check_interval);
-        
-        // Start metrics collection
-        this.metricsInterval = setInterval(async () => {
-            await this._collectMetrics();
-        }, this.config.metrics_collection_interval);
-        
-        // Initial health check and metrics collection
-        await this._performHealthCheck();
-        await this._collectMetrics();
-        
-        log('info', 'System monitoring started');
+
+        try {
+            this.startTime = Date.now();
+            this.isMonitoring = true;
+
+            // Start metrics collection
+            if (this.config.metrics.auto_start) {
+                this.metricsCollector.startCollection(this.config.metrics.collection_interval);
+                log('info', 'Metrics collection started');
+            }
+
+            // Start health monitoring
+            if (this.config.health.auto_start) {
+                this.healthChecker.startPeriodicChecks(this.config.health.check_interval);
+                log('info', 'Health monitoring started');
+            }
+
+            // Start alert monitoring
+            if (this.config.alerts.auto_start) {
+                await this.alertManager.startMonitoring();
+                log('info', 'Alert monitoring started');
+            }
+
+            // Start dashboard API
+            if (this.dashboardAPI && this.config.dashboard.auto_start) {
+                await this.dashboardAPI.start();
+                log('info', 'Dashboard API started');
+            }
+
+            log('info', 'Comprehensive system monitoring started successfully');
+            
+        } catch (error) {
+            log('error', `Failed to start system monitoring: ${error.message}`);
+            this.isMonitoring = false;
+            throw error;
+        }
     }
 
     /**
@@ -80,24 +117,87 @@ export class SystemMonitor {
      */
     async stopMonitoring() {
         if (!this.isMonitoring) {
+            log('warning', 'System monitoring not running');
             return;
         }
-        
-        log('info', 'Stopping system monitoring...');
-        
-        this.isMonitoring = false;
-        
-        if (this.healthCheckInterval) {
-            clearInterval(this.healthCheckInterval);
-            this.healthCheckInterval = null;
+
+        try {
+            // Stop components
+            this.metricsCollector.stopCollection();
+            this.healthChecker.stopPeriodicChecks();
+            this.alertManager.stopMonitoring();
+            
+            if (this.dashboardAPI) {
+                await this.dashboardAPI.stop();
+            }
+
+            this.isMonitoring = false;
+            
+            const uptime = this.startTime ? Date.now() - this.startTime : 0;
+            log('info', `System monitoring stopped after ${Math.round(uptime / 1000)}s`);
+            
+        } catch (error) {
+            log('error', `Error stopping system monitoring: ${error.message}`);
+            throw error;
         }
-        
-        if (this.metricsInterval) {
-            clearInterval(this.metricsInterval);
-            this.metricsInterval = null;
+    }
+
+    /**
+     * Get comprehensive system status
+     */
+    async getSystemStatus() {
+        try {
+            const [health, metrics, performance, alerts] = await Promise.all([
+                this.healthChecker.performHealthCheck(),
+                this.metricsCollector.getLatestMetrics(),
+                this.performanceAnalyzer.analyzePerformance('1h'),
+                this.alertManager.getActiveAlerts()
+            ]);
+
+            return {
+                timestamp: new Date().toISOString(),
+                monitoring: {
+                    is_active: this.isMonitoring,
+                    uptime: this.startTime ? Date.now() - this.startTime : 0,
+                    components: {
+                        metrics_collector: this.metricsCollector.isCollecting,
+                        health_checker: this.healthChecker.isRunning,
+                        alert_manager: this.alertManager.isMonitoring,
+                        dashboard_api: this.dashboardAPI?.server ? true : false
+                    }
+                },
+                health: {
+                    overall_status: health.overall_status,
+                    score: Math.round((health.summary.healthy / health.summary.total) * 100),
+                    critical_issues: health.summary.critical,
+                    warnings: health.summary.warning,
+                    checks: Object.keys(health.checks).length
+                },
+                metrics: {
+                    collectors_active: this.metricsCollector.collectors.size,
+                    last_collection: metrics ? Object.values(metrics)[0]?.timestamp : null,
+                    storage_connected: this.metricsCollector.storage.isConnected()
+                },
+                performance: {
+                    system_score: performance.system_health?.overall_score || 0,
+                    bottlenecks: performance.bottlenecks?.length || 0,
+                    recommendations: performance.recommendations?.length || 0
+                },
+                alerts: {
+                    active: alerts.length,
+                    critical: alerts.filter(a => a.severity === 'critical').length,
+                    warning: alerts.filter(a => a.severity === 'warning').length
+                }
+            };
+            
+        } catch (error) {
+            log('error', `Error getting system status: ${error.message}`);
+            return {
+                timestamp: new Date().toISOString(),
+                error: error.message,
+                monitoring: { is_active: this.isMonitoring }
+            };
         }
-        
-        log('info', 'System monitoring stopped');
     }
 
     /**
@@ -638,4 +738,3 @@ class AlertManager {
 }
 
 export default SystemMonitor;
-
