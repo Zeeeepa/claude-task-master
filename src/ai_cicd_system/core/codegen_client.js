@@ -3,7 +3,7 @@
  * @description Production-grade Codegen API client based on Python SDK patterns
  */
 
-import { log } from '../../scripts/modules/utils.js';
+import { log } from '../../../scripts/modules/utils.js';
 
 /**
  * Codegen Agent - mimics the Python SDK Agent class

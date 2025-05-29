@@ -3,7 +3,7 @@
  * @description Comprehensive system monitoring and metrics collection
  */
 
-import { log } from '../../scripts/modules/utils.js';
+import { log } from '../../../scripts/modules/utils.js';
 
 /**
  * System monitor for comprehensive health tracking and metrics

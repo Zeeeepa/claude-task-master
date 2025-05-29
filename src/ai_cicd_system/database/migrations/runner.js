@@ -8,7 +8,7 @@ import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { getConnection } from '../connection.js';
-import { log } from '../../../../scripts/modules/utils.js';
+import { log } from '../../../../../scripts/modules/utils.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

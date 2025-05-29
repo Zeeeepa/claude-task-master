@@ -3,7 +3,7 @@
  * @description Environment-based configuration for Codegen API integration
  */
 
-import { log } from '../../scripts/modules/utils.js';
+import { log } from '../../../scripts/modules/utils.js';
 
 /**
  * Codegen Configuration Manager

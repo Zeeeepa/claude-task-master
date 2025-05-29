@@ -5,6 +5,7 @@
 
 import { jest } from '@jest/globals';
 import { CodegenAgent, CodegenTask, CodegenError } from '../../src/ai_cicd_system/core/codegen_client.js';
+import { RateLimiter } from '../../src/ai_cicd_system/core/codegen_client.js';
 
 // Mock fetch globally
 global.fetch = jest.fn();
@@ -384,7 +385,7 @@ describe('RateLimiter', () => {
     let rateLimiter;
 
     beforeEach(() => {
-        rateLimiter = new (require('../../src/ai_cicd_system/core/codegen_client.js').RateLimiter)({
+        rateLimiter = new RateLimiter({
             requestsPerMinute: 5,
             requestsPerHour: 100
         });
@@ -413,4 +414,3 @@ describe('RateLimiter', () => {
         });
     });
 });
-

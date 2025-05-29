@@ -87,6 +87,7 @@
 		"figlet": "^1.8.0",
 		"fs-extra": "^11.2.0",
 		"glob": "^11.0.0",
+		"gradient-string": "^3.0.0",
 		"helmet": "^8.0.0",
 		"inquirer": "^12.1.0",
 		"js-yaml": "^4.1.0",
