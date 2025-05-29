@@ -1,0 +1,277 @@
+{
+  "version": "2.0",
+  "description": "Codegen generation rules and configuration for intelligent code generation",
+  "last_updated": "2025-05-28",
+  
+  "generation_rules": {
+    "code_quality": {
+      "min_test_coverage": 80,
+      "require_documentation": true,
+      "require_error_handling": true,
+      "require_input_validation": true,
+      "require_logging": true,
+      "max_function_complexity": 10,
+      "max_file_length": 500,
+      "enforce_naming_conventions": true
+    },
+    
+    "security": {
+      "require_input_sanitization": true,
+      "require_authentication_checks": true,
+      "require_authorization_validation": true,
+      "scan_for_vulnerabilities": true,
+      "require_secure_headers": true,
+      "validate_dependencies": true
+    },
+    
+    "performance": {
+      "max_response_time_ms": 2000,
+      "require_caching_strategy": true,
+      "optimize_database_queries": true,
+      "minimize_memory_usage": true,
+      "require_performance_tests": true
+    },
+    
+    "maintainability": {
+      "follow_solid_principles": true,
+      "use_design_patterns": true,
+      "require_modular_design": true,
+      "minimize_code_duplication": true,
+      "require_clear_interfaces": true
+    }
+  },
+  
+  "task_processing": {
+    "natural_language": {
+      "confidence_threshold": 0.7,
+      "max_complexity_score": 10,
+      "require_context_extraction": true,
+      "enable_dependency_analysis": true,
+      "enable_risk_assessment": true
+    },
+    
+    "priority_calculation": {
+      "urgency_weight": 0.4,
+      "complexity_weight": 0.3,
+      "dependency_weight": 0.3,
+      "max_priority_score": 10
+    },
+    
+    "complexity_assessment": {
+      "action_weight": 0.5,
+      "entity_weight": 0.3,
+      "constraint_weight": 0.7,
+      "technical_requirement_weight": 0.8,
+      "max_complexity": 10
+    }
+  },
+  
+  "code_generation": {
+    "templates": {
+      "feature": {
+        "required_patterns": ["service", "validation", "error-handling"],
+        "optional_patterns": ["caching", "monitoring"],
+        "test_requirements": ["unit", "integration"],
+        "documentation_level": "comprehensive"
+      },
+      
+      "bug_fix": {
+        "required_patterns": ["defensive-programming", "validation"],
+        "test_requirements": ["regression", "unit"],
+        "documentation_level": "minimal",
+        "change_scope": "targeted"
+      },
+      
+      "refactor": {
+        "required_patterns": ["extract-function", "single-responsibility"],
+        "test_requirements": ["existing", "regression"],
+        "documentation_level": "updated",
+        "preserve_behavior": true
+      },
+      
+      "test": {
+        "required_patterns": ["comprehensive-coverage", "edge-cases"],
+        "test_types": ["unit", "integration", "e2e"],
+        "coverage_target": 90,
+        "documentation_level": "test-specific"
+      },
+      
+      "integration": {
+        "required_patterns": ["retry", "circuit-breaker", "monitoring"],
+        "test_requirements": ["integration", "error-scenarios"],
+        "documentation_level": "comprehensive",
+        "error_handling": "robust"
+      }
+    },
+    
+    "technology_specific": {
+      "javascript": {
+        "style_guide": "airbnb",
+        "linting": "eslint",
+        "testing_framework": "jest",
+        "documentation": "jsdoc",
+        "package_manager": "npm"
+      },
+      
+      "react": {
+        "component_type": "functional",
+        "state_management": "hooks",
+        "prop_validation": "prop-types",
+        "testing_library": "react-testing-library",
+        "accessibility": "required"
+      },
+      
+      "node": {
+        "framework": "express",
+        "middleware_pattern": "required",
+        "validation_library": "joi",
+        "logging_library": "winston",
+        "testing_framework": "jest"
+      },
+      
+      "python": {
+        "style_guide": "pep8",
+        "type_hints": "required",
+        "documentation": "docstrings",
+        "testing_framework": "pytest",
+        "linting": "pylint"
+      }
+    }
+  },
+  
+  "pr_creation": {
+    "branch_naming": {
+      "prefix": "codegen",
+      "include_type": true,
+      "include_timestamp": true,
+      "max_length": 100,
+      "sanitize_special_chars": true
+    },
+    
+    "description_template": {
+      "include_task_summary": true,
+      "include_implementation_details": true,
+      "include_testing_info": true,
+      "include_acceptance_criteria": true,
+      "include_risk_assessment": true,
+      "include_checklists": true
+    },
+    
+    "labels": {
+      "auto_assign": true,
+      "include_type_labels": true,
+      "include_priority_labels": true,
+      "include_complexity_labels": true,
+      "include_technology_labels": true,
+      "custom_label": "codegen-generated"
+    },
+    
+    "reviewers": {
+      "auto_assign": true,
+      "assign_by_technology": true,
+      "assign_by_complexity": true,
+      "assign_security_reviewer": true,
+      "max_reviewers": 3
+    }
+  },
+  
+  "validation_criteria": {
+    "code_quality": {
+      "linting_passed": true,
+      "tests_passing": true,
+      "coverage_threshold_met": true,
+      "documentation_complete": true,
+      "security_scan_passed": true
+    },
+    
+    "functionality": {
+      "requirements_met": true,
+      "acceptance_criteria_satisfied": true,
+      "edge_cases_handled": true,
+      "error_scenarios_covered": true,
+      "performance_acceptable": true
+    },
+    
+    "integration": {
+      "existing_tests_passing": true,
+      "no_breaking_changes": true,
+      "backward_compatibility": true,
+      "api_contracts_maintained": true
+    }
+  },
+  
+  "error_handling": {
+    "retry_attempts": 3,
+    "retry_delay_ms": 1000,
+    "timeout_ms": 30000,
+    "fallback_strategies": ["simplified_generation", "manual_intervention"],
+    "error_reporting": {
+      "log_level": "error",
+      "include_context": true,
+      "notify_team": true
+    }
+  },
+  
+  "monitoring": {
+    "metrics": {
+      "generation_success_rate": true,
+      "average_generation_time": true,
+      "code_quality_scores": true,
+      "pr_merge_rate": true,
+      "error_frequency": true
+    },
+    
+    "alerts": {
+      "generation_failure_threshold": 0.1,
+      "quality_score_threshold": 0.8,
+      "performance_degradation": true
+    }
+  },
+  
+  "optimization": {
+    "caching": {
+      "enable_template_caching": true,
+      "enable_pattern_caching": true,
+      "cache_duration_minutes": 60
+    },
+    
+    "performance": {
+      "parallel_processing": true,
+      "batch_operations": true,
+      "lazy_loading": true,
+      "connection_pooling": true
+    }
+  },
+  
+  "compliance": {
+    "data_privacy": {
+      "anonymize_sensitive_data": true,
+      "secure_data_transmission": true,
+      "data_retention_policy": "30_days"
+    },
+    
+    "audit": {
+      "log_all_operations": true,
+      "track_changes": true,
+      "maintain_audit_trail": true
+    }
+  },
+  
+  "experimental_features": {
+    "ai_code_review": {
+      "enabled": false,
+      "confidence_threshold": 0.8
+    },
+    
+    "auto_optimization": {
+      "enabled": false,
+      "optimization_types": ["performance", "security", "maintainability"]
+    },
+    
+    "predictive_testing": {
+      "enabled": false,
+      "test_generation": "ai_assisted"
+    }
+  }
+}
+

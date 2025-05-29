@@ -1,18 +1,22 @@
 /**
- * @fileoverview Comprehensive AI-Driven CI/CD Development Flow System
- * @description Unified system integrating requirement analysis, task storage, 
- *              codegen integration, validation, and workflow orchestration
+ * @fileoverview AI CI/CD System Main Entry Point
+ * @description Enhanced system with natural language processing and intelligent code generation
  */
 
-import { SystemConfig } from './config/system_config.js';
-import { RequirementProcessor } from './core/requirement_processor.js';
-import { TaskStorageManager } from './core/task_storage_manager.js';
-import { CodegenIntegrator } from './core/codegen_integrator.js';
-import { ValidationEngine } from './core/validation_engine.js';
-import { WorkflowOrchestrator } from './core/workflow_orchestrator.js';
-import { ContextManager } from './core/context_manager.js';
-import { SystemMonitor } from './monitoring/system_monitor.js';
 import { log } from '../scripts/modules/utils.js';
+import { RequirementProcessor } from './core/requirement_processor.js';
+import { WorkflowOrchestrator } from './core/workflow_orchestrator.js';
+import { CodegenIntegrator } from './core/codegen_integrator.js';
+import { TaskProcessor } from './core/task_processor.js';
+import { PromptGenerator } from './core/prompt_generator.js';
+import { PRCreator } from './core/pr_creator.js';
+import { ValidationEngine } from './core/validation_engine.js';
+import { ContextManager } from './core/context_manager.js';
+import { TaskStorageManager } from './core/task_storage_manager.js';
+import { SystemMonitor } from './monitoring/system_monitor.js';
+import { createSystemConfig } from './config/system_config.js';
+import { CodeGenerationTemplates } from './templates/code_generation_templates.js';
+import { PRTemplates } from './templates/pr_templates.js';
 
 /**
  * Main AI-Driven CI/CD System
@@ -20,7 +24,7 @@ import { log } from '../scripts/modules/utils.js';
  */
 export class AICICDSystem {
     constructor(config = {}) {
-        this.config = new SystemConfig(config);
+        this.config = createSystemConfig(config);
         this.components = new Map();
         this.isInitialized = false;
         this.activeWorkflows = new Map();
@@ -406,5 +410,27 @@ export async function processRequirement(requirement, config = {}) {
     }
 }
 
-export default AICICDSystem;
+// Export main classes and functions
+export {
+    AICICDSystem,
+    RequirementProcessor,
+    TaskStorageManager,
+    CodegenIntegrator,
+    TaskProcessor,
+    PromptGenerator,
+    PRCreator,
+    ValidationEngine,
+    WorkflowOrchestrator,
+    ContextManager,
+    SystemMonitor,
+    createAICICDSystem,
+    processRequirement
+};
 
+// Export additional utilities
+export { createSystemConfig } from './config/system_config.js';
+export { CodeGenerationTemplates } from './templates/code_generation_templates.js';
+export { PRTemplates } from './templates/pr_templates.js';
+
+// Default export
+export default AICICDSystem;
