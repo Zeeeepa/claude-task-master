@@ -3,7 +3,7 @@
  * @description Production-grade codegen integration with real Codegen SDK
  */
 
-import { log } from '../../scripts/modules/utils.js';
+import { log } from '../../../scripts/modules/utils.js';
 import { CodegenAgent, CodegenTask, CodegenError } from './codegen_client.js';
 import { CodegenErrorHandler } from './error_handler.js';
 import { RateLimiter, QuotaManager } from './rate_limiter.js';

@@ -7,7 +7,7 @@
 
 import rateLimit from 'express-rate-limit';
 import slowDown from 'express-slow-down';
-import { SimpleLogger } from '../../ai_cicd_system/utils/simple_logger.js';
+import { log } from '../../ai_cicd_system/utils/simple_logger.js';
 
 export class RateLimiter {
   constructor(config = {}) {

@@ -3,7 +3,7 @@
  * @description Advanced rate limiting with multiple strategies and quota management
  */
 
-import { log } from '../../scripts/modules/utils.js';
+import { log } from '../../../scripts/modules/utils.js';
 
 /**
  * Advanced Rate Limiter with multiple strategies

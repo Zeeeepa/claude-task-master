@@ -5,7 +5,7 @@
 
 import pg from 'pg';
 import { dbConfig, validateConfig, getConnectionString } from '../config/database_config.js';
-import { log } from '../../../scripts/modules/utils.js';
+import { log } from '../../../../scripts/modules/utils.js';
 
 const { Pool } = pg;
 

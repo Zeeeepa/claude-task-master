@@ -3,7 +3,7 @@
  * @description Comprehensive error handling and recovery for Codegen API integration
  */
 
-import { log } from '../../scripts/modules/utils.js';
+import { log } from '../../../scripts/modules/utils.js';
 import { CodegenError } from './codegen_client.js';
 
 /**
@@ -528,4 +528,4 @@ class ErrorStatistics {
 }
 
 export default CodegenErrorHandler;
-
+export { CircuitBreaker, ErrorStatistics };

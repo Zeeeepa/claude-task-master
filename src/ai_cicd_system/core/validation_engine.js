@@ -3,7 +3,7 @@
  * @description Unified validation engine with Claude Code integration
  */
 
-import { log } from '../../scripts/modules/utils.js';
+import { log } from '../../../scripts/modules/utils.js';
 
 /**
  * Validation engine that integrates with Claude Code for comprehensive PR validation

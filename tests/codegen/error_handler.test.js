@@ -6,6 +6,7 @@
 import { jest } from '@jest/globals';
 import { CodegenErrorHandler } from '../../src/ai_cicd_system/core/error_handler.js';
 import { CodegenError } from '../../src/ai_cicd_system/core/codegen_client.js';
+import ErrorHandler, { CircuitBreaker, ErrorStatistics } from '../../src/ai_cicd_system/core/error_handler.js';
 
 describe('CodegenErrorHandler', () => {
     let errorHandler;
@@ -223,10 +224,9 @@ describe('CircuitBreaker', () => {
     let circuitBreaker;
 
     beforeEach(() => {
-        const CircuitBreaker = require('../../src/ai_cicd_system/core/error_handler.js').default.__CircuitBreaker;
         circuitBreaker = new CircuitBreaker({
-            circuitBreakerThreshold: 3,
-            circuitBreakerTimeout: 60000
+            failureThreshold: 3,
+            resetTimeout: 1000
         });
     });
 
@@ -285,7 +285,6 @@ describe('ErrorStatistics', () => {
     let errorStats;
 
     beforeEach(() => {
-        const ErrorStatistics = require('../../src/ai_cicd_system/core/error_handler.js').default.__ErrorStatistics;
         errorStats = new ErrorStatistics();
     });
 
@@ -361,4 +360,3 @@ describe('ErrorStatistics', () => {
         });
     });
 });
-

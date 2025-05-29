@@ -7,7 +7,7 @@
 
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
-import { SimpleLogger } from '../../ai_cicd_system/utils/simple_logger.js';
+import { log } from '../../ai_cicd_system/utils/simple_logger.js';
 
 export class DataTransformer {
   constructor(config = {}) {

@@ -32,7 +32,14 @@
 		"mcp-server": "node mcp-server/server.js",
 		"format-check": "prettier --check .",
 		"format": "prettier --write .",
-		"workflow-demo": "node src/workflow_orchestrator/demo.js"
+		"workflow-demo": "node src/workflow_orchestrator/demo.js",
+		"security:scan": "./scripts/security/security_scan.sh",
+		"security:scan:deps": "./scripts/security/security_scan.sh -d",
+		"security:scan:static": "./scripts/security/security_scan.sh -s",
+		"security:scan:web": "./scripts/security/security_scan.sh -w",
+		"security:scan:config": "./scripts/security/security_scan.sh -c",
+		"security:scan:fix": "./scripts/security/security_scan.sh -f",
+		"security:example": "node src/ai_cicd_system/security/example.js"
 	},
 	"keywords": [
 		"claude",
@@ -80,9 +87,13 @@
 		"figlet": "^1.8.0",
 		"fs-extra": "^11.2.0",
 		"glob": "^11.0.0",
+		"gradient-string": "^3.0.0",
+		"helmet": "^8.0.0",
 		"inquirer": "^12.1.0",
 		"js-yaml": "^4.1.0",
+		"jsonwebtoken": "^9.0.2",
 		"lodash": "^4.17.21",
+		"multer": "^1.4.5-lts.1",
 		"node-cron": "^3.0.3",
 		"ollama-ai-provider": "^1.2.0",
 		"openai": "^4.89.0",
@@ -90,6 +101,7 @@
 		"pg": "^8.16.0",
 		"pg-pool": "^3.10.0",
 		"retry": "^0.13.1",
+		"speakeasy": "^2.0.0",
 		"uuid": "^11.1.0",
 		"ws": "^8.18.2",
 		"zod": "^3.23.8"
