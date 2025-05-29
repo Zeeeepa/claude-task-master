@@ -1,204 +1,384 @@
 /**
- * Task Master Orchestrator Configuration
+ * @fileoverview Unified Configuration System for Task Master Orchestrator
+ * @description Central configuration hub for the Task Master orchestrator system
  */
 
-export const defaultConfig = {
-    // Core orchestrator settings
+import { readFileSync, existsSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+/**
+ * Default configuration values
+ */
+const DEFAULT_CONFIG = {
+    // Core Orchestrator Settings
     orchestrator: {
-        name: 'TaskMaster',
-        version: '2.0.0',
+        name: 'TaskMasterOrchestrator',
+        version: '1.2.0',
         environment: process.env.NODE_ENV || 'development',
-        logLevel: process.env.LOG_LEVEL || 'info'
+        logLevel: process.env.LOG_LEVEL || 'info',
+        maxConcurrentTasks: parseInt(process.env.MAX_CONCURRENT_TASKS) || 10,
+        taskTimeout: parseInt(process.env.TASK_TIMEOUT) || 300000, // 5 minutes
+        healthCheckInterval: parseInt(process.env.HEALTH_CHECK_INTERVAL) || 30000, // 30 seconds
+        eventBusEnabled: process.env.EVENT_BUS_ENABLED !== 'false',
     },
 
-    // Task management configuration
-    tasks: {
-        tasksFile: process.env.TASKS_FILE || 'tasks.json',
-        autoSave: process.env.TASKS_AUTO_SAVE !== 'false',
-        backupEnabled: process.env.TASKS_BACKUP_ENABLED === 'true',
-        backupInterval: parseInt(process.env.TASKS_BACKUP_INTERVAL) || 3600000 // 1 hour
+    // Task Management Configuration
+    taskManager: {
+        preserveLegacyFunctionality: true,
+        enableEventLogging: true,
+        backwardCompatibility: true,
+        autoSaveInterval: parseInt(process.env.AUTO_SAVE_INTERVAL) || 60000, // 1 minute
+        maxTaskHistory: parseInt(process.env.MAX_TASK_HISTORY) || 1000,
+        enableTaskValidation: true,
+        enableDependencyTracking: true,
     },
 
-    // Database configuration
+    // Event System Configuration
+    events: {
+        enabled: true,
+        maxListeners: parseInt(process.env.MAX_EVENT_LISTENERS) || 100,
+        eventTimeout: parseInt(process.env.EVENT_TIMEOUT) || 10000, // 10 seconds
+        enableEventPersistence: process.env.ENABLE_EVENT_PERSISTENCE !== 'false',
+        eventRetryAttempts: parseInt(process.env.EVENT_RETRY_ATTEMPTS) || 3,
+        eventRetryDelay: parseInt(process.env.EVENT_RETRY_DELAY) || 1000, // 1 second
+    },
+
+    // Health Check Configuration
+    healthChecks: {
+        enabled: true,
+        endpoints: {
+            orchestrator: '/health/orchestrator',
+            taskManager: '/health/task-manager',
+            eventBus: '/health/events',
+            integrations: '/health/integrations',
+        },
+        timeout: parseInt(process.env.HEALTH_CHECK_TIMEOUT) || 5000, // 5 seconds
+        retryAttempts: parseInt(process.env.HEALTH_RETRY_ATTEMPTS) || 2,
+        alertThreshold: parseInt(process.env.HEALTH_ALERT_THRESHOLD) || 3, // failures before alert
+    },
+
+    // Integration Configuration
+    integrations: {
+        aiCicdSystem: {
+            enabled: true,
+            path: './src/ai_cicd_system',
+            autoStart: true,
+            healthCheckEnabled: true,
+        },
+        codegenSDK: {
+            enabled: process.env.CODEGEN_ENABLED !== 'false',
+            apiKey: process.env.CODEGEN_API_KEY,
+            orgId: process.env.CODEGEN_ORG_ID,
+            baseUrl: process.env.CODEGEN_BASE_URL || 'https://api.codegen.sh',
+            timeout: parseInt(process.env.CODEGEN_TIMEOUT) || 30000,
+        },
+        agentAPI: {
+            enabled: process.env.AGENT_API_ENABLED !== 'false',
+            baseUrl: process.env.AGENT_API_BASE_URL || 'http://localhost:8000',
+            apiKey: process.env.AGENT_API_KEY,
+            timeout: parseInt(process.env.AGENT_API_TIMEOUT) || 30000,
+        },
+        linear: {
+            enabled: process.env.LINEAR_ENABLED !== 'false',
+            apiKey: process.env.LINEAR_API_KEY,
+            teamId: process.env.LINEAR_TEAM_ID,
+            baseUrl: process.env.LINEAR_BASE_URL || 'https://api.linear.app',
+        },
+    },
+
+    // Database Configuration
     database: {
-        host: process.env.DB_HOST || 'localhost',
-        port: parseInt(process.env.DB_PORT) || 5432,
-        database: process.env.DB_NAME || 'taskmaster',
-        user: process.env.DB_USER || 'taskmaster',
-        password: process.env.DB_PASSWORD || '',
-        ssl: process.env.DB_SSL === 'true',
-        maxConnections: parseInt(process.env.DB_MAX_CONNECTIONS) || 20,
-        idleTimeout: parseInt(process.env.DB_IDLE_TIMEOUT) || 30000,
-        connectionTimeout: parseInt(process.env.DB_CONNECTION_TIMEOUT) || 2000
+        enabled: process.env.DATABASE_ENABLED !== 'false',
+        type: process.env.DATABASE_TYPE || 'postgresql',
+        host: process.env.DATABASE_HOST || 'localhost',
+        port: parseInt(process.env.DATABASE_PORT) || 5432,
+        database: process.env.DATABASE_NAME || 'taskmaster',
+        username: process.env.DATABASE_USERNAME || 'taskmaster',
+        password: process.env.DATABASE_PASSWORD,
+        ssl: process.env.DATABASE_SSL === 'true',
+        poolSize: parseInt(process.env.DATABASE_POOL_SIZE) || 10,
+        connectionTimeout: parseInt(process.env.DATABASE_CONNECTION_TIMEOUT) || 10000,
     },
 
-    // Codegen SDK configuration
-    codegen: {
-        token: process.env.CODEGEN_TOKEN,
-        orgId: process.env.CODEGEN_ORG_ID,
-        baseUrl: process.env.CODEGEN_BASE_URL || 'https://api.codegen.sh',
-        timeout: parseInt(process.env.CODEGEN_TIMEOUT) || 30000,
-        retries: parseInt(process.env.CODEGEN_RETRIES) || 3
+    // Monitoring and Metrics
+    monitoring: {
+        enabled: process.env.MONITORING_ENABLED !== 'false',
+        metricsInterval: parseInt(process.env.METRICS_INTERVAL) || 60000, // 1 minute
+        enablePerformanceTracking: true,
+        enableErrorTracking: true,
+        enableResourceMonitoring: true,
+        alertingEnabled: process.env.ALERTING_ENABLED !== 'false',
     },
 
-    // Claude Code configuration (via AgentAPI)
-    claude: {
-        agentApiUrl: process.env.AGENT_API_URL || 'http://localhost:3001',
-        apiKey: process.env.CLAUDE_API_KEY,
-        model: process.env.CLAUDE_MODEL || 'claude-3-5-sonnet-20241022',
-        timeout: parseInt(process.env.CLAUDE_TIMEOUT) || 60000,
-        maxRetries: parseInt(process.env.CLAUDE_MAX_RETRIES) || 3
+    // Security Configuration
+    security: {
+        enableApiKeyValidation: true,
+        enableRateLimiting: true,
+        rateLimitWindow: parseInt(process.env.RATE_LIMIT_WINDOW) || 900000, // 15 minutes
+        rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX) || 100,
+        enableCors: process.env.ENABLE_CORS !== 'false',
+        corsOrigins: process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : ['*'],
     },
-
-    // Linear integration configuration
-    linear: {
-        enabled: process.env.LINEAR_ENABLED === 'true',
-        apiKey: process.env.LINEAR_API_KEY,
-        teamId: process.env.LINEAR_TEAM_ID,
-        projectId: process.env.LINEAR_PROJECT_ID,
-        webhookSecret: process.env.LINEAR_WEBHOOK_SECRET,
-        syncInterval: parseInt(process.env.LINEAR_SYNC_INTERVAL) || 300000, // 5 minutes
-        autoCreateIssues: process.env.LINEAR_AUTO_CREATE_ISSUES === 'true',
-        bidirectionalSync: process.env.LINEAR_BIDIRECTIONAL_SYNC === 'true'
-    },
-
-    // WSL2 deployment configuration
-    wsl2: {
-        enabled: process.env.WSL2_ENABLED === 'true',
-        distributionName: process.env.WSL2_DISTRIBUTION || 'Ubuntu',
-        workspaceRoot: process.env.WSL2_WORKSPACE_ROOT || '/mnt/c/workspace',
-        dockerEnabled: process.env.WSL2_DOCKER_ENABLED === 'true',
-        deploymentTimeout: parseInt(process.env.WSL2_DEPLOYMENT_TIMEOUT) || 600000, // 10 minutes
-        validationEnabled: process.env.WSL2_VALIDATION_ENABLED === 'true',
-        autoRollback: process.env.WSL2_AUTO_ROLLBACK === 'true'
-    },
-
-    // AgentAPI middleware configuration
-    agentApi: {
-        enabled: process.env.AGENT_API_ENABLED === 'true',
-        port: parseInt(process.env.AGENT_API_PORT) || 3000,
-        host: process.env.AGENT_API_HOST || '0.0.0.0',
-        cors: {
-            enabled: process.env.AGENT_API_CORS_ENABLED === 'true',
-            origin: process.env.AGENT_API_CORS_ORIGIN || '*'
-        },
-        rateLimit: {
-            enabled: process.env.AGENT_API_RATE_LIMIT_ENABLED === 'true',
-            windowMs: parseInt(process.env.AGENT_API_RATE_LIMIT_WINDOW) || 900000, // 15 minutes
-            max: parseInt(process.env.AGENT_API_RATE_LIMIT_MAX) || 100
-        },
-        authentication: {
-            enabled: process.env.AGENT_API_AUTH_ENABLED === 'true',
-            secret: process.env.AGENT_API_SECRET || 'default-secret-change-me',
-            tokenExpiry: process.env.AGENT_API_TOKEN_EXPIRY || '24h'
-        }
-    },
-
-    // Logging configuration
-    logging: {
-        level: process.env.LOG_LEVEL || 'info',
-        format: process.env.LOG_FORMAT || 'json',
-        file: {
-            enabled: process.env.LOG_FILE_ENABLED === 'true',
-            path: process.env.LOG_FILE_PATH || 'logs/taskmaster.log',
-            maxSize: process.env.LOG_FILE_MAX_SIZE || '10m',
-            maxFiles: parseInt(process.env.LOG_FILE_MAX_FILES) || 5
-        },
-        console: {
-            enabled: process.env.LOG_CONSOLE_ENABLED !== 'false',
-            colorize: process.env.LOG_CONSOLE_COLORIZE !== 'false'
-        }
-    },
-
-    // Health check configuration
-    health: {
-        enabled: process.env.HEALTH_CHECK_ENABLED === 'true',
-        port: parseInt(process.env.HEALTH_CHECK_PORT) || 3001,
-        path: process.env.HEALTH_CHECK_PATH || '/health',
-        interval: parseInt(process.env.HEALTH_CHECK_INTERVAL) || 30000 // 30 seconds
-    }
 };
 
 /**
- * Load configuration from environment and validate
+ * Configuration Manager Class
  */
-export function loadConfig(overrides = {}) {
-    const config = {
-        ...defaultConfig,
-        ...overrides
-    };
-
-    // Validate required configuration
-    validateConfig(config);
-
-    return config;
-}
-
-/**
- * Validate configuration
- */
-function validateConfig(config) {
-    const errors = [];
-
-    // Validate database configuration
-    if (!config.database.host) {
-        errors.push('Database host is required');
-    }
-    if (!config.database.database) {
-        errors.push('Database name is required');
-    }
-    if (!config.database.user) {
-        errors.push('Database user is required');
+export class ConfigurationManager {
+    constructor() {
+        this.config = { ...DEFAULT_CONFIG };
+        this.configPath = null;
+        this.watchers = new Map();
+        this.loaded = false;
     }
 
-    // Validate Codegen configuration if enabled
-    if (config.codegen.token && !config.codegen.orgId) {
-        errors.push('Codegen organization ID is required when token is provided');
+    /**
+     * Load configuration from file and environment variables
+     * @param {string} configPath - Path to configuration file
+     * @returns {Promise<Object>} Loaded configuration
+     */
+    async load(configPath = null) {
+        try {
+            // Try to load from file if provided or find default config file
+            if (configPath || this.findConfigFile()) {
+                const filePath = configPath || this.findConfigFile();
+                await this.loadFromFile(filePath);
+            }
+
+            // Override with environment variables
+            this.loadFromEnvironment();
+
+            // Validate configuration
+            this.validate();
+
+            this.loaded = true;
+            return this.config;
+        } catch (error) {
+            throw new Error(`Failed to load configuration: ${error.message}`);
+        }
     }
 
-    // Validate Claude configuration if enabled
-    if (config.claude.apiKey && !config.claude.agentApiUrl) {
-        errors.push('AgentAPI URL is required when Claude API key is provided');
+    /**
+     * Find configuration file in standard locations
+     * @returns {string|null} Path to configuration file
+     */
+    findConfigFile() {
+        const possiblePaths = [
+            join(process.cwd(), 'config', 'orchestrator.json'),
+            join(process.cwd(), 'config', 'orchestrator.js'),
+            join(process.cwd(), '.taskmasterconfig'),
+            join(__dirname, 'orchestrator.json'),
+        ];
+
+        for (const path of possiblePaths) {
+            if (existsSync(path)) {
+                return path;
+            }
+        }
+
+        return null;
     }
 
-    // Validate Linear configuration if enabled
-    if (config.linear.enabled) {
-        if (!config.linear.apiKey) {
+    /**
+     * Load configuration from file
+     * @param {string} filePath - Path to configuration file
+     */
+    async loadFromFile(filePath) {
+        try {
+            this.configPath = filePath;
+            
+            if (filePath.endsWith('.json')) {
+                const content = readFileSync(filePath, 'utf8');
+                const fileConfig = JSON.parse(content);
+                this.mergeConfig(fileConfig);
+            } else if (filePath.endsWith('.js')) {
+                const module = await import(filePath);
+                const fileConfig = module.default || module;
+                this.mergeConfig(fileConfig);
+            }
+        } catch (error) {
+            throw new Error(`Failed to load config file ${filePath}: ${error.message}`);
+        }
+    }
+
+    /**
+     * Load configuration from environment variables
+     */
+    loadFromEnvironment() {
+        // Environment variables are already loaded in DEFAULT_CONFIG
+        // This method can be extended for additional env var processing
+    }
+
+    /**
+     * Merge configuration objects
+     * @param {Object} newConfig - Configuration to merge
+     */
+    mergeConfig(newConfig) {
+        this.config = this.deepMerge(this.config, newConfig);
+    }
+
+    /**
+     * Deep merge two objects
+     * @param {Object} target - Target object
+     * @param {Object} source - Source object
+     * @returns {Object} Merged object
+     */
+    deepMerge(target, source) {
+        const result = { ...target };
+        
+        for (const key in source) {
+            if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+                result[key] = this.deepMerge(result[key] || {}, source[key]);
+            } else {
+                result[key] = source[key];
+            }
+        }
+        
+        return result;
+    }
+
+    /**
+     * Validate configuration
+     */
+    validate() {
+        const errors = [];
+
+        // Validate required fields
+        if (this.config.integrations.codegenSDK.enabled && !this.config.integrations.codegenSDK.apiKey) {
+            errors.push('Codegen SDK API key is required when Codegen integration is enabled');
+        }
+
+        if (this.config.integrations.linear.enabled && !this.config.integrations.linear.apiKey) {
             errors.push('Linear API key is required when Linear integration is enabled');
         }
-        if (!config.linear.teamId) {
-            errors.push('Linear team ID is required when Linear integration is enabled');
+
+        if (this.config.database.enabled && !this.config.database.password) {
+            errors.push('Database password is required when database is enabled');
+        }
+
+        // Validate numeric values
+        if (this.config.orchestrator.maxConcurrentTasks < 1) {
+            errors.push('Max concurrent tasks must be at least 1');
+        }
+
+        if (this.config.orchestrator.taskTimeout < 1000) {
+            errors.push('Task timeout must be at least 1000ms');
+        }
+
+        if (errors.length > 0) {
+            throw new Error(`Configuration validation failed:\n${errors.join('\n')}`);
         }
     }
 
-    // Validate WSL2 configuration if enabled
-    if (config.wsl2.enabled) {
-        if (!config.wsl2.workspaceRoot) {
-            errors.push('WSL2 workspace root is required when WSL2 deployment is enabled');
+    /**
+     * Get configuration value by path
+     * @param {string} path - Dot-separated path to configuration value
+     * @param {*} defaultValue - Default value if path not found
+     * @returns {*} Configuration value
+     */
+    get(path, defaultValue = undefined) {
+        const keys = path.split('.');
+        let current = this.config;
+
+        for (const key of keys) {
+            if (current && typeof current === 'object' && key in current) {
+                current = current[key];
+            } else {
+                return defaultValue;
+            }
         }
+
+        return current;
     }
 
-    if (errors.length > 0) {
-        throw new Error(`Configuration validation failed:\n${errors.join('\n')}`);
+    /**
+     * Set configuration value by path
+     * @param {string} path - Dot-separated path to configuration value
+     * @param {*} value - Value to set
+     */
+    set(path, value) {
+        const keys = path.split('.');
+        let current = this.config;
+
+        for (let i = 0; i < keys.length - 1; i++) {
+            const key = keys[i];
+            if (!(key in current) || typeof current[key] !== 'object') {
+                current[key] = {};
+            }
+            current = current[key];
+        }
+
+        current[keys[keys.length - 1]] = value;
     }
+
+    /**
+     * Get all configuration
+     * @returns {Object} Complete configuration object
+     */
+    getAll() {
+        return { ...this.config };
+    }
+
+    /**
+     * Check if configuration is loaded
+     * @returns {boolean} True if configuration is loaded
+     */
+    isLoaded() {
+        return this.loaded;
+    }
+
+    /**
+     * Reload configuration
+     * @returns {Promise<Object>} Reloaded configuration
+     */
+    async reload() {
+        this.loaded = false;
+        return await this.load(this.configPath);
+    }
+}
+
+// Global configuration manager instance
+export const configManager = new ConfigurationManager();
+
+/**
+ * Initialize configuration system
+ * @param {string} configPath - Optional path to configuration file
+ * @returns {Promise<Object>} Loaded configuration
+ */
+export async function initializeConfig(configPath = null) {
+    return await configManager.load(configPath);
 }
 
 /**
- * Get configuration for specific component
+ * Get configuration value
+ * @param {string} path - Dot-separated path to configuration value
+ * @param {*} defaultValue - Default value if path not found
+ * @returns {*} Configuration value
  */
-export function getComponentConfig(component, config = null) {
-    const fullConfig = config || loadConfig();
-    
-    if (!fullConfig[component]) {
-        throw new Error(`Configuration for component '${component}' not found`);
-    }
-    
-    return fullConfig[component];
+export function getConfig(path, defaultValue = undefined) {
+    return configManager.get(path, defaultValue);
 }
 
-export default {
-    defaultConfig,
-    loadConfig,
-    getComponentConfig
-};
+/**
+ * Set configuration value
+ * @param {string} path - Dot-separated path to configuration value
+ * @param {*} value - Value to set
+ */
+export function setConfig(path, value) {
+    configManager.set(path, value);
+}
+
+/**
+ * Get all configuration
+ * @returns {Object} Complete configuration object
+ */
+export function getAllConfig() {
+    return configManager.getAll();
+}
+
+export default configManager;
 

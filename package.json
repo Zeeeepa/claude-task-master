@@ -2,7 +2,7 @@
 	"name": "task-master-ai",
 	"version": "0.15.0",
 	"description": "A task management system for ambitious AI-driven development that doesn't overwhelm and confuse Cursor.",
-	"main": "index.js",
+	"main": "src/core/orchestrator.js",
 	"type": "module",
 	"scripts": {
 		"test": "node --experimental-vm-modules node_modules/.bin/jest",
