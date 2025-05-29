@@ -1,292 +1,162 @@
-/**
- * @fileoverview Consolidated Database Connection Manager
- * @description Unified connection management consolidating patterns from PRs #41,42,53,59,62,64,65,69,70,74,79,81
- * @version 2.0.0 - Zero Redundancy Implementation
- */
-
 import { Pool } from 'pg';
 import { EventEmitter } from 'events';
-import dotenv from 'dotenv';
 import { readFileSync } from 'fs';
 import { createHash } from 'crypto';
 
-// Load environment variables
-dotenv.config();
-
 /**
- * Consolidated Database Connection Manager
- * Combines all connection management patterns from the 12 PRs
+ * High-performance PostgreSQL connection manager with health monitoring,
+ * connection pooling, and circuit breaker pattern for CI/CD orchestration
  */
 export class DatabaseConnectionManager extends EventEmitter {
     constructor(config = {}) {
         super();
-        
-        this.config = this._buildConfiguration(config);
-        this.pools = new Map(); // Support for multiple pools (primary, read replicas)
+        this.config = this._buildConfig(config);
+        this.pools = new Map();
         this.healthStatus = {
             connected: false,
             lastCheck: null,
-            consecutiveFailures: 0,
-            pools: new Map()
+            consecutiveFailures: 0
         };
-        
+        this.queryCache = new Map();
         this.metrics = {
-            totalConnections: 0,
-            activeConnections: 0,
-            idleConnections: 0,
-            waitingConnections: 0,
             totalQueries: 0,
             successfulQueries: 0,
             failedQueries: 0,
-            slowQueries: 0,
-            averageQueryTime: 0,
-            connectionErrors: 0,
-            lastReset: new Date()
+            averageQueryTime: 0
         };
-        
-        this.queryCache = new Map();
-        this.preparedStatements = new Map();
+        this.healthCheckInterval = null;
         this.circuitBreaker = {
-            state: 'closed', // closed, open, half-open
-            failures: 0,
-            lastFailure: null,
-            timeout: parseInt(process.env.CIRCUIT_BREAKER_TIMEOUT) || 60000,
-            threshold: parseInt(process.env.CIRCUIT_BREAKER_THRESHOLD) || 5
-        };
-        
-        this._setupEventHandlers();
-        this._startHealthMonitoring();
-    }
-
-    /**
-     * Build comprehensive configuration from environment and overrides
-     */
-    _buildConfiguration(overrides = {}) {
-        const baseConfig = {
-            // Primary database configuration
-            primary: {
-                host: process.env.DB_HOST || 'localhost',
-                port: parseInt(process.env.DB_PORT) || 5432,
-                database: process.env.DB_NAME || 'codegen-taskmaster-db',
-                user: process.env.DB_USER || 'software_developer',
-                password: process.env.DB_PASSWORD || 'password',
-                ssl: this._buildSSLConfig(),
-                
-                // Connection pool settings
-                min: parseInt(process.env.DB_POOL_MIN) || 2,
-                max: parseInt(process.env.DB_POOL_MAX) || 20,
-                idleTimeoutMillis: parseInt(process.env.DB_POOL_IDLE_TIMEOUT) || 30000,
-                connectionTimeoutMillis: parseInt(process.env.DB_POOL_CONNECTION_TIMEOUT) || 2000,
-                acquireTimeoutMillis: parseInt(process.env.DB_POOL_ACQUIRE_TIMEOUT) || 30000,
-                createTimeoutMillis: parseInt(process.env.DB_POOL_CREATE_TIMEOUT) || 30000,
-                destroyTimeoutMillis: parseInt(process.env.DB_POOL_DESTROY_TIMEOUT) || 5000,
-                reapIntervalMillis: parseInt(process.env.DB_POOL_REAP_INTERVAL) || 1000,
-                createRetryIntervalMillis: parseInt(process.env.DB_POOL_CREATE_RETRY_INTERVAL) || 200,
-                
-                // Enhanced pool settings
-                maxUses: parseInt(process.env.DB_POOL_MAX_USES) || 7500,
-                maxLifetimeSeconds: parseInt(process.env.DB_POOL_MAX_LIFETIME) || 3600,
-                testOnBorrow: process.env.DB_POOL_TEST_ON_BORROW !== 'false',
-                testOnReturn: process.env.DB_POOL_TEST_ON_RETURN !== 'false',
-                testWhileIdle: process.env.DB_POOL_TEST_WHILE_IDLE !== 'false',
-                
-                // Query settings
-                statement_timeout: parseInt(process.env.DB_STATEMENT_TIMEOUT) || 60000,
-                query_timeout: parseInt(process.env.DB_QUERY_TIMEOUT) || 30000,
-                idle_in_transaction_session_timeout: parseInt(process.env.DB_IDLE_IN_TRANSACTION_TIMEOUT) || 30000
-            },
-            
-            // Read replica configuration (optional)
-            readReplica: this._buildReadReplicaConfig(),
-            
-            // Performance and monitoring settings
-            monitoring: {
-                enabled: process.env.DB_MONITORING_ENABLED !== 'false',
-                healthCheckInterval: parseInt(process.env.DB_HEALTH_CHECK_INTERVAL) || 30000,
-                slowQueryThreshold: parseInt(process.env.DB_SLOW_QUERY_THRESHOLD) || 1000,
-                metricsInterval: parseInt(process.env.DB_METRICS_INTERVAL) || 60000
-            },
-            
-            // Logging configuration
-            logging: {
-                enabled: process.env.DB_LOGGING_ENABLED !== 'false',
-                level: process.env.DB_LOGGING_LEVEL || 'info',
-                logQueries: process.env.DB_LOG_QUERIES === 'true',
-                logSlowQueries: process.env.DB_LOG_SLOW_QUERIES !== 'false',
-                logConnections: process.env.DB_LOG_CONNECTIONS === 'true'
-            },
-            
-            // Cache and performance settings
-            cache: {
-                enabled: process.env.DB_ENABLE_QUERY_CACHE !== 'false',
-                size: parseInt(process.env.DB_QUERY_CACHE_SIZE) || 100,
-                ttl: parseInt(process.env.DB_QUERY_CACHE_TTL) || 300000
-            },
-            
-            // Failover and load balancing
-            failover: {
-                enabled: process.env.DB_POOL_ENABLE_FAILOVER !== 'false',
-                timeout: parseInt(process.env.DB_POOL_FAILOVER_TIMEOUT) || 5000,
-                maxAttempts: parseInt(process.env.DB_POOL_MAX_FAILOVER_ATTEMPTS) || 3,
-                loadBalancing: process.env.DB_POOL_LOAD_BALANCING || 'round_robin'
-            }
-        };
-        
-        // Deep merge with overrides
-        return this._deepMerge(baseConfig, overrides);
-    }
-
-    /**
-     * Build SSL configuration from environment
-     */
-    _buildSSLConfig() {
-        if (process.env.DB_SSL_MODE !== 'require') {
-            return false;
-        }
-        
-        const sslConfig = { rejectUnauthorized: false };
-        
-        try {
-            if (process.env.DB_SSL_CA) {
-                sslConfig.ca = readFileSync(process.env.DB_SSL_CA);
-            }
-            if (process.env.DB_SSL_CERT) {
-                sslConfig.cert = readFileSync(process.env.DB_SSL_CERT);
-            }
-            if (process.env.DB_SSL_KEY) {
-                sslConfig.key = readFileSync(process.env.DB_SSL_KEY);
-            }
-        } catch (error) {
-            console.warn('SSL certificate files not found, using basic SSL configuration');
-        }
-        
-        return sslConfig;
-    }
-
-    /**
-     * Build read replica configuration
-     */
-    _buildReadReplicaConfig() {
-        if (!process.env.DB_READ_HOST) {
-            return null;
-        }
-        
-        return {
-            host: process.env.DB_READ_HOST,
-            port: parseInt(process.env.DB_READ_PORT) || 5432,
-            database: process.env.DB_NAME,
-            user: process.env.DB_READ_USER || process.env.DB_USER,
-            password: process.env.DB_READ_PASSWORD || process.env.DB_PASSWORD,
-            ssl: this._buildSSLConfig(),
-            // Use smaller pool for read replica
-            min: Math.max(1, Math.floor((parseInt(process.env.DB_POOL_MIN) || 2) / 2)),
-            max: Math.max(5, Math.floor((parseInt(process.env.DB_POOL_MAX) || 20) / 2))
+            state: 'CLOSED', // CLOSED, OPEN, HALF_OPEN
+            failureCount: 0,
+            lastFailureTime: null,
+            timeout: 60000 // 1 minute
         };
     }
 
     /**
-     * Initialize database connections
+     * Initialize database connections and start health monitoring
      */
     async initialize() {
         try {
-            // Create primary pool
-            this.pools.set('primary', new Pool(this.config.primary));
-            this._setupPoolEventHandlers('primary', this.pools.get('primary'));
+            console.log('🔄 Initializing database connection manager...');
             
-            // Create read replica pool if configured
-            if (this.config.readReplica) {
-                this.pools.set('readReplica', new Pool(this.config.readReplica));
-                this._setupPoolEventHandlers('readReplica', this.pools.get('readReplica'));
+            // Create primary connection pool
+            await this.createPool('primary', this.config.primary);
+            
+            // Create read replica pools if configured
+            if (this.config.readReplicas && this.config.readReplicas.length > 0) {
+                for (let i = 0; i < this.config.readReplicas.length; i++) {
+                    await this.createPool(`replica_${i}`, this.config.readReplicas[i]);
+                }
             }
+
+            // Test initial connection
+            await this._testConnection();
             
-            // Test connections
-            await this._testConnections();
+            // Start health monitoring
+            this._startHealthMonitoring();
             
             this.healthStatus.connected = true;
             this.emit('connected');
             
-            if (this.config.logging.enabled) {
-                console.log('Database connection manager initialized successfully');
-                console.log(`- Primary pool: ${this.config.primary.min}-${this.config.primary.max} connections`);
-                if (this.config.readReplica) {
-                    console.log(`- Read replica pool: ${this.config.readReplica.min}-${this.config.readReplica.max} connections`);
-                }
-            }
-            
-            return true;
+            console.log('✅ Database connection manager initialized successfully');
+            return this;
         } catch (error) {
-            this.healthStatus.connected = false;
-            this.emit('error', error);
-            throw new Error(`Failed to initialize database connections: ${error.message}`);
-        }
-    }
-
-    /**
-     * Execute query with automatic pool selection and error handling
-     */
-    async query(text, params = [], options = {}) {
-        const startTime = Date.now();
-        const queryId = this._generateQueryId(text, params);
-        
-        try {
-            // Check circuit breaker
-            if (this.circuitBreaker.state === 'open') {
-                throw new Error('Circuit breaker is open - database unavailable');
-            }
-            
-            // Check cache if enabled
-            if (this.config.cache.enabled && options.useCache !== false && !params.length) {
-                const cached = this._getCachedResult(queryId);
-                if (cached) {
-                    this._updateMetrics('cache_hit', Date.now() - startTime);
-                    return cached;
-                }
-            }
-            
-            // Select appropriate pool
-            const poolName = this._selectPool(options);
-            const pool = this.pools.get(poolName);
-            
-            if (!pool) {
-                throw new Error(`Pool '${poolName}' not available`);
-            }
-            
-            // Execute query
-            const result = await pool.query(text, params);
-            const duration = Date.now() - startTime;
-            
-            // Update metrics
-            this._updateMetrics('success', duration);
-            
-            // Cache result if applicable
-            if (this.config.cache.enabled && options.useCache !== false && !params.length) {
-                this._cacheResult(queryId, result, duration);
-            }
-            
-            // Log slow queries
-            if (duration > this.config.monitoring.slowQueryThreshold) {
-                this._logSlowQuery(text, params, duration, poolName);
-            }
-            
-            // Reset circuit breaker on success
-            this._resetCircuitBreaker();
-            
-            return result;
-            
-        } catch (error) {
-            const duration = Date.now() - startTime;
-            this._updateMetrics('error', duration);
-            this._handleQueryError(error, text, params);
+            console.error('❌ Failed to initialize database connection manager:', error);
             throw error;
         }
     }
 
     /**
-     * Execute transaction with automatic retry and rollback
+     * Create a new connection pool
+     */
+    async createPool(name, config) {
+        const poolConfig = {
+            ...config,
+            ssl: this._buildSSLConfig(),
+            max: config.max || 20,
+            min: config.min || 5,
+            idleTimeoutMillis: config.idleTimeoutMillis || 30000,
+            connectionTimeoutMillis: config.connectionTimeoutMillis || 10000,
+            query_timeout: config.query_timeout || 30000,
+            statement_timeout: config.statement_timeout || 30000
+        };
+
+        const pool = new Pool(poolConfig);
+        
+        // Set up pool event handlers
+        pool.on('error', (err) => {
+            console.error(`Pool ${name} error:`, err);
+            this._handlePoolError(name, err);
+        });
+
+        pool.on('connect', () => {
+            console.log(`✅ New client connected to pool ${name}`);
+        });
+
+        pool.on('remove', () => {
+            console.log(`🔌 Client removed from pool ${name}`);
+        });
+
+        this.pools.set(name, pool);
+        console.log(`📊 Created connection pool: ${name}`);
+        
+        return pool;
+    }
+
+    /**
+     * Execute a query with automatic retry and circuit breaker
+     */
+    async query(text, params = [], options = {}) {
+        const startTime = Date.now();
+        const queryId = this._generateQueryId(text, params);
+        
+        // Check circuit breaker
+        if (this._isCircuitOpen()) {
+            throw new Error('Circuit breaker is OPEN - database unavailable');
+        }
+
+        // Check cache for read queries
+        if (options.useCache && this._isReadQuery(text)) {
+            const cached = this.queryCache.get(queryId);
+            if (cached && Date.now() - cached.timestamp < (options.cacheTTL || 300000)) {
+                return cached.result;
+            }
+        }
+
+        try {
+            const pool = this._selectPool(options.preferReplica);
+            const result = await pool.query(text, params);
+            
+            // Update metrics
+            const duration = Date.now() - startTime;
+            this._updateMetrics(duration, true);
+            
+            // Cache result if applicable
+            if (options.useCache && this._isReadQuery(text)) {
+                this.queryCache.set(queryId, {
+                    result,
+                    timestamp: Date.now()
+                });
+            }
+
+            // Reset circuit breaker on success
+            this._resetCircuitBreaker();
+            
+            return result;
+        } catch (error) {
+            const duration = Date.now() - startTime;
+            this._updateMetrics(duration, false);
+            this._handleQueryError(error);
+            throw error;
+        }
+    }
+
+    /**
+     * Execute a transaction with automatic retry
      */
     async transaction(callback, options = {}) {
-        const poolName = this._selectPool(options);
-        const pool = this.pools.get(poolName);
+        const pool = this._selectPool(false); // Always use primary for transactions
         const client = await pool.connect();
         
         try {
@@ -303,53 +173,14 @@ export class DatabaseConnectionManager extends EventEmitter {
     }
 
     /**
-     * Get connection pool statistics
+     * Get connection health status
      */
-    getPoolStats() {
-        const stats = {};
-        
-        for (const [name, pool] of this.pools) {
-            stats[name] = {
-                totalCount: pool.totalCount,
-                idleCount: pool.idleCount,
-                waitingCount: pool.waitingCount,
-                maxCount: pool.options.max,
-                minCount: pool.options.min
-            };
-        }
-        
-        return stats;
-    }
-
-    /**
-     * Get comprehensive health status
-     */
-    getHealth() {
-        const poolStats = this.getPoolStats();
-        
+    async getHealthStatus() {
         return {
-            connected: this.healthStatus.connected,
-            lastCheck: this.healthStatus.lastCheck,
-            consecutiveFailures: this.healthStatus.consecutiveFailures,
-            circuitBreaker: this.circuitBreaker.state,
-            pools: poolStats,
-            metrics: { ...this.metrics },
-            uptime: Date.now() - this.metrics.lastReset.getTime()
-        };
-    }
-
-    /**
-     * Get performance metrics
-     */
-    getMetrics() {
-        return {
-            ...this.metrics,
-            pools: this.getPoolStats(),
-            cache: {
-                size: this.queryCache.size,
-                hitRate: this.metrics.totalQueries > 0 ? 
-                    (this.metrics.cacheHits || 0) / this.metrics.totalQueries : 0
-            }
+            ...this.healthStatus,
+            pools: Array.from(this.pools.keys()),
+            metrics: this.metrics,
+            circuitBreaker: this.circuitBreaker
         };
     }
 
@@ -357,277 +188,232 @@ export class DatabaseConnectionManager extends EventEmitter {
      * Graceful shutdown
      */
     async shutdown() {
+        console.log('🔄 Shutting down database connection manager...');
+        
         try {
             // Stop health monitoring
             if (this.healthCheckInterval) {
                 clearInterval(this.healthCheckInterval);
+                this.healthCheckInterval = null;
             }
+            
+            // Clear caches
+            this.queryCache.clear();
             
             // Close all pools
             const shutdownPromises = [];
             for (const [name, pool] of this.pools) {
-                shutdownPromises.push(pool.end());
+                shutdownPromises.push(
+                    pool.end().catch(error => {
+                        console.warn(`Warning: Pool ${name} failed to close cleanly:`, error.message);
+                        return Promise.resolve();
+                    })
+                );
             }
             
             await Promise.all(shutdownPromises);
+            this.pools.clear();
             
             this.healthStatus.connected = false;
             this.emit('disconnected');
             
-            if (this.config.logging.enabled) {
-                console.log('Database connection manager shut down gracefully');
-            }
-            
+            console.log('✅ Database connection manager shutdown complete');
         } catch (error) {
-            console.error('Error during database shutdown:', error);
+            console.error('❌ Error during database shutdown:', error);
             throw error;
         }
     }
 
     // Private methods
+    _buildConfig(userConfig) {
+        const defaultConfig = {
+            primary: {
+                host: process.env.DB_HOST || 'localhost',
+                port: parseInt(process.env.DB_PORT) || 5432,
+                database: process.env.DB_NAME || 'claude_task_master',
+                user: process.env.DB_USER || 'postgres',
+                password: process.env.DB_PASSWORD || '',
+                max: parseInt(process.env.DB_POOL_MAX) || 20,
+                min: parseInt(process.env.DB_POOL_MIN) || 5
+            },
+            readReplicas: process.env.DB_READ_REPLICAS ? 
+                JSON.parse(process.env.DB_READ_REPLICAS) : [],
+            healthCheckInterval: parseInt(process.env.DB_HEALTH_CHECK_INTERVAL) || 30000
+        };
 
-    _setupEventHandlers() {
-        this.on('error', (error) => {
-            console.error('Database connection manager error:', error);
-        });
-        
-        this.on('connected', () => {
-            if (this.config.logging.logConnections) {
-                console.log('Database connected successfully');
-            }
-        });
-        
-        this.on('disconnected', () => {
-            if (this.config.logging.logConnections) {
-                console.log('Database disconnected');
-            }
-        });
+        return { ...defaultConfig, ...userConfig };
     }
 
-    _setupPoolEventHandlers(poolName, pool) {
-        pool.on('connect', (client) => {
-            this.metrics.totalConnections++;
-            if (this.config.logging.logConnections) {
-                console.log(`New client connected to ${poolName} pool`);
-            }
-        });
-        
-        pool.on('remove', (client) => {
-            if (this.config.logging.logConnections) {
-                console.log(`Client removed from ${poolName} pool`);
-            }
-        });
-        
-        pool.on('error', (error, client) => {
-            this.metrics.connectionErrors++;
-            console.error(`Pool ${poolName} error:`, error);
-            this.emit('poolError', { poolName, error, client });
-        });
-    }
-
-    async _testConnections() {
-        const testPromises = [];
-        
-        for (const [name, pool] of this.pools) {
-            testPromises.push(
-                pool.query('SELECT NOW() as current_time, version() as pg_version')
-                    .then(result => ({ name, success: true, result }))
-                    .catch(error => ({ name, success: false, error }))
-            );
+    _buildSSLConfig() {
+        if (process.env.DB_SSL_MODE !== 'require') {
+            return false;
         }
         
-        const results = await Promise.all(testPromises);
+        const sslConfig = { rejectUnauthorized: true };
         
-        for (const result of results) {
-            if (!result.success) {
-                throw new Error(`Failed to connect to ${result.name} pool: ${result.error.message}`);
+        try {
+            if (process.env.DB_SSL_CA) {
+                sslConfig.ca = readFileSync(process.env.DB_SSL_CA);
             }
-        }
-        
-        return results;
-    }
-
-    _selectPool(options = {}) {
-        // Force primary for writes
-        if (options.write || options.transaction) {
-            return 'primary';
-        }
-        
-        // Use read replica for reads if available and healthy
-        if (this.pools.has('readReplica') && options.read !== false) {
-            const replicaHealth = this.healthStatus.pools.get('readReplica');
-            if (!replicaHealth || replicaHealth.healthy !== false) {
-                return 'readReplica';
+            if (process.env.DB_SSL_CERT) {
+                sslConfig.cert = readFileSync(process.env.DB_SSL_CERT);
             }
+            if (process.env.DB_SSL_KEY) {
+                sslConfig.key = readFileSync(process.env.DB_SSL_KEY);
+            }
+            
+            console.log('✅ SSL certificates loaded successfully');
+        } catch (error) {
+            if (process.env.NODE_ENV === 'production') {
+                throw new Error(`SSL certificates required in production but failed to load: ${error.message}`);
+            }
+            
+            console.warn(`⚠️  SSL certificate loading failed: ${error.message}`);
+            console.warn('   Falling back to basic SSL - NOT RECOMMENDED FOR PRODUCTION');
+            sslConfig.rejectUnauthorized = false;
         }
         
-        return 'primary';
+        return sslConfig;
     }
 
     _generateQueryId(text, params) {
+        // Fast hash function for cache keys
         const queryString = text + JSON.stringify(params);
-        return createHash('md5').update(queryString).digest('hex');
+        let hash = 0;
+        for (let i = 0; i < queryString.length; i++) {
+            const char = queryString.charCodeAt(i);
+            hash = ((hash << 5) - hash) + char;
+            hash = hash & hash; // Convert to 32-bit integer
+        }
+        return hash.toString(36);
     }
 
-    _getCachedResult(queryId) {
-        const cached = this.queryCache.get(queryId);
-        if (cached && Date.now() - cached.timestamp < this.config.cache.ttl) {
-            return cached.result;
+    _selectPool(preferReplica = false) {
+        if (preferReplica && this.pools.size > 1) {
+            // Round-robin selection of read replicas
+            const replicas = Array.from(this.pools.keys()).filter(name => name.startsWith('replica_'));
+            if (replicas.length > 0) {
+                const index = Math.floor(Math.random() * replicas.length);
+                return this.pools.get(replicas[index]);
+            }
         }
         
-        if (cached) {
-            this.queryCache.delete(queryId);
-        }
-        
-        return null;
+        return this.pools.get('primary');
     }
 
-    _cacheResult(queryId, result, duration) {
-        if (this.queryCache.size >= this.config.cache.size) {
-            // Remove oldest entry
-            const firstKey = this.queryCache.keys().next().value;
-            this.queryCache.delete(firstKey);
-        }
-        
-        this.queryCache.set(queryId, {
-            result: { ...result },
-            timestamp: Date.now(),
-            duration
-        });
+    _isReadQuery(text) {
+        const trimmed = text.trim().toLowerCase();
+        return trimmed.startsWith('select') || trimmed.startsWith('with');
     }
 
-    _updateMetrics(type, duration) {
-        this.metrics.totalQueries++;
-        
-        if (type === 'success') {
-            this.metrics.successfulQueries++;
-        } else if (type === 'error') {
-            this.metrics.failedQueries++;
-        } else if (type === 'cache_hit') {
-            this.metrics.cacheHits = (this.metrics.cacheHits || 0) + 1;
-        }
-        
-        if (duration > this.config.monitoring.slowQueryThreshold) {
-            this.metrics.slowQueries++;
-        }
-        
-        // Update average query time
-        this.metrics.averageQueryTime = 
-            (this.metrics.averageQueryTime * (this.metrics.totalQueries - 1) + duration) / 
-            this.metrics.totalQueries;
-    }
-
-    _logSlowQuery(text, params, duration, poolName) {
-        if (this.config.logging.logSlowQueries) {
-            console.warn(`Slow query detected (${duration}ms) on ${poolName}:`, {
-                query: text.substring(0, 200),
-                params: params.length > 0 ? '[PARAMS]' : 'none',
-                duration,
-                pool: poolName
-            });
-        }
-    }
-
-    _handleQueryError(error, text, params) {
-        this.circuitBreaker.failures++;
-        this.circuitBreaker.lastFailure = Date.now();
-        
-        if (this.circuitBreaker.failures >= this.circuitBreaker.threshold) {
-            this.circuitBreaker.state = 'open';
-            console.error('Circuit breaker opened due to consecutive failures');
-        }
-        
-        if (this.config.logging.enabled) {
-            console.error('Query error:', {
-                error: error.message,
-                query: text.substring(0, 200),
-                params: params.length > 0 ? '[PARAMS]' : 'none'
-            });
-        }
-    }
-
-    _resetCircuitBreaker() {
-        if (this.circuitBreaker.state === 'open' || this.circuitBreaker.state === 'half-open') {
-            this.circuitBreaker.state = 'closed';
-            this.circuitBreaker.failures = 0;
-            this.circuitBreaker.lastFailure = null;
-        }
+    async _testConnection() {
+        const result = await this.query('SELECT NOW() as current_time, version() as pg_version');
+        console.log(`🔗 Database connection test successful - PostgreSQL ${result.rows[0].pg_version.split(' ')[1]}`);
+        return result;
     }
 
     _startHealthMonitoring() {
-        if (!this.config.monitoring.enabled) {
-            return;
-        }
-        
         this.healthCheckInterval = setInterval(async () => {
             try {
-                await this._performHealthCheck();
+                await this._testConnection();
+                this.healthStatus.lastCheck = new Date();
+                this.healthStatus.consecutiveFailures = 0;
             } catch (error) {
-                console.error('Health check failed:', error);
+                this.healthStatus.consecutiveFailures++;
+                console.warn(`⚠️  Health check failed (${this.healthStatus.consecutiveFailures} consecutive failures):`, error.message);
+                
+                if (this.healthStatus.consecutiveFailures >= 3) {
+                    this._openCircuitBreaker();
+                }
             }
-        }, this.config.monitoring.healthCheckInterval);
+        }, this.config.healthCheckInterval);
     }
 
-    async _performHealthCheck() {
-        const healthPromises = [];
-        
-        for (const [name, pool] of this.pools) {
-            healthPromises.push(
-                pool.query('SELECT 1 as health_check')
-                    .then(() => ({ name, healthy: true, timestamp: Date.now() }))
-                    .catch(error => ({ name, healthy: false, error, timestamp: Date.now() }))
-            );
-        }
-        
-        const results = await Promise.all(healthPromises);
-        
-        for (const result of results) {
-            this.healthStatus.pools.set(result.name, result);
-        }
-        
-        this.healthStatus.lastCheck = Date.now();
-        
-        const allHealthy = results.every(r => r.healthy);
-        if (allHealthy) {
-            this.healthStatus.consecutiveFailures = 0;
+    _updateMetrics(duration, success) {
+        this.metrics.totalQueries++;
+        if (success) {
+            this.metrics.successfulQueries++;
         } else {
-            this.healthStatus.consecutiveFailures++;
+            this.metrics.failedQueries++;
         }
         
-        this.emit('healthCheck', { results, allHealthy });
+        // Update average query time using exponential moving average
+        this.metrics.averageQueryTime = this.metrics.averageQueryTime * 0.9 + duration * 0.1;
     }
 
-    _deepMerge(target, source) {
-        const result = { ...target };
+    _handlePoolError(poolName, error) {
+        console.error(`Pool ${poolName} error:`, error);
+        this.emit('poolError', { poolName, error });
+    }
+
+    _handleQueryError(error) {
+        this.circuitBreaker.failureCount++;
+        this.circuitBreaker.lastFailureTime = Date.now();
         
-        for (const key in source) {
-            if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
-                result[key] = this._deepMerge(target[key] || {}, source[key]);
-            } else {
-                result[key] = source[key];
-            }
+        if (this.circuitBreaker.failureCount >= 5) {
+            this._openCircuitBreaker();
         }
-        
-        return result;
+    }
+
+    _isCircuitOpen() {
+        if (this.circuitBreaker.state === 'OPEN') {
+            if (Date.now() - this.circuitBreaker.lastFailureTime > this.circuitBreaker.timeout) {
+                this.circuitBreaker.state = 'HALF_OPEN';
+                console.log('🔄 Circuit breaker moved to HALF_OPEN state');
+                return false;
+            }
+            return true;
+        }
+        return false;
+    }
+
+    _openCircuitBreaker() {
+        this.circuitBreaker.state = 'OPEN';
+        console.warn('⚠️  Circuit breaker OPENED - database marked as unavailable');
+        this.emit('circuitBreakerOpen');
+    }
+
+    _resetCircuitBreaker() {
+        if (this.circuitBreaker.state !== 'CLOSED') {
+            this.circuitBreaker.state = 'CLOSED';
+            this.circuitBreaker.failureCount = 0;
+            console.log('✅ Circuit breaker CLOSED - database available');
+            this.emit('circuitBreakerClosed');
+        }
     }
 }
 
-// Export singleton instance
+// Singleton instance management
 let instance = null;
 
-export function getConnection(config) {
+export function getConnection() {
     if (!instance) {
-        instance = new DatabaseConnectionManager(config);
+        throw new Error('Database connection not initialized. Call initializeDatabase() first.');
     }
     return instance;
 }
 
-export function resetConnection() {
+export async function initializeDatabase(config) {
     if (instance) {
-        instance.shutdown().catch(console.error);
-        instance = null;
+        console.warn('⚠️  Database already initialized');
+        return instance;
     }
+    
+    instance = new DatabaseConnectionManager(config);
+    await instance.initialize();
+    return instance;
 }
 
-export default DatabaseConnectionManager;
+export async function resetConnection() {
+    if (instance) {
+        try {
+            await instance.shutdown();
+            console.log('✅ Connection reset successfully');
+        } catch (error) {
+            console.error('❌ Error during connection shutdown:', error);
+        } finally {
+            instance = null;
+        }
+    }
+}
 
