@@ -1,6 +1,8 @@
-# Dependency directories
+# Dependencies
 node_modules/
-jspm_packages/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
 # Environment variables
 .env
@@ -9,22 +11,26 @@ jspm_packages/
 .env.test.local
 .env.production.local
 
-# Cursor configuration -- might have ENV variables. Included by default
-# .cursor/mcp.json
-
 # Logs
 logs
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-lerna-debug.log*
-tests/e2e/_runs/
-tests/e2e/log/
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
 
 # Coverage directory used by tools like istanbul
-coverage
+coverage/
 *.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Dependency directories
+node_modules/
+jspm_packages/
 
 # Optional npm cache directory
 .npm
@@ -42,25 +48,77 @@ coverage
 .yarn-integrity
 
 # dotenv environment variables file
-.env.test
+.env
 
-# parcel-bundler cache
+# parcel-bundler cache (https://parceljs.org/)
 .cache
+.parcel-cache
 
-# Next.js build output
+# next.js build output
 .next
 
-# Nuxt.js build / generate output
+# nuxt.js build output
 .nuxt
-dist
 
-# Mac files
+# vuepress build output
+.vuepress/dist
+
+# Serverless directories
+.serverless
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# TernJS port file
+.tern-port
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-# Debug files
-*.debug
-init-debug.log
-dev-debug.log
+# AI Development Orchestrator specific
+/database/data/
+/logs/
+/temp/
+/uploads/
+/downloads/
+/cache/
 
-# NPMRC
-.npmrc
+# Build outputs
+/dist/
+/build/
+
+# Test outputs
+/test-results/
+/coverage/
+
+# Deployment artifacts
+/deployment/
+/artifacts/
+
+# WSL2 specific
+/wsl2-instances/
+/deployment-logs/
+
+# Database backups
+*.sql
+*.dump
+
+# Temporary files
+*.tmp
+*.temp
