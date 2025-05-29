@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database for event storage
+  postgres-events:
+    image: postgres:15-alpine
+    container_name: claude-task-master-postgres
+    environment:
+      POSTGRES_DB: claude_task_master
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_events_data:/var/lib/postgresql/data
+      - ./src/database/migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d claude_task_master"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - claude-task-master
+
+  # Optional: pgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: claude-task-master-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@claude-task-master.dev
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "8080:80"
+    depends_on:
+      - postgres-events
+    restart: unless-stopped
+    networks:
+      - claude-task-master
+    profiles:
+      - admin
+
+  # Optional: Redis for caching and session management
+  redis:
+    image: redis:7-alpine
+    container_name: claude-task-master-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - claude-task-master
+    profiles:
+      - cache
+
+volumes:
+  postgres_events_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  claude-task-master:
+    driver: bridge
+
