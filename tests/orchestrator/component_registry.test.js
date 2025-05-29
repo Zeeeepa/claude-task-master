@@ -3,6 +3,7 @@
  * @description Unit tests for the ComponentRegistry class
  */
 
+import { jest } from '@jest/globals';
 import { ComponentRegistry } from '../../src/ai_cicd_system/orchestrator/component_registry.js';
 
 // Mock component for testing
@@ -455,4 +456,3 @@ describe('ComponentRegistry', () => {
         });
     });
 });
-

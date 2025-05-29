@@ -3,6 +3,7 @@
  * @description Integration tests for the complete orchestrator system
  */
 
+import { jest } from '@jest/globals';
 import { SystemOrchestrator } from '../../src/ai_cicd_system/orchestrator/system_orchestrator.js';
 import { UnifiedSystem } from '../../src/ai_cicd_system/core/unified_system.js';
 import { SystemConfig } from '../../src/ai_cicd_system/config/system_config.js';
@@ -458,4 +459,3 @@ describe('Orchestrator Integration Tests', () => {
         });
     });
 });
-

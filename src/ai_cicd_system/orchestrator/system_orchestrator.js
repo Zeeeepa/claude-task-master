@@ -275,14 +275,14 @@ export class SystemOrchestrator {
 	}
 
 	/**
-	 * Monitor workflow execution
+	 * Monitor workflow execution until completion or timeout
 	 * @param {Object} workflowOrchestrator - Workflow orchestrator instance
-	 * @param {string} workflowId - Workflow ID
+	 * @param {string} workflowId - Workflow ID to monitor
 	 * @returns {Promise<Object>} Workflow result
 	 * @private
 	 */
 	async _monitorWorkflowExecution(workflowOrchestrator, workflowId) {
-		const maxWaitTime = 300000; // 5 minutes
+		const maxWaitTime = this.config.workflow.step_timeout || 300000; // Use config timeout or default 5 minutes
 		const pollInterval = 1000; // 1 second
 		const startTime = Date.now();
 

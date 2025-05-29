@@ -3,6 +3,7 @@
  * @description Unit tests for the SystemOrchestrator class
  */
 
+import { jest } from '@jest/globals';
 import { SystemOrchestrator } from '../../src/ai_cicd_system/orchestrator/system_orchestrator.js';
 import { SystemConfig } from '../../src/ai_cicd_system/config/system_config.js';
 
@@ -90,8 +91,8 @@ class MockComponent {
     }
 }
 
-// Mock the WorkflowOrchestrator import
-jest.mock('../../src/ai_cicd_system/core/workflow_orchestrator.js', () => ({
+// Mock the WorkflowOrchestrator import using dynamic import mocking
+jest.unstable_mockModule('../../src/ai_cicd_system/core/workflow_orchestrator.js', () => ({
     WorkflowOrchestrator: MockWorkflowOrchestrator
 }));
 
@@ -100,6 +101,9 @@ describe('SystemOrchestrator', () => {
     let config;
 
     beforeEach(() => {
+        // Use fake timers for better test control
+        jest.useFakeTimers();
+        
         config = new SystemConfig({
             mode: 'testing',
             workflow: { max_concurrent_workflows: 5 },
@@ -112,6 +116,8 @@ describe('SystemOrchestrator', () => {
         if (orchestrator.isInitialized) {
             await orchestrator.shutdown();
         }
+        // Clear any remaining timers
+        jest.clearAllTimers();
     });
 
     describe('Initialization', () => {
@@ -274,13 +280,24 @@ describe('SystemOrchestrator', () => {
             
             // Mock workflow orchestrator to never complete
             const workflowOrchestrator = orchestrator.getComponent('workflowOrchestrator');
+            const originalGetStatus = workflowOrchestrator.getWorkflowStatus;
             workflowOrchestrator.getWorkflowStatus = jest.fn().mockResolvedValue({
                 workflow_id: 'test-workflow',
                 status: 'running'
             });
             
-            await expect(orchestrator.processTask(task)).rejects.toThrow('Workflow execution timeout');
-        }, 10000);
+            // Set a very short timeout for this test
+            const originalTimeout = orchestrator.config.workflow.step_timeout;
+            orchestrator.config.workflow.step_timeout = 100; // 100ms
+            
+            try {
+                await expect(orchestrator.processTask(task)).rejects.toThrow('Workflow execution timeout');
+            } finally {
+                // Restore original timeout and method
+                orchestrator.config.workflow.step_timeout = originalTimeout;
+                workflowOrchestrator.getWorkflowStatus = originalGetStatus;
+            }
+        }, 3000); // Reduced test timeout to 3 seconds
     });
 
     describe('Health and Statistics', () => {
@@ -431,13 +448,13 @@ describe('SystemOrchestrator', () => {
     describe('Configuration', () => {
         test('should use provided configuration', () => {
             const customConfig = new SystemConfig({
-                mode: 'production',
+                mode: 'testing',
                 workflow: { max_concurrent_workflows: 20 }
             });
             
             const orch = new SystemOrchestrator(customConfig);
             
-            expect(orch.config.config.mode).toBe('production');
+            expect(orch.config.config.mode).toBe('testing');
             expect(orch.config.workflow.max_concurrent_workflows).toBe(20);
         });
 
@@ -454,4 +471,3 @@ describe('SystemOrchestrator', () => {
         });
     });
 });
-

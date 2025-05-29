@@ -3,6 +3,7 @@
  * @description Unit tests for the LifecycleManager class
  */
 
+import { jest } from '@jest/globals';
 import { LifecycleManager } from '../../src/ai_cicd_system/orchestrator/lifecycle_manager.js';
 import { ComponentRegistry } from '../../src/ai_cicd_system/orchestrator/component_registry.js';
 
@@ -493,4 +494,3 @@ describe('LifecycleManager', () => {
         });
     });
 });
-
