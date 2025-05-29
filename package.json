@@ -22,7 +22,10 @@
 		"inspector": "npx @modelcontextprotocol/inspector node mcp-server/server.js",
 		"mcp-server": "node mcp-server/server.js",
 		"format-check": "prettier --check .",
-		"format": "prettier --write ."
+		"format": "prettier --write .",
+		"agentapi:start": "node -e \"import('./src/middleware/agentapi/example.js').then(m => m.startServerExample())\"",
+		"agentapi:test": "node src/middleware/agentapi/test.js",
+		"agentapi:example": "node src/middleware/agentapi/example.js"
 	},
 	"keywords": [
 		"claude",
@@ -49,6 +52,7 @@
 		"@anthropic-ai/sdk": "^0.39.0",
 		"@openrouter/ai-sdk-provider": "^0.4.5",
 		"ai": "^4.3.10",
+		"axios": "^1.9.0",
 		"boxen": "^8.0.1",
 		"chalk": "^5.4.1",
 		"cli-table3": "^0.6.5",
@@ -68,6 +72,7 @@
 		"openai": "^4.89.0",
 		"ora": "^8.2.0",
 		"uuid": "^11.1.0",
+		"ws": "^8.18.2",
 		"zod": "^3.23.8"
 	},
 	"engines": {
