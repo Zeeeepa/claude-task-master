@@ -1,4 +1,4 @@
-# Task Master [![GitHub stars](https://img.shields.io/github/stars/eyaltoledano/claude-task-master?style=social)](https://github.com/eyaltoledano/claude-task-master/stargazers)
+# Claude Task Master - AI-Powered CI/CD Orchestration System
 
 [![CI](https://github.com/eyaltoledano/claude-task-master/actions/workflows/ci.yml/badge.svg)](https://github.com/eyaltoledano/claude-task-master/actions/workflows/ci.yml) [![npm version](https://badge.fury.io/js/task-master-ai.svg)](https://badge.fury.io/js/task-master-ai) [![Discord](https://dcbadge.limes.pink/api/server/https://discord.gg/taskmasterai?style=flat)](https://discord.gg/taskmasterai) [![License: MIT with Commons Clause](https://img.shields.io/badge/license-MIT%20with%20Commons%20Clause-blue.svg)](LICENSE)
 
@@ -7,229 +7,408 @@
 [![Twitter Follow](https://img.shields.io/twitter/follow/eyaltoledano?style=flat)](https://x.com/eyaltoledano)
 [![Twitter Follow](https://img.shields.io/twitter/follow/RalphEcom?style=flat)](https://x.com/RalphEcom)
 
-A task management system for AI-driven development with Claude, designed to work seamlessly with Cursor AI.
+## 🚀 Overview
 
-## Requirements
+Claude Task Master is a comprehensive AI-powered CI/CD orchestration system that integrates multiple AI agents and tools to automate the entire software development lifecycle. It combines intelligent task management, automated code generation, PR validation, and deployment orchestration into a unified platform.
 
-Taskmaster utilizes AI across several commands, and those require a separate API key. You can use a variety of models from different AI providers provided you add your API keys. For example, if you want to use Claude 3.7, you'll need an Anthropic API key.
+## 🏗️ Architecture
 
-You can define 3 types of models to be used: the main model, the research model, and the fallback model (in case either the main or research fail). Whatever model you use, its provider API key must be present in either mcp.json or .env.
+The system consists of four main components working together:
 
-At least one (1) of the following is required:
-
-- Anthropic API key (Claude API)
-- OpenAI API key
-- Google Gemini API key
-- Perplexity API key (for research model)
-- xAI API Key (for research or main model)
-- OpenRouter API Key (for research or main model)
-
-Using the research model is optional but highly recommended. You will need at least ONE API key. Adding all API keys enables you to seamlessly switch between model providers at will.
-
-## Quick Start
-
-### Option 1: MCP (Recommended)
-
-MCP (Model Control Protocol) lets you run Task Master directly from your editor.
-
-#### 1. Add your MCP config at the following path depending on your editor
-
-| Editor       | Scope   | Linux/macOS Path                      | Windows Path                                      | Key          |
-| ------------ | ------- | ------------------------------------- | ------------------------------------------------- | ------------ |
-| **Cursor**   | Global  | `~/.cursor/mcp.json`                  | `%USERPROFILE%\.cursor\mcp.json`                  | `mcpServers` |
-|              | Project | `<project_folder>/.cursor/mcp.json`   | `<project_folder>\.cursor\mcp.json`               | `mcpServers` |
-| **Windsurf** | Global  | `~/.codeium/windsurf/mcp_config.json` | `%USERPROFILE%\.codeium\windsurf\mcp_config.json` | `mcpServers` |
-| **VS Code**  | Project | `<project_folder>/.vscode/mcp.json`   | `<project_folder>\.vscode\mcp.json`               | `servers`    |
-
-##### Cursor & Windsurf (`mcpServers`)
-
-```jsonc
-{
-	"mcpServers": {
-		"taskmaster-ai": {
-			"command": "npx",
-			"args": ["-y", "--package=task-master-ai", "task-master-ai"],
-			"env": {
-				"ANTHROPIC_API_KEY": "YOUR_ANTHROPIC_API_KEY_HERE",
-				"PERPLEXITY_API_KEY": "YOUR_PERPLEXITY_API_KEY_HERE",
-				"OPENAI_API_KEY": "YOUR_OPENAI_KEY_HERE",
-				"GOOGLE_API_KEY": "YOUR_GOOGLE_KEY_HERE",
-				"MISTRAL_API_KEY": "YOUR_MISTRAL_KEY_HERE",
-				"OPENROUTER_API_KEY": "YOUR_OPENROUTER_KEY_HERE",
-				"XAI_API_KEY": "YOUR_XAI_KEY_HERE",
-				"AZURE_OPENAI_API_KEY": "YOUR_AZURE_KEY_HERE",
-				"OLLAMA_API_KEY": "YOUR_OLLAMA_API_KEY_HERE"
-			}
-		}
-	}
-}
+```
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   Codegen API   │    │  Claude Code     │    │   PostgreSQL    │
+│   (AI Agent)    │◄──►│  (via AgentAPI)  │◄──►│   Database      │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+         ▲                        ▲                       ▲
+         │                        │                       │
+         ▼                        ▼                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              Claude Task Master Orchestrator                    │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐│
+│  │Task Manager │ │CI/CD Engine │ │AgentAPI     │ │Webhook      ││
+│  │             │ │             │ │Client       │ │Handler      ││
+│  └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘│
+└─────────────────────────────────────────────────────────────────┘
+         ▲                                                 ▲
+         │                                                 │
+         ▼                                                 ▼
+┌─────────────────┐                               ┌─────────────────┐
+│   GitHub/GitLab │                               │   WSL2 Instance │
+│   Repositories  │                               │   (Deployment)  │
+└─────────────────┘                               └─────────────────┘
 ```
 
-> 🔑 Replace `YOUR_…_KEY_HERE` with your real API keys. You can remove keys you don't use.
+### Component Responsibilities
 
-##### VS Code (`servers` + `type`)
+1. **Claude Task Master Orchestrator** (Core System)
+   - Central coordination engine
+   - Task management and planning
+   - CI/CD pipeline orchestration
+   - Webhook event processing
+   - Database operations
 
-```jsonc
-{
-	"servers": {
-		"taskmaster-ai": {
-			"command": "npx",
-			"args": ["-y", "--package=task-master-ai", "task-master-ai"],
-			"env": {
-				"ANTHROPIC_API_KEY": "YOUR_ANTHROPIC_API_KEY_HERE",
-				"PERPLEXITY_API_KEY": "YOUR_PERPLEXITY_API_KEY_HERE",
-				"OPENAI_API_KEY": "YOUR_OPENAI_KEY_HERE",
-				"GOOGLE_API_KEY": "YOUR_GOOGLE_KEY_HERE",
-				"MISTRAL_API_KEY": "YOUR_MISTRAL_KEY_HERE",
-				"OPENROUTER_API_KEY": "YOUR_OPENROUTER_KEY_HERE",
-				"XAI_API_KEY": "YOUR_XAI_KEY_HERE",
-				"AZURE_OPENAI_API_KEY": "YOUR_AZURE_KEY_HERE"
-			},
-			"type": "stdio"
-		}
-	}
-}
+2. **AgentAPI Middleware** ([agentapi](https://github.com/Zeeeepa/agentapi))
+   - HTTP API for controlling coding agents
+   - Manages Claude Code, Goose, Aider, and Codex
+   - Terminal emulation and message parsing
+   - Session management
+
+3. **Claude Code** (AI Validation Agent)
+   - PR code review and validation
+   - Error analysis and debugging
+   - Automated fix suggestions
+   - Security and performance analysis
+
+4. **Codegen API** (Code Generation Agent)
+   - Natural language to code generation
+   - Task-based development
+   - PR creation and management
+   - Context-aware implementations
+
+5. **PostgreSQL Database**
+   - Project and task storage
+   - Pipeline state management
+   - Audit trails and metrics
+   - Prompt templates and configurations
+
+## 🔄 CI/CD Development Flow
+
+### 1. Task Creation & Planning
+```mermaid
+graph TD
+    A[PRD Analysis] --> B[AI Task Generation]
+    B --> C[Task Storage in DB]
+    C --> D[Dependency Mapping]
+    D --> E[Priority Assignment]
 ```
 
-> 🔑 Replace `YOUR_…_KEY_HERE` with your real API keys. You can remove keys you don't use.
-
-#### 2. (Cursor-only) Enable Taskmaster MCP
-
-Open Cursor Settings (Ctrl+Shift+J) ➡ Click on MCP tab on the left ➡ Enable task-master-ai with the toggle
-
-#### 3. (Optional) Configure the models you want to use
-
-In your editor’s AI chat pane, say:
-
-```txt
-Change the main, research and fallback models to <model_name>, <model_name> and <model_name> respectively.
+### 2. Code Generation Workflow
+```mermaid
+graph TD
+    A[Task Selection] --> B[Context Gathering]
+    B --> C[Prompt Generation]
+    C --> D[Codegen API Request]
+    D --> E[Code Generation]
+    E --> F[PR Creation]
+    F --> G[Webhook Trigger]
 ```
 
-[Table of available models](docs/models.md)
-
-#### 4. Initialize Task Master
-
-In your editor’s AI chat pane, say:
-
-```txt
-Initialize taskmaster-ai in my project
+### 3. PR Validation Pipeline
+```mermaid
+graph TD
+    A[PR Created/Updated] --> B[Webhook Received]
+    B --> C[Clone to WSL2]
+    C --> D[AgentAPI Session Init]
+    D --> E[Claude Code Analysis]
+    E --> F[Validation Results]
+    F --> G{Issues Found?}
+    G -->|Yes| H[Auto-fix Attempt]
+    G -->|No| I[Approve PR]
+    H --> J{Fix Successful?}
+    J -->|Yes| I
+    J -->|No| K[Create Issue for Manual Review]
 ```
 
-#### 5. Make sure you have a PRD in `<project_folder>/scripts/prd.txt`
+### 4. Error Handling & Recovery
+```mermaid
+graph TD
+    A[Pipeline Error] --> B[Retry Logic]
+    B --> C{Max Retries?}
+    C -->|No| D[Retry Step]
+    C -->|Yes| E[Claude Code Debug]
+    E --> F{Fix Available?}
+    F -->|Yes| G[Apply Fix]
+    F -->|No| H[Escalate to Codegen]
+    G --> I[Continue Pipeline]
+    H --> J[Create Manual Issue]
+```
 
-An example of a PRD is located into `<project_folder>/scripts/example_prd.txt`.
+## 🛠️ Installation & Setup
 
-**Always start with a detailed PRD.**
+### Prerequisites
 
-The more detailed your PRD, the better the generated tasks will be.
+- Node.js 18+ 
+- PostgreSQL 13+
+- WSL2 (for Windows users)
+- AgentAPI server
+- Claude Code installed globally
 
-#### 6. Common Commands
+### 1. Database Setup
 
-Use your AI assistant to:
+```bash
+# Create PostgreSQL database
+createdb claude_task_master
 
-- Parse requirements: `Can you parse my PRD at scripts/prd.txt?`
-- Plan next step: `What’s the next task I should work on?`
-- Implement a task: `Can you help me implement task 3?`
-- Expand a task: `Can you help me expand task 4?`
+# Set environment variables
+export DB_HOST=localhost
+export DB_PORT=5432
+export DB_NAME=claude_task_master
+export DB_USER=postgres
+export DB_PASSWORD=your_password
+```
 
-[More examples on how to use Task Master in chat](docs/examples.md)
-
-### Option 2: Using Command Line
-
-#### Installation
+### 2. Install Claude Task Master
 
 ```bash
 # Install globally
 npm install -g task-master-ai
 
-# OR install locally within your project
-npm install task-master-ai
-```
-
-#### Initialize a new project
-
-```bash
-# If installed globally
-task-master init
-
-# If installed locally
-npx task-master init
-```
-
-This will prompt you for project details and set up a new project with the necessary files and structure.
-
-#### Common Commands
-
-```bash
-# Initialize a new project
-task-master init
-
-# Parse a PRD and generate tasks
-task-master parse-prd your-prd.txt
-
-# List all tasks
-task-master list
-
-# Show the next task to work on
-task-master next
-
-# Generate task files
-task-master generate
-```
-
-## Documentation
-
-For more detailed information, check out the documentation in the `docs` directory:
-
-- [Configuration Guide](docs/configuration.md) - Set up environment variables and customize Task Master
-- [Tutorial](docs/tutorial.md) - Step-by-step guide to getting started with Task Master
-- [Command Reference](docs/command-reference.md) - Complete list of all available commands
-- [Task Structure](docs/task-structure.md) - Understanding the task format and features
-- [Example Interactions](docs/examples.md) - Common Cursor AI interaction examples
-
-## Troubleshooting
-
-### If `task-master init` doesn't respond:
-
-Try running it with Node directly:
-
-```bash
-node node_modules/claude-task-master/scripts/init.js
-```
-
-Or clone the repository and run:
-
-```bash
-git clone https://github.com/eyaltoledano/claude-task-master.git
+# Or clone and install locally
+git clone https://github.com/Zeeeepa/claude-task-master.git
 cd claude-task-master
-node scripts/init.js
+npm install
 ```
 
-## Contributors
+### 3. Install AgentAPI
 
-<a href="https://github.com/eyaltoledano/claude-task-master/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=eyaltoledano/claude-task-master" alt="Task Master project contributors" />
-</a>
+```bash
+# Download latest release from https://github.com/Zeeeepa/agentapi/releases
+# Or build from source
+git clone https://github.com/Zeeeepa/agentapi.git
+cd agentapi
+go build -o agentapi
+```
 
-## Star History
+### 4. Install Claude Code
 
-[![Star History Chart](https://api.star-history.com/svg?repos=eyaltoledano/claude-task-master&type=Timeline)](https://www.star-history.com/#eyaltoledano/claude-task-master&Timeline)
+```bash
+npm install -g @anthropic-ai/claude-code
+```
 
-## Licensing
+### 5. Configuration
 
-Task Master is licensed under the MIT License with Commons Clause. This means you can:
+Create `.env` file:
 
-✅ **Allowed**:
+```env
+# Database Configuration
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=claude_task_master
+DB_USER=postgres
+DB_PASSWORD=your_password
+DB_SSL_MODE=disable
 
-- Use Task Master for any purpose (personal, commercial, academic)
-- Modify the code
-- Distribute copies
-- Create and sell products built using Task Master
+# API Keys
+ANTHROPIC_API_KEY=your_anthropic_key
+CODEGEN_API_KEY=your_codegen_key
+OPENAI_API_KEY=your_openai_key
 
-❌ **Not Allowed**:
+# Service URLs
+AGENTAPI_URL=http://localhost:3284
+CODEGEN_API_URL=https://api.codegen.sh
 
-- Sell Task Master itself
-- Offer Task Master as a hosted service
-- Create competing products based on Task Master
+# WSL2 Configuration
+WSL2_INSTANCE_PATH=/mnt/c/projects
 
-See the [LICENSE](LICENSE) file for the complete license text and [licensing details](docs/licensing.md) for more information.
+# Server Configuration
+PORT=3000
+NODE_ENV=production
+```
+
+## 🚀 Quick Start
+
+### 1. Start the Services
+
+```bash
+# Terminal 1: Start AgentAPI with Claude Code
+agentapi server -- claude --allowedTools "Bash(git*) Edit Replace"
+
+# Terminal 2: Start Claude Task Master
+npm start
+# or
+node src/index.js
+```
+
+### 2. Create a Project
+
+```bash
+curl -X POST http://localhost:3000/api/projects \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "My Project",
+    "description": "AI-powered web application",
+    "repositoryUrl": "https://github.com/user/repo",
+    "repositoryOwner": "user",
+    "repositoryName": "repo"
+  }'
+```
+
+### 3. Setup Webhook
+
+Add webhook to your GitHub repository:
+- URL: `http://your-server:3000/webhook`
+- Content type: `application/json`
+- Events: `Pull requests`, `Pushes`, `Issues`
+
+### 4. Generate Tasks from PRD
+
+```bash
+curl -X POST http://localhost:3000/api/tasks/parse-prd \
+  -H "Content-Type: application/json" \
+  -d '{
+    "project_id": "your-project-id",
+    "prd_path": "./scripts/prd.txt"
+  }'
+```
+
+## 📋 API Reference
+
+### Projects
+
+- `GET /api/projects` - List all projects
+- `POST /api/projects` - Create new project
+- `GET /api/projects/:id` - Get project details
+
+### Tasks
+
+- `GET /api/tasks?project_id=:id` - List project tasks
+- `POST /api/tasks` - Create new task
+- `GET /api/tasks/next?project_id=:id` - Get next task to work on
+- `PUT /api/tasks/:id` - Update task
+
+### Pipelines
+
+- `POST /api/pipelines/validate-pr` - Validate PR with Claude Code
+- `POST /api/pipelines/generate-code` - Generate code from tasks
+- `GET /api/pipelines/:id/status` - Get pipeline status
+
+### Webhooks
+
+- `POST /webhook` - GitHub/GitLab webhook endpoint
+
+## 🔧 Advanced Configuration
+
+### Custom Prompt Templates
+
+The system uses PostgreSQL-stored prompt templates for different operations:
+
+```sql
+INSERT INTO prompt_templates (name, template_type, content, variables) VALUES (
+  'custom_validation',
+  'validation',
+  'Analyze this PR for {{validation_focus}} in {{project_name}}...',
+  '["validation_focus", "project_name"]'
+);
+```
+
+### WSL2 Instance Configuration
+
+For Windows users, configure WSL2 for code deployment:
+
+```json
+{
+  "wsl2InstancePath": "/mnt/c/projects",
+  "deploymentConfig": {
+    "autoClone": true,
+    "workspaceSetup": [
+      "npm install",
+      "npm run build"
+    ]
+  }
+}
+```
+
+### AgentAPI Integration
+
+Configure multiple agent types:
+
+```json
+{
+  "agentapiConfig": {
+    "claude": {
+      "model": "claude-3-sonnet",
+      "allowedTools": ["Bash(git*)", "Edit", "Replace"],
+      "maxTokens": 4096
+    },
+    "aider": {
+      "model": "gpt-4",
+      "apiKey": "your-openai-key"
+    }
+  }
+}
+```
+
+## 🔍 Monitoring & Observability
+
+### Health Checks
+
+```bash
+curl http://localhost:3000/health
+```
+
+Response:
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-05-29T02:26:00.000Z",
+  "database": {
+    "connected": true,
+    "pools": ["primary"],
+    "metrics": {
+      "totalQueries": 1250,
+      "averageQueryTime": 15.5
+    }
+  },
+  "components": {
+    "database": "connected",
+    "orchestrator": "initialized",
+    "taskManager": "initialized"
+  }
+}
+```
+
+### Pipeline Metrics
+
+Monitor CI/CD pipeline performance:
+
+```sql
+SELECT 
+  pipeline_type,
+  AVG(duration_ms) as avg_duration,
+  COUNT(*) as total_runs,
+  COUNT(*) FILTER (WHERE status = 'completed') as successful_runs
+FROM ci_cd_pipelines 
+WHERE created_at > NOW() - INTERVAL '7 days'
+GROUP BY pipeline_type;
+```
+
+## 🔐 Security Considerations
+
+- **Webhook Security**: Verify webhook signatures
+- **API Authentication**: Implement JWT or API key authentication
+- **Database Security**: Use SSL connections and encrypted passwords
+- **Code Execution**: Sandbox code execution in WSL2 instances
+- **Secret Management**: Store API keys securely
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License with Commons Clause. See [LICENSE](LICENSE) for details.
+
+## 🆘 Support
+
+- 📖 [Documentation](docs/)
+- 💬 [Discord Community](https://discord.gg/taskmasterai)
+- 🐛 [Issue Tracker](https://github.com/Zeeeepa/claude-task-master/issues)
+- 📧 [Email Support](mailto:support@taskmasterai.com)
+
+## 🗺️ Roadmap
+
+- [ ] Multi-cloud deployment support
+- [ ] Advanced AI model integration
+- [ ] Real-time collaboration features
+- [ ] Enterprise SSO integration
+- [ ] Advanced analytics dashboard
+- [ ] Plugin ecosystem
+
+---
+
+**Transform your development workflow with AI-powered automation. Start building the future of software development today!** 🚀
