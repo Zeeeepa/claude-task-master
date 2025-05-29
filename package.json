@@ -22,6 +22,7 @@
 		"demo:requirement-analyzer": "node demo/requirement_analyzer_demo.js",
 		"demo:examples": "node -e \"import('./src/requirement_analyzer/examples.js').then(m => m.runAllExamples())\"",
 		"demo:orchestrator": "node src/ai_cicd_system/examples/orchestrator_usage.js",
+		"demo:unified-orchestrator": "node -e \"import('./src/ai_cicd_system/orchestrator/unified_orchestrator.js').then(m => m.createUnifiedOrchestrator().then(o => console.log('Unified orchestrator created:', o.getMetrics())))\"",
 		"ai-cicd:demo": "node src/ai_cicd_system/examples/usage_example.js",
 		"ai-cicd:basic": "node -e \"import('./src/ai_cicd_system/examples/usage_example.js').then(m => m.basicRequirementProcessing())\"",
 		"ai-cicd:advanced": "node -e \"import('./src/ai_cicd_system/examples/usage_example.js').then(m => m.advancedSystemUsage())\"",

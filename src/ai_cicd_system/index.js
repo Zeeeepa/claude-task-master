@@ -9,10 +9,10 @@ import { RequirementProcessor } from './core/requirement_processor.js';
 import { TaskStorageManager } from './core/task_storage_manager.js';
 import { CodegenIntegrator } from './core/codegen_integrator.js';
 import { ValidationEngine } from './core/validation_engine.js';
-import { WorkflowOrchestrator } from './core/workflow_orchestrator.js';
 import { ContextManager } from './core/context_manager.js';
 import { SystemMonitor } from './monitoring/system_monitor.js';
 import { log } from '../scripts/modules/utils.js';
+import { UnifiedOrchestrator, createUnifiedOrchestrator } from './orchestrator/index.js';
 
 /**
  * Main AI-Driven CI/CD System
@@ -23,7 +23,10 @@ export class AICICDSystem {
 		this.config = new SystemConfig(config);
 		this.components = new Map();
 		this.isInitialized = false;
-		this.activeWorkflows = new Map();
+		this.isRunning = false;
+
+		// Use unified orchestrator instead of separate orchestrators
+		this.orchestrator = null;
 
 		// Initialize core components
 		this._initializeComponents();
@@ -48,7 +51,7 @@ export class AICICDSystem {
 				'requirementProcessor',
 				'codegenIntegrator',
 				'validationEngine',
-				'workflowOrchestrator',
+				'orchestrator',
 				'systemMonitor'
 			]);
 
@@ -144,14 +147,12 @@ export class AICICDSystem {
 
 			// Step 5: Orchestrate workflow completion
 			log('debug', 'Step 5: Orchestrating workflow completion');
-			const orchestrationResult = await this.components
-				.get('workflowOrchestrator')
-				.completeWorkflow(workflowId, {
-					analysis: analysisResult,
-					tasks: storedTasks,
-					codegen: codegenResults,
-					validation: validationResults
-				});
+			const orchestrationResult = await this.orchestrator.completeWorkflow(workflowId, {
+				analysis: analysisResult,
+				tasks: storedTasks,
+				codegen: codegenResults,
+				validation: validationResults
+			});
 
 			// Compile final result
 			const workflowResult = {
@@ -269,7 +270,7 @@ export class AICICDSystem {
 			// Shutdown components in reverse order
 			const shutdownOrder = [
 				'systemMonitor',
-				'workflowOrchestrator',
+				'orchestrator',
 				'validationEngine',
 				'codegenIntegrator',
 				'requirementProcessor',
@@ -320,8 +321,8 @@ export class AICICDSystem {
 			new ValidationEngine(this.config.validation)
 		);
 		this.components.set(
-			'workflowOrchestrator',
-			new WorkflowOrchestrator(this.config.workflow)
+			'orchestrator',
+			createUnifiedOrchestrator(this.config.workflow)
 		);
 		this.components.set(
 			'systemMonitor',
