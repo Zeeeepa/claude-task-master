@@ -438,19 +438,9 @@ function getParametersForRole(role, explicitRoot = null) {
  */
 function isApiKeySet(providerName, session = null, projectRoot = null) {
 	// Define the expected environment variable name for each provider
-	if (providerName?.toLowerCase() === 'ollama') {
-		return true; // Indicate key status is effectively "OK"
-	}
-
 	const keyMap = {
 		openai: 'OPENAI_API_KEY',
-		anthropic: 'ANTHROPIC_API_KEY',
-		google: 'GOOGLE_API_KEY',
-		perplexity: 'PERPLEXITY_API_KEY',
-		mistral: 'MISTRAL_API_KEY',
-		azure: 'AZURE_OPENAI_API_KEY',
-		openrouter: 'OPENROUTER_API_KEY',
-		xai: 'XAI_API_KEY'
+		anthropic: 'ANTHROPIC_API_KEY'
 		// Add other providers as needed
 	};
 
@@ -514,33 +504,7 @@ function getMcpApiKeyStatus(providerName, projectRoot = null) {
 				break;
 			case 'openai':
 				apiKeyToCheck = mcpEnv.OPENAI_API_KEY;
-				placeholderValue = 'YOUR_OPENAI_API_KEY_HERE'; // Assuming placeholder matches OPENAI
-				break;
-			case 'openrouter':
-				apiKeyToCheck = mcpEnv.OPENROUTER_API_KEY;
-				placeholderValue = 'YOUR_OPENROUTER_API_KEY_HERE';
-				break;
-			case 'google':
-				apiKeyToCheck = mcpEnv.GOOGLE_API_KEY;
-				placeholderValue = 'YOUR_GOOGLE_API_KEY_HERE';
-				break;
-			case 'perplexity':
-				apiKeyToCheck = mcpEnv.PERPLEXITY_API_KEY;
-				placeholderValue = 'YOUR_PERPLEXITY_API_KEY_HERE';
-				break;
-			case 'xai':
-				apiKeyToCheck = mcpEnv.XAI_API_KEY;
-				placeholderValue = 'YOUR_XAI_API_KEY_HERE';
-				break;
-			case 'ollama':
-				return true; // No key needed
-			case 'mistral':
-				apiKeyToCheck = mcpEnv.MISTRAL_API_KEY;
-				placeholderValue = 'YOUR_MISTRAL_API_KEY_HERE';
-				break;
-			case 'azure':
-				apiKeyToCheck = mcpEnv.AZURE_OPENAI_API_KEY;
-				placeholderValue = 'YOUR_AZURE_OPENAI_API_KEY_HERE';
+				placeholderValue = 'YOUR_OPENAI_API_KEY_HERE';
 				break;
 			default:
 				return false; // Unknown provider
