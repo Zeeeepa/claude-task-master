@@ -5,9 +5,7 @@
 	"main": "index.js",
 	"type": "module",
 	"bin": {
-		"task-master": "bin/task-master.js",
-		"task-master-mcp": "mcp-server/server.js",
-		"task-master-ai": "mcp-server/server.js"
+		"task-master": "index.js"
 	},
 	"scripts": {
 		"test": "node --experimental-vm-modules node_modules/.bin/jest",
@@ -16,11 +14,9 @@
 		"test:coverage": "node --experimental-vm-modules node_modules/.bin/jest --coverage",
 		"test:e2e": "./tests/e2e/run_e2e.sh",
 		"test:e2e-report": "./tests/e2e/run_e2e.sh --analyze-log",
-		"prepare": "chmod +x bin/task-master.js mcp-server/server.js",
+		"prepare": "chmod +x index.js",
 		"changeset": "changeset",
 		"release": "changeset publish",
-		"inspector": "npx @modelcontextprotocol/inspector node mcp-server/server.js",
-		"mcp-server": "node mcp-server/server.js",
 		"format-check": "prettier --check .",
 		"format": "prettier --write ."
 	},
@@ -33,21 +29,14 @@
 		"cursor",
 		"anthropic",
 		"llm",
-		"mcp",
-		"context"
+		"orchestrator"
 	],
 	"author": "Eyal Toledano",
 	"license": "MIT WITH Commons-Clause",
 	"dependencies": {
 		"@ai-sdk/anthropic": "^1.2.10",
-		"@ai-sdk/azure": "^1.3.17",
-		"@ai-sdk/google": "^1.2.13",
-		"@ai-sdk/mistral": "^1.2.7",
 		"@ai-sdk/openai": "^1.3.20",
-		"@ai-sdk/perplexity": "^1.1.7",
-		"@ai-sdk/xai": "^1.2.15",
 		"@anthropic-ai/sdk": "^0.39.0",
-		"@openrouter/ai-sdk-provider": "^0.4.5",
 		"ai": "^4.3.10",
 		"boxen": "^8.0.1",
 		"chalk": "^5.4.1",
@@ -56,7 +45,6 @@
 		"cors": "^2.8.5",
 		"dotenv": "^16.3.1",
 		"express": "^4.21.2",
-		"fastmcp": "^1.20.5",
 		"figlet": "^1.8.0",
 		"fuse.js": "^7.1.0",
 		"gradient-string": "^3.0.0",
@@ -64,7 +52,6 @@
 		"inquirer": "^12.5.0",
 		"jsonwebtoken": "^9.0.2",
 		"lru-cache": "^10.2.0",
-		"ollama-ai-provider": "^1.2.0",
 		"openai": "^4.89.0",
 		"ora": "^8.2.0",
 		"uuid": "^11.1.0",
@@ -83,12 +70,9 @@
 	},
 	"files": [
 		"scripts/**",
-		"assets/**",
 		".cursor/**",
 		"README-task-master.md",
 		"index.js",
-		"bin/**",
-		"mcp-server/**",
 		"src/**"
 	],
 	"overrides": {

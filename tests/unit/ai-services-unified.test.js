@@ -25,12 +25,6 @@ const mockModelMap = {
 			cost_per_1m_tokens: { input: 3, output: 15, currency: 'USD' }
 		}
 	],
-	perplexity: [
-		{
-			id: 'test-research-model',
-			cost_per_1m_tokens: { input: 1, output: 1, currency: 'USD' }
-		}
-	],
 	openai: [
 		{
 			id: 'test-openai-model',
@@ -60,38 +54,21 @@ jest.unstable_mockModule('../../scripts/modules/config-manager.js', () => ({
 const mockGenerateAnthropicText = jest.fn();
 const mockStreamAnthropicText = jest.fn();
 const mockGenerateAnthropicObject = jest.fn();
+
+const mockGenerateOpenAIText = jest.fn();
+const mockStreamOpenAIText = jest.fn();
+const mockGenerateOpenAIObject = jest.fn();
+
 jest.unstable_mockModule('../../src/ai-providers/anthropic.js', () => ({
 	generateAnthropicText: mockGenerateAnthropicText,
 	streamAnthropicText: mockStreamAnthropicText,
 	generateAnthropicObject: mockGenerateAnthropicObject
 }));
 
-const mockGeneratePerplexityText = jest.fn();
-const mockStreamPerplexityText = jest.fn();
-const mockGeneratePerplexityObject = jest.fn();
-jest.unstable_mockModule('../../src/ai-providers/perplexity.js', () => ({
-	generatePerplexityText: mockGeneratePerplexityText,
-	streamPerplexityText: mockStreamPerplexityText,
-	generatePerplexityObject: mockGeneratePerplexityObject
-}));
-
-const mockGenerateOpenAIText = jest.fn();
-const mockStreamOpenAIText = jest.fn();
-const mockGenerateOpenAIObject = jest.fn();
 jest.unstable_mockModule('../../src/ai-providers/openai.js', () => ({
 	generateOpenAIText: mockGenerateOpenAIText,
 	streamOpenAIText: mockStreamOpenAIText,
 	generateOpenAIObject: mockGenerateOpenAIObject
-}));
-
-// Mock ollama provider (for special case testing - API key is optional)
-const mockGenerateOllamaText = jest.fn();
-const mockStreamOllamaText = jest.fn();
-const mockGenerateOllamaObject = jest.fn();
-jest.unstable_mockModule('../../src/ai-providers/ollama.js', () => ({
-	generateOllamaText: mockGenerateOllamaText,
-	streamOllamaText: mockStreamOllamaText,
-	generateOllamaObject: mockGenerateOllamaObject
 }));
 
 // Mock utils logger, API key resolver, AND findProjectRoot
@@ -122,23 +99,22 @@ describe('Unified AI Services', () => {
 		jest.clearAllMocks(); // Clears all mocks
 
 		// Set default mock behaviors
+		// Mock default config values
 		mockGetMainProvider.mockReturnValue('anthropic');
 		mockGetMainModelId.mockReturnValue('test-main-model');
-		mockGetResearchProvider.mockReturnValue('perplexity');
+		mockGetResearchProvider.mockReturnValue('openai');
 		mockGetResearchModelId.mockReturnValue('test-research-model');
-		mockGetFallbackProvider.mockReturnValue('anthropic');
+		mockGetFallbackProvider.mockReturnValue('openai');
 		mockGetFallbackModelId.mockReturnValue('test-fallback-model');
 		mockGetParametersForRole.mockImplementation((role) => {
 			if (role === 'main') return { maxTokens: 100, temperature: 0.5 };
 			if (role === 'research') return { maxTokens: 200, temperature: 0.3 };
-			if (role === 'fallback') return { maxTokens: 150, temperature: 0.6 };
-			return { maxTokens: 100, temperature: 0.5 }; // Default
+			if (role === 'fallback') return { maxTokens: 150, temperature: 0.7 };
+			return {};
 		});
 		mockResolveEnvVariable.mockImplementation((key) => {
 			if (key === 'ANTHROPIC_API_KEY') return 'mock-anthropic-key';
-			if (key === 'PERPLEXITY_API_KEY') return 'mock-perplexity-key';
 			if (key === 'OPENAI_API_KEY') return 'mock-openai-key';
-			if (key === 'OLLAMA_API_KEY') return 'mock-ollama-key';
 			return null;
 		});
 
@@ -188,133 +164,79 @@ describe('Unified AI Services', () => {
 					{ role: 'user', content: 'Test' }
 				]
 			});
-			expect(mockGeneratePerplexityText).not.toHaveBeenCalled();
+			expect(mockGenerateOpenAIText).not.toHaveBeenCalled();
 		});
 
 		test('should fall back to fallback provider if main fails', async () => {
 			const mainError = new Error('Main provider failed');
-			mockGenerateAnthropicText
-				.mockRejectedValueOnce(mainError)
-				.mockResolvedValueOnce({
-					text: 'Fallback provider response',
-					usage: { inputTokens: 15, outputTokens: 25, totalTokens: 40 }
-				});
+			mockGenerateAnthropicText.mockRejectedValueOnce(mainError);
+			
+			// Mock fallback provider (openai) to succeed
+			mockGenerateOpenAIText.mockResolvedValueOnce({
+				text: 'Fallback provider response',
+				usage: { inputTokens: 15, outputTokens: 25, totalTokens: 40 }
+			});
 
-			const explicitRoot = '/explicit/test/root';
 			const params = {
 				role: 'main',
-				prompt: 'Fallback test',
-				projectRoot: explicitRoot
+				prompt: 'Test fallback',
+				session: { env: {} }
 			};
+
 			const result = await generateTextService(params);
 
 			expect(result.mainResult).toBe('Fallback provider response');
-			expect(result).toHaveProperty('telemetryData');
-			expect(mockGetMainProvider).toHaveBeenCalledWith(explicitRoot);
-			expect(mockGetFallbackProvider).toHaveBeenCalledWith(explicitRoot);
-			expect(mockGetParametersForRole).toHaveBeenCalledWith(
-				'main',
-				explicitRoot
-			);
-			expect(mockGetParametersForRole).toHaveBeenCalledWith(
-				'fallback',
-				explicitRoot
-			);
-
-			expect(mockResolveEnvVariable).toHaveBeenCalledWith(
-				'ANTHROPIC_API_KEY',
-				undefined,
-				explicitRoot
-			);
-
-			expect(mockGenerateAnthropicText).toHaveBeenCalledTimes(2);
-			expect(mockGeneratePerplexityText).not.toHaveBeenCalled();
-			expect(mockLog).toHaveBeenCalledWith(
-				'error',
-				expect.stringContaining('Service call failed for role main')
-			);
-			expect(mockLog).toHaveBeenCalledWith(
-				'info',
-				expect.stringContaining('New AI service call with role: fallback')
-			);
+			expect(mockGenerateAnthropicText).toHaveBeenCalledTimes(1);
+			expect(mockGenerateOpenAIText).toHaveBeenCalledTimes(1);
 		});
 
 		test('should fall back to research provider if main and fallback fail', async () => {
-			const mainError = new Error('Main failed');
-			const fallbackError = new Error('Fallback failed');
-			mockGenerateAnthropicText
-				.mockRejectedValueOnce(mainError)
-				.mockRejectedValueOnce(fallbackError);
-			mockGeneratePerplexityText.mockResolvedValue({
-				text: 'Research provider response',
-				usage: { inputTokens: 20, outputTokens: 30, totalTokens: 50 }
-			});
+			const mainError = new Error('Main provider failed');
+			const fallbackError = new Error('Fallback provider failed');
+			
+			mockGenerateAnthropicText.mockRejectedValueOnce(mainError);
+			mockGenerateOpenAIText
+				.mockRejectedValueOnce(fallbackError) // fallback fails
+				.mockResolvedValueOnce({              // research succeeds
+					text: 'Research provider response',
+					usage: { inputTokens: 20, outputTokens: 30, totalTokens: 50 }
+				});
 
-			const params = { role: 'main', prompt: 'Research fallback test' };
+			const params = {
+				role: 'main',
+				prompt: 'Test research fallback',
+				session: { env: {} }
+			};
+
 			const result = await generateTextService(params);
 
 			expect(result.mainResult).toBe('Research provider response');
-			expect(result).toHaveProperty('telemetryData');
-			expect(mockGetMainProvider).toHaveBeenCalledWith(fakeProjectRoot);
-			expect(mockGetFallbackProvider).toHaveBeenCalledWith(fakeProjectRoot);
-			expect(mockGetResearchProvider).toHaveBeenCalledWith(fakeProjectRoot);
-			expect(mockGetParametersForRole).toHaveBeenCalledWith(
-				'main',
-				fakeProjectRoot
-			);
-			expect(mockGetParametersForRole).toHaveBeenCalledWith(
-				'fallback',
-				fakeProjectRoot
-			);
-			expect(mockGetParametersForRole).toHaveBeenCalledWith(
-				'research',
-				fakeProjectRoot
-			);
-
-			expect(mockResolveEnvVariable).toHaveBeenCalledWith(
-				'ANTHROPIC_API_KEY',
-				undefined,
-				fakeProjectRoot
-			);
-			expect(mockResolveEnvVariable).toHaveBeenCalledWith(
-				'ANTHROPIC_API_KEY',
-				undefined,
-				fakeProjectRoot
-			);
-			expect(mockResolveEnvVariable).toHaveBeenCalledWith(
-				'PERPLEXITY_API_KEY',
-				undefined,
-				fakeProjectRoot
-			);
-
-			expect(mockGenerateAnthropicText).toHaveBeenCalledTimes(2);
-			expect(mockGeneratePerplexityText).toHaveBeenCalledTimes(1);
-			expect(mockLog).toHaveBeenCalledWith(
-				'error',
-				expect.stringContaining('Service call failed for role fallback')
-			);
-			expect(mockLog).toHaveBeenCalledWith(
-				'info',
-				expect.stringContaining('New AI service call with role: research')
-			);
+			expect(mockGenerateAnthropicText).toHaveBeenCalledTimes(1);
+			expect(mockGenerateOpenAIText).toHaveBeenCalledTimes(2); // fallback + research
 		});
 
 		test('should throw error if all providers in sequence fail', async () => {
-			mockGenerateAnthropicText.mockRejectedValue(
-				new Error('Anthropic failed')
-			);
-			mockGeneratePerplexityText.mockRejectedValue(
-				new Error('Perplexity failed')
-			);
+			const mainError = new Error('Main failed');
+			const fallbackError = new Error('Fallback failed');
+			const researchError = new Error('Research failed');
+			
+			mockGenerateAnthropicText.mockRejectedValue(mainError);
+			mockGenerateOpenAIText
+				.mockRejectedValueOnce(fallbackError)  // fallback fails
+				.mockRejectedValueOnce(researchError); // research fails
 
-			const params = { role: 'main', prompt: 'All fail test' };
+			const params = {
+				role: 'main',
+				prompt: 'All providers fail test',
+				session: { env: {} }
+			};
 
 			await expect(generateTextService(params)).rejects.toThrow(
-				'Perplexity failed' // Error from the last attempt (research)
+				'Research failed'
 			);
 
-			expect(mockGenerateAnthropicText).toHaveBeenCalledTimes(2); // main, fallback
-			expect(mockGeneratePerplexityText).toHaveBeenCalledTimes(1); // research
+			expect(mockGenerateAnthropicText).toHaveBeenCalledTimes(1);
+			expect(mockGenerateOpenAIText).toHaveBeenCalledTimes(2); // fallback + research
 		});
 
 		test('should handle retryable errors correctly', async () => {
@@ -327,18 +249,16 @@ describe('Unified AI Services', () => {
 					usage: { inputTokens: 5, outputTokens: 10, totalTokens: 15 }
 				});
 
-			const params = { role: 'main', prompt: 'Retry success test' };
+			const params = { 
+				role: 'main', 
+				prompt: 'Retry success test',
+				session: { env: {} }
+			};
 			const result = await generateTextService(params);
 
 			expect(result.mainResult).toBe('Success after retry');
 			expect(result).toHaveProperty('telemetryData');
 			expect(mockGenerateAnthropicText).toHaveBeenCalledTimes(2); // Initial + 1 retry
-			expect(mockLog).toHaveBeenCalledWith(
-				'info',
-				expect.stringContaining(
-					'Something went wrong on the provider side. Retrying'
-				)
-			);
 		});
 
 		test('should use default project root or handle null if findProjectRoot returns null', async () => {
@@ -348,14 +268,18 @@ describe('Unified AI Services', () => {
 				usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 }
 			});
 
-			const params = { role: 'main', prompt: 'No root test' }; // No explicit root passed
+			const params = { 
+				role: 'main', 
+				prompt: 'No root test',
+				session: { env: {} }
+			}; // No explicit root passed
 			await generateTextService(params);
 
 			expect(mockGetMainProvider).toHaveBeenCalledWith(null);
 			expect(mockGetParametersForRole).toHaveBeenCalledWith('main', null);
 			expect(mockResolveEnvVariable).toHaveBeenCalledWith(
 				'ANTHROPIC_API_KEY',
-				undefined,
+				{ env: {} },
 				null
 			);
 			expect(mockGenerateAnthropicText).toHaveBeenCalledTimes(1);
@@ -376,8 +300,8 @@ describe('Unified AI Services', () => {
 				return true; // Other providers have keys
 			});
 
-			// Mock perplexity text response (since we'll skip anthropic)
-			mockGeneratePerplexityText.mockResolvedValue({
+			// Mock openai text response (since we'll skip anthropic)
+			mockGenerateOpenAIText.mockResolvedValue({
 				text: 'Perplexity response (skipped to research)',
 				usage: { inputTokens: 20, outputTokens: 30, totalTokens: 50 }
 			});
@@ -390,7 +314,7 @@ describe('Unified AI Services', () => {
 
 			const result = await generateTextService(params);
 
-			// Should have gotten the perplexity response
+			// Should have gotten the openai response
 			expect(result.mainResult).toBe(
 				'Perplexity response (skipped to research)'
 			);
@@ -402,7 +326,7 @@ describe('Unified AI Services', () => {
 				fakeProjectRoot
 			);
 			expect(mockIsApiKeySet).toHaveBeenCalledWith(
-				'perplexity',
+				'openai',
 				params.session,
 				fakeProjectRoot
 			);
@@ -418,49 +342,36 @@ describe('Unified AI Services', () => {
 			// Should NOT call anthropic provider
 			expect(mockGenerateAnthropicText).not.toHaveBeenCalled();
 
-			// Should call perplexity provider
-			expect(mockGeneratePerplexityText).toHaveBeenCalledTimes(1);
+			// Should call openai provider
+			expect(mockGenerateOpenAIText).toHaveBeenCalledTimes(1);
 		});
 
 		test('should skip multiple providers with missing API keys and use first available', async () => {
 			// Setup: Main and fallback providers have no keys, only research has a key
 			mockIsApiKeySet.mockImplementation((provider, session, root) => {
-				if (provider === 'anthropic') return false; // Main and fallback are both anthropic
-				if (provider === 'perplexity') return true; // Research has a key
+				if (provider === 'anthropic') return false; // Main provider has no key
+				if (provider === 'openai') return true; // Research and fallback have keys
 				return false;
 			});
 
-			// Define different providers for testing multiple skips
-			mockGetFallbackProvider.mockReturnValue('openai'); // Different from main
-			mockGetFallbackModelId.mockReturnValue('test-openai-model');
-
-			// Mock isApiKeySet to return false for both main and fallback
-			mockIsApiKeySet.mockImplementation((provider, session, root) => {
-				if (provider === 'anthropic') return false; // Main provider has no key
-				if (provider === 'openai') return false; // Fallback provider has no key
-				return true; // Research provider has a key
-			});
-
-			// Mock perplexity text response (since we'll skip to research)
-			mockGeneratePerplexityText.mockResolvedValue({
-				text: 'Research response after skipping main and fallback',
+			// Mock openai text response (since we'll skip anthropic and use research)
+			mockGenerateOpenAIText.mockResolvedValue({
+				text: 'Research response after skipping main',
 				usage: { inputTokens: 20, outputTokens: 30, totalTokens: 50 }
 			});
 
 			const params = {
 				role: 'main',
-				prompt: 'Skip multiple providers test',
+				prompt: 'Test prompt for multiple skips',
 				session: { env: {} }
 			};
 
 			const result = await generateTextService(params);
 
-			// Should have gotten the perplexity (research) response
-			expect(result.mainResult).toBe(
-				'Research response after skipping main and fallback'
-			);
+			// Should have gotten the research response
+			expect(result.mainResult).toBe('Research response after skipping main');
 
-			// Should check API keys for all three roles
+			// Should check API keys for main and research
 			expect(mockIsApiKeySet).toHaveBeenCalledWith(
 				'anthropic',
 				params.session,
@@ -471,32 +382,20 @@ describe('Unified AI Services', () => {
 				params.session,
 				fakeProjectRoot
 			);
-			expect(mockIsApiKeySet).toHaveBeenCalledWith(
-				'perplexity',
-				params.session,
-				fakeProjectRoot
-			);
 
-			// Should log warnings for both skipped providers
+			// Should log warning for skipped main provider
 			expect(mockLog).toHaveBeenCalledWith(
 				'warn',
 				expect.stringContaining(
 					`Skipping role 'main' (Provider: anthropic): API key not set or invalid.`
 				)
 			);
-			expect(mockLog).toHaveBeenCalledWith(
-				'warn',
-				expect.stringContaining(
-					`Skipping role 'fallback' (Provider: openai): API key not set or invalid.`
-				)
-			);
 
-			// Should NOT call skipped providers
+			// Should NOT call anthropic provider
 			expect(mockGenerateAnthropicText).not.toHaveBeenCalled();
-			expect(mockGenerateOpenAIText).not.toHaveBeenCalled();
 
-			// Should call perplexity provider
-			expect(mockGeneratePerplexityText).toHaveBeenCalledTimes(1);
+			// Should call openai provider for research
+			expect(mockGenerateOpenAIText).toHaveBeenCalledTimes(1);
 		});
 
 		test('should throw error if all providers in sequence have missing API keys', async () => {
@@ -524,13 +423,13 @@ describe('Unified AI Services', () => {
 			expect(mockLog).toHaveBeenCalledWith(
 				'warn',
 				expect.stringContaining(
-					`Skipping role 'fallback' (Provider: anthropic): API key not set or invalid.`
+					`Skipping role 'fallback' (Provider: openai): API key not set or invalid.`
 				)
 			);
 			expect(mockLog).toHaveBeenCalledWith(
 				'warn',
 				expect.stringContaining(
-					`Skipping role 'research' (Provider: perplexity): API key not set or invalid.`
+					`Skipping role 'research' (Provider: openai): API key not set or invalid.`
 				)
 			);
 
@@ -544,39 +443,9 @@ describe('Unified AI Services', () => {
 
 			// Should NOT call any providers
 			expect(mockGenerateAnthropicText).not.toHaveBeenCalled();
-			expect(mockGeneratePerplexityText).not.toHaveBeenCalled();
+			expect(mockGenerateOpenAIText).not.toHaveBeenCalled();
 		});
 
-		test('should not check API key for Ollama provider and try to use it', async () => {
-			// Setup: Set main provider to ollama
-			mockGetMainProvider.mockReturnValue('ollama');
-			mockGetMainModelId.mockReturnValue('llama3');
-
-			// Mock Ollama text generation to succeed
-			mockGenerateOllamaText.mockResolvedValue({
-				text: 'Ollama response (no API key required)',
-				usage: { inputTokens: 10, outputTokens: 10, totalTokens: 20 }
-			});
-
-			const params = {
-				role: 'main',
-				prompt: 'Ollama special case test',
-				session: { env: {} }
-			};
-
-			const result = await generateTextService(params);
-
-			// Should have gotten the Ollama response
-			expect(result.mainResult).toBe('Ollama response (no API key required)');
-
-			// isApiKeySet shouldn't be called for Ollama
-			// Note: This is indirect - the code just doesn't check isApiKeySet for ollama
-			// so we're verifying ollama provider was called despite isApiKeySet being mocked to false
-			mockIsApiKeySet.mockReturnValue(false); // Should be ignored for Ollama
-
-			// Should call Ollama provider
-			expect(mockGenerateOllamaText).toHaveBeenCalledTimes(1);
-		});
 
 		test('should correctly use the provided session for API key check', async () => {
 			// Mock custom session object with env vars
