@@ -1,155 +1,225 @@
 /**
- * @fileoverview Initial Database Schema Migration
- * @description Creates the consolidated database schema from the provided db.sql
- * @version 1.0.0
+ * Migration: Initial Schema
+ * Created: 2025-05-30T13:54:00.000Z
+ * Description: Create initial database schema for Claude Task Master
  */
 
-import { readFileSync } from 'fs';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+/**
+ * Apply migration - Create initial schema
+ * @param {import('pg').PoolClient} client - Database client
+ */
+export async function up(client) {
+  // Enable required extensions
+  await client.query(`CREATE EXTENSION IF NOT EXISTS "uuid-ossp";`);
+  await client.query(`CREATE EXTENSION IF NOT EXISTS "pg_trgm";`);
+  await client.query(`CREATE EXTENSION IF NOT EXISTS "btree_gin";`);
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+  // Create custom types
+  await client.query(`
+    CREATE TYPE task_status AS ENUM (
+      'backlog',
+      'todo', 
+      'in-progress',
+      'done',
+      'deferred',
+      'cancelled'
+    );
+  `);
 
-export const up = async (client) => {
-    console.log('Running initial schema migration...');
-    
-    try {
-        // Read the consolidated schema file
-        const schemaPath = join(__dirname, '../schema/consolidated_schema.sql');
-        const schemaSQL = readFileSync(schemaPath, 'utf8');
-        
-        // Execute the schema creation
-        await client.query(schemaSQL);
-        
-        // Read and execute indexes
-        const indexesPath = join(__dirname, '../schema/indexes.sql');
-        const indexesSQL = readFileSync(indexesPath, 'utf8');
-        await client.query(indexesSQL);
-        
-        // Insert initial data
-        await client.query(`
-            -- Insert default project
-            INSERT INTO projects (name, description, repository_url, repository_name, settings)
-            VALUES (
-                'Claude Task Master',
-                'AI-powered task management system',
-                'https://github.com/Zeeeepa/claude-task-master',
-                'claude-task-master',
-                '{
-                    "default_agent": "codegen",
-                    "auto_assign": true,
-                    "validation_required": true,
-                    "max_concurrent_tasks": 10
-                }'::jsonb
-            ) ON CONFLICT (name) DO NOTHING;
-        `);
-        
-        // Insert default agent configurations
-        const projectResult = await client.query(
-            "SELECT id FROM projects WHERE name = 'Claude Task Master' LIMIT 1"
-        );
-        
-        if (projectResult.rows.length > 0) {
-            const projectId = projectResult.rows[0].id;
-            
-            await client.query(`
-                INSERT INTO agent_configurations (project_id, agent_type, agent_name, configuration, capabilities)
-                VALUES 
-                ($1, 'codegen', 'primary-codegen', '{
-                    "api_url": "https://api.codegen.sh",
-                    "timeout": 30000,
-                    "max_retries": 3,
-                    "auto_pr_creation": true
-                }'::jsonb, '[
-                    "code_generation",
-                    "pr_creation",
-                    "code_review",
-                    "testing"
-                ]'::jsonb),
-                ($1, 'claude_code', 'primary-claude', '{
-                    "model": "claude-3-sonnet",
-                    "max_tokens": 4096,
-                    "temperature": 0.1
-                }'::jsonb, '[
-                    "code_analysis",
-                    "code_generation",
-                    "debugging",
-                    "optimization"
-                ]'::jsonb),
-                ($1, 'webhook_orchestrator', 'primary-webhook', '{
-                    "github_webhook_secret": "placeholder",
-                    "linear_webhook_secret": "placeholder",
-                    "max_concurrent_webhooks": 50
-                }'::jsonb, '[
-                    "webhook_processing",
-                    "event_routing",
-                    "notification_handling"
-                ]'::jsonb),
-                ($1, 'task_manager', 'primary-task-manager', '{
-                    "max_concurrent_tasks": 10,
-                    "task_timeout": 600000,
-                    "auto_retry": true,
-                    "retry_attempts": 3
-                }'::jsonb, '[
-                    "task_scheduling",
-                    "task_execution",
-                    "dependency_management",
-                    "resource_allocation"
-                ]'::jsonb)
-                ON CONFLICT (project_id, agent_type, agent_name) DO NOTHING;
-            `, [projectId]);
-        }
-        
-        console.log('✅ Initial schema migration completed successfully');
-        
-    } catch (error) {
-        console.error('❌ Initial schema migration failed:', error);
-        throw error;
-    }
-};
+  await client.query(`
+    CREATE TYPE dependency_type AS ENUM (
+      'blocks',
+      'depends_on',
+      'related',
+      'subtask'
+    );
+  `);
 
-export const down = async (client) => {
-    console.log('Rolling back initial schema migration...');
-    
-    try {
-        // Drop all tables in reverse dependency order
-        const dropQueries = [
-            'DROP VIEW IF EXISTS pr_validation_status CASCADE;',
-            'DROP VIEW IF EXISTS task_execution_summary CASCADE;',
-            'DROP VIEW IF EXISTS active_tasks CASCADE;',
-            
-            'DROP TABLE IF EXISTS dependencies CASCADE;',
-            'DROP TABLE IF EXISTS agent_configurations CASCADE;',
-            'DROP TABLE IF EXISTS workflow_events CASCADE;',
-            'DROP TABLE IF EXISTS validations CASCADE;',
-            'DROP TABLE IF EXISTS pull_requests CASCADE;',
-            'DROP TABLE IF EXISTS task_executions CASCADE;',
-            'DROP TABLE IF EXISTS tasks CASCADE;',
-            'DROP TABLE IF EXISTS projects CASCADE;',
-            
-            'DROP FUNCTION IF EXISTS update_updated_at_column() CASCADE;',
-            
-            'DROP TYPE IF EXISTS validation_result CASCADE;',
-            'DROP TYPE IF EXISTS execution_status CASCADE;',
-            'DROP TYPE IF EXISTS pr_status CASCADE;',
-            'DROP TYPE IF EXISTS agent_type CASCADE;',
-            'DROP TYPE IF EXISTS task_status CASCADE;'
-        ];
-        
-        for (const query of dropQueries) {
-            await client.query(query);
-        }
-        
-        console.log('✅ Initial schema rollback completed successfully');
-        
-    } catch (error) {
-        console.error('❌ Initial schema rollback failed:', error);
-        throw error;
-    }
-};
+  await client.query(`
+    CREATE TYPE execution_status AS ENUM (
+      'pending',
+      'running',
+      'completed',
+      'failed',
+      'timeout',
+      'cancelled'
+    );
+  `);
 
-export const description = 'Create initial database schema with all tables, indexes, and default data';
-export const version = '001';
-export const timestamp = '20250529010000';
+  await client.query(`
+    CREATE TYPE template_type AS ENUM (
+      'task',
+      'project',
+      'workflow',
+      'test',
+      'deployment'
+    );
+  `);
+
+  // Create projects table first (referenced by tasks)
+  await client.query(`
+    CREATE TABLE projects (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name VARCHAR(255) NOT NULL UNIQUE,
+      description TEXT,
+      repository_url VARCHAR(500),
+      context JSONB,
+      architecture JSONB,
+      status VARCHAR(50) DEFAULT 'active',
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW(),
+      
+      CONSTRAINT valid_status CHECK (status IN ('active', 'inactive', 'archived', 'completed'))
+    );
+  `);
+
+  // Create tasks table
+  await client.query(`
+    CREATE TABLE tasks (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      title VARCHAR(255) NOT NULL,
+      description TEXT,
+      requirements JSONB,
+      dependencies JSONB,
+      acceptance_criteria JSONB,
+      complexity_score INTEGER DEFAULT 0,
+      status task_status DEFAULT 'backlog',
+      priority VARCHAR(50) DEFAULT 'medium',
+      parent_task_id UUID REFERENCES tasks(id) ON DELETE SET NULL,
+      project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW(),
+      created_by VARCHAR(255),
+      assigned_to VARCHAR(255),
+      details TEXT,
+      test_strategy TEXT,
+      previous_status task_status,
+      legacy_id INTEGER UNIQUE,
+      
+      CONSTRAINT valid_complexity_score CHECK (complexity_score >= 0 AND complexity_score <= 100),
+      CONSTRAINT valid_priority CHECK (priority IN ('low', 'medium', 'high', 'critical'))
+    );
+  `);
+
+  // Create subtasks relationship table
+  await client.query(`
+    CREATE TABLE subtasks (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      parent_task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+      child_task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+      order_index INTEGER DEFAULT 0,
+      created_at TIMESTAMP DEFAULT NOW(),
+      
+      CONSTRAINT no_self_reference CHECK (parent_task_id != child_task_id),
+      CONSTRAINT unique_parent_child UNIQUE (parent_task_id, child_task_id)
+    );
+  `);
+
+  // Create task dependencies table
+  await client.query(`
+    CREATE TABLE task_dependencies (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+      depends_on_task_id UUID NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+      dependency_type dependency_type DEFAULT 'blocks',
+      created_at TIMESTAMP DEFAULT NOW(),
+      
+      CONSTRAINT no_self_dependency CHECK (task_id != depends_on_task_id),
+      CONSTRAINT unique_task_dependency UNIQUE (task_id, depends_on_task_id)
+    );
+  `);
+
+  // Create templates table
+  await client.query(`
+    CREATE TABLE templates (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name VARCHAR(255) NOT NULL,
+      type template_type NOT NULL,
+      content JSONB NOT NULL,
+      usage_count INTEGER DEFAULT 0,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW(),
+      created_by VARCHAR(255),
+      
+      CONSTRAINT unique_template_name_type UNIQUE (name, type),
+      CONSTRAINT positive_usage_count CHECK (usage_count >= 0)
+    );
+  `);
+
+  // Create execution history table
+  await client.query(`
+    CREATE TABLE execution_history (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      task_id UUID REFERENCES tasks(id) ON DELETE SET NULL,
+      attempt_number INTEGER DEFAULT 1,
+      status execution_status NOT NULL,
+      error_logs JSONB,
+      success_patterns JSONB,
+      execution_time INTERVAL,
+      started_at TIMESTAMP,
+      completed_at TIMESTAMP,
+      created_at TIMESTAMP DEFAULT NOW(),
+      
+      CONSTRAINT positive_attempt_number CHECK (attempt_number > 0),
+      CONSTRAINT valid_execution_time CHECK (
+        (status = 'completed' AND completed_at IS NOT NULL AND started_at IS NOT NULL) OR
+        (status != 'completed')
+      )
+    );
+  `);
+
+  // Create learning data table
+  await client.query(`
+    CREATE TABLE learning_data (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      pattern_type VARCHAR(100) NOT NULL,
+      pattern_data JSONB NOT NULL,
+      success_rate DECIMAL(5,2),
+      usage_frequency INTEGER DEFAULT 0,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW(),
+      
+      CONSTRAINT valid_success_rate CHECK (success_rate >= 0 AND success_rate <= 100),
+      CONSTRAINT positive_usage_frequency CHECK (usage_frequency >= 0)
+    );
+  `);
+
+  // Create system config table
+  await client.query(`
+    CREATE TABLE system_config (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      key VARCHAR(100) NOT NULL UNIQUE,
+      value JSONB NOT NULL,
+      description TEXT,
+      created_at TIMESTAMP DEFAULT NOW(),
+      updated_at TIMESTAMP DEFAULT NOW()
+    );
+  `);
+
+  console.log('✅ Created all tables');
+}
+
+/**
+ * Rollback migration - Drop all tables and types
+ * @param {import('pg').PoolClient} client - Database client
+ */
+export async function down(client) {
+  // Drop tables in reverse order (respecting foreign key constraints)
+  await client.query('DROP TABLE IF EXISTS system_config CASCADE;');
+  await client.query('DROP TABLE IF EXISTS learning_data CASCADE;');
+  await client.query('DROP TABLE IF EXISTS execution_history CASCADE;');
+  await client.query('DROP TABLE IF EXISTS templates CASCADE;');
+  await client.query('DROP TABLE IF EXISTS task_dependencies CASCADE;');
+  await client.query('DROP TABLE IF EXISTS subtasks CASCADE;');
+  await client.query('DROP TABLE IF EXISTS tasks CASCADE;');
+  await client.query('DROP TABLE IF EXISTS projects CASCADE;');
+
+  // Drop custom types
+  await client.query('DROP TYPE IF EXISTS template_type CASCADE;');
+  await client.query('DROP TYPE IF EXISTS execution_status CASCADE;');
+  await client.query('DROP TYPE IF EXISTS dependency_type CASCADE;');
+  await client.query('DROP TYPE IF EXISTS task_status CASCADE;');
+
+  console.log('✅ Dropped all tables and types');
+}
 
