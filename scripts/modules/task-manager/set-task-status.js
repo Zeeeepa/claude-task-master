@@ -12,13 +12,14 @@ import {
 	isValidTaskStatus,
 	TASK_STATUS_OPTIONS
 } from '../../../src/constants/task-status.js';
+import { StorageAdapter } from '../../../src/database/services/StorageAdapter.js';
 
 /**
  * Set the status of a task
  * @param {string} tasksPath - Path to the tasks.json file
  * @param {string} taskIdInput - Task ID(s) to update
  * @param {string} newStatus - New status
- * @param {Object} options - Additional options (mcpLog for MCP mode)
+ * @param {Object} options - Additional options (mcpLog for MCP mode, projectId for database)
  * @returns {Object|undefined} Result object in MCP mode, undefined in CLI mode
  */
 async function setTaskStatus(tasksPath, taskIdInput, newStatus, options = {}) {
@@ -45,7 +46,19 @@ async function setTaskStatus(tasksPath, taskIdInput, newStatus, options = {}) {
 		}
 
 		log('info', `Reading tasks from ${tasksPath}...`);
-		const data = readJSON(tasksPath);
+		
+		// Use storage adapter to read tasks
+		const storageAdapter = new StorageAdapter();
+		let data;
+		
+		try {
+			data = await storageAdapter.readTasks(tasksPath, options.projectId);
+		} catch (error) {
+			// Fallback to file-based storage
+			console.warn(`Storage adapter failed, falling back to file-based storage: ${error.message}`);
+			data = readJSON(tasksPath);
+		}
+
 		if (!data || !data.tasks) {
 			throw new Error(`No valid tasks found in ${tasksPath}`);
 		}

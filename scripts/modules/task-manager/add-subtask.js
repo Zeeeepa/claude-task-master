@@ -3,6 +3,7 @@ import path from 'path';
 import { log, readJSON, writeJSON } from '../utils.js';
 import { isTaskDependentOn } from '../task-manager.js';
 import generateTaskFiles from './generate-task-files.js';
+import { StorageAdapter } from '../../../src/database/services/StorageAdapter.js';
 
 /**
  * Add a subtask to a parent task
@@ -11,6 +12,8 @@ import generateTaskFiles from './generate-task-files.js';
  * @param {number|string|null} existingTaskId - ID of an existing task to convert to subtask (optional)
  * @param {Object} newSubtaskData - Data for creating a new subtask (used if existingTaskId is null)
  * @param {boolean} generateFiles - Whether to regenerate task files after adding the subtask
+ * @param {Object} [options] - Additional options
+ * @param {string} [options.projectId] - Project ID for database storage
  * @returns {Object} The newly created or converted subtask
  */
 async function addSubtask(
@@ -18,13 +21,24 @@ async function addSubtask(
 	parentId,
 	existingTaskId = null,
 	newSubtaskData = null,
-	generateFiles = true
+	generateFiles = true,
+	options = {}
 ) {
 	try {
 		log('info', `Adding subtask to parent task ${parentId}...`);
 
-		// Read the existing tasks
-		const data = readJSON(tasksPath);
+		// Use storage adapter to read tasks
+		const storageAdapter = new StorageAdapter();
+		let data;
+		
+		try {
+			data = await storageAdapter.readTasks(tasksPath, options.projectId);
+		} catch (error) {
+			// Fallback to file-based storage
+			console.warn(`Storage adapter failed, falling back to file-based storage: ${error.message}`);
+			data = readJSON(tasksPath);
+		}
+
 		if (!data || !data.tasks) {
 			throw new Error(`Invalid or missing tasks file at ${tasksPath}`);
 		}

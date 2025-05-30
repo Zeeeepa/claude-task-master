@@ -19,6 +19,8 @@ import {
 	createProgressBar
 } from '../ui.js';
 
+import { StorageAdapter } from '../../../src/database/services/StorageAdapter.js';
+
 /**
  * List all tasks
  * @param {string} tasksPath - Path to the tasks.json file
@@ -26,14 +28,17 @@ import {
  * @param {string} reportPath - Path to the complexity report
  * @param {boolean} withSubtasks - Whether to show subtasks
  * @param {string} outputFormat - Output format (text or json)
+ * @param {Object} [options] - Additional options
+ * @param {string} [options.projectId] - Project ID for database storage
  * @returns {Object} - Task list result for json format
  */
-function listTasks(
+async function listTasks(
 	tasksPath,
 	statusFilter,
 	reportPath = null,
 	withSubtasks = false,
-	outputFormat = 'text'
+	outputFormat = 'text',
+	options = {}
 ) {
 	try {
 		// Only display banner for text output
@@ -41,7 +46,18 @@ function listTasks(
 			displayBanner();
 		}
 
-		const data = readJSON(tasksPath); // Reads the whole tasks.json
+		// Use storage adapter to read tasks
+		const storageAdapter = new StorageAdapter();
+		let data;
+		
+		try {
+			data = await storageAdapter.readTasks(tasksPath, options.projectId);
+		} catch (error) {
+			// Fallback to file-based storage
+			console.warn(`Storage adapter failed, falling back to file-based storage: ${error.message}`);
+			data = readJSON(tasksPath);
+		}
+
 		if (!data || !data.tasks) {
 			throw new Error(`No valid tasks found in ${tasksPath}`);
 		}

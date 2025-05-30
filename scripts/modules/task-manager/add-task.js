@@ -16,6 +16,7 @@ import { readJSON, writeJSON, log as consoleLog, truncate } from '../utils.js';
 import { generateObjectService } from '../ai-services-unified.js';
 import { getDefaultPriority } from '../config-manager.js';
 import generateTaskFiles from './generate-task-files.js';
+import { StorageAdapter } from '../../../src/database/services/StorageAdapter.js';
 
 // Define Zod schema for the expected AI output object
 const AiTaskDataSchema = z.object({
@@ -54,6 +55,7 @@ const AiTaskDataSchema = z.object({
  * @param {string} [context.projectRoot] - Project root path (for MCP/env fallback)
  * @param {string} [context.commandName] - The name of the command being executed (for telemetry)
  * @param {string} [context.outputType] - The output type ('cli' or 'mcp', for telemetry)
+ * @param {string} [context.projectId] - Project ID for database storage
  * @returns {Promise<object>} An object containing newTaskId and telemetryData
  */
 async function addTask(
@@ -66,7 +68,7 @@ async function addTask(
 	manualTaskData = null,
 	useResearch = false
 ) {
-	const { session, mcpLog, projectRoot, commandName, outputType } = context;
+	const { session, mcpLog, projectRoot, commandName, outputType, projectId } = context;
 	const isMCP = !!mcpLog;
 
 	// Create a consistent logFn object regardless of context
@@ -161,8 +163,17 @@ async function addTask(
 	}
 
 	try {
-		// Read the existing tasks
-		let data = readJSON(tasksPath);
+		// Use storage adapter to read tasks
+		const storageAdapter = new StorageAdapter();
+		let data;
+		
+		try {
+			data = await storageAdapter.readTasks(tasksPath, projectId);
+		} catch (error) {
+			// Fallback to file-based storage
+			console.warn(`Storage adapter failed, falling back to file-based storage: ${error.message}`);
+			data = readJSON(tasksPath);
+		}
 
 		// If tasks.json doesn't exist or is invalid, create a new one
 		if (!data || !data.tasks) {
@@ -172,8 +183,13 @@ async function addTask(
 				tasks: []
 			};
 			// Ensure the directory exists and write the new file
-			writeJSON(tasksPath, data);
-			report('Created new tasks.json file with empty tasks array.', 'info');
+			if (storageAdapter.isDatabase) {
+				// For database storage, we don't need to write an empty file
+				report('Using database storage - no file creation needed.', 'info');
+			} else {
+				writeJSON(tasksPath, data);
+				report('Created new tasks.json file with empty tasks array.', 'info');
+			}
 		}
 
 		// Find the highest task ID to determine the next ID
@@ -1023,13 +1039,27 @@ async function addTask(
 			}
 		}
 
-		// Add the task to the tasks array
-		data.tasks.push(newTask);
+		// Add the task to the tasks array or database
+		if (storageAdapter.isDatabase) {
+			// For database storage, use the storage adapter to add the task
+			try {
+				const createdTask = await storageAdapter.addTask(tasksPath, newTask, projectId);
+				// Update newTask with the created task data (including any database-generated fields)
+				Object.assign(newTask, createdTask);
+				report('DEBUG: Task added to database.', 'debug');
+			} catch (error) {
+				report(`Failed to add task to database: ${error.message}`, 'error');
+				throw error;
+			}
+		} else {
+			// For file storage, add to the data array and write to file
+			data.tasks.push(newTask);
 
-		report('DEBUG: Writing tasks.json...', 'debug');
-		// Write the updated tasks to the file
-		writeJSON(tasksPath, data);
-		report('DEBUG: tasks.json written.', 'debug');
+			report('DEBUG: Writing tasks.json...', 'debug');
+			// Write the updated tasks to the file
+			writeJSON(tasksPath, data);
+			report('DEBUG: tasks.json written.', 'debug');
+		}
 
 		// Generate markdown task files
 		report('Generating task files...', 'info');
