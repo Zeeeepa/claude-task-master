@@ -26,6 +26,7 @@ import {
 	isApiKeySet // Keep this check
 } from '../config-manager.js';
 import generateTaskFiles from './generate-task-files.js';
+import { StorageAdapter } from '../../../src/database/services/StorageAdapter.js';
 
 // Zod schema for post-parsing validation of the updated task object
 const updatedTaskSchema = z

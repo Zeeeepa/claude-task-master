@@ -4,14 +4,17 @@ import path from 'path';
 import { log, readJSON, writeJSON } from '../utils.js';
 import generateTaskFiles from './generate-task-files.js';
 import taskExists from './task-exists.js';
+import { StorageAdapter } from '../../../src/database/services/StorageAdapter.js';
 
 /**
  * Removes one or more tasks or subtasks from the tasks file
  * @param {string} tasksPath - Path to the tasks file
  * @param {string} taskIds - Comma-separated string of task/subtask IDs to remove (e.g., '5,6.1,7')
+ * @param {Object} [options] - Additional options
+ * @param {string} [options.projectId] - Project ID for database storage
  * @returns {Object} Result object with success status, messages, and removed task info
  */
-async function removeTask(tasksPath, taskIds) {
+async function removeTask(tasksPath, taskIds, options = {}) {
 	const results = {
 		success: true,
 		messages: [],
@@ -30,8 +33,18 @@ async function removeTask(tasksPath, taskIds) {
 	}
 
 	try {
-		// Read the tasks file ONCE before the loop
-		const data = readJSON(tasksPath);
+		// Use storage adapter to read tasks
+		const storageAdapter = new StorageAdapter();
+		let data;
+		
+		try {
+			data = await storageAdapter.readTasks(tasksPath, options.projectId);
+		} catch (error) {
+			// Fallback to file-based storage
+			console.warn(`Storage adapter failed, falling back to file-based storage: ${error.message}`);
+			data = readJSON(tasksPath);
+		}
+
 		if (!data || !data.tasks) {
 			throw new Error(`No valid tasks found in ${tasksPath}`);
 		}
@@ -40,7 +53,8 @@ async function removeTask(tasksPath, taskIds) {
 
 		for (const taskId of taskIdsToRemove) {
 			// Check if the task ID exists *before* attempting removal
-			if (!taskExists(data.tasks, taskId)) {
+			const exists = await taskExists(data.tasks, taskId, options);
+			if (!exists) {
 				const errorMsg = `Task with ID ${taskId} not found or already removed.`;
 				results.errors.push(errorMsg);
 				results.success = false; // Mark overall success as false if any error occurs
