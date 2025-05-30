@@ -15,6 +15,9 @@ import { generateTextService } from '../ai-services-unified.js';
 
 import { getDebugFlag, getProjectName } from '../config-manager.js';
 
+// Enhanced complexity analysis with ML models and dependency analysis
+import { RequirementProcessor } from '../../../src/ai_cicd_system/core/requirement_processor.js';
+
 /**
  * Generates the prompt for complexity analysis.
  * (Moved from ai-services.js and simplified)
@@ -341,6 +344,57 @@ async function analyzeTaskComplexity(options, context = {}) {
 		const prompt = generateInternalComplexityAnalysisPrompt(tasksData);
 		const systemPrompt =
 			'You are an expert software architect and project manager analyzing task complexity. Respond only with the requested valid JSON array.';
+
+		// Enhanced complexity analysis with ML models and dependency analysis
+		let enhancedAnalysis = null;
+		try {
+			reportLog('Performing enhanced complexity analysis with RequirementProcessor...', 'info');
+			const requirementProcessor = new RequirementProcessor({
+				enableComplexityEstimation: true,
+				enableDependencyAnalysis: true,
+				enableEntityExtraction: true
+			});
+			
+			await requirementProcessor.initialize?.();
+			
+			// Analyze each task for enhanced complexity estimation
+			const enhancedTasks = [];
+			for (const task of tasksData.tasks) {
+				try {
+					const taskAnalysis = await requirementProcessor.estimateComplexity({
+						title: task.title,
+						description: task.description,
+						details: task.details || '',
+						dependencies: task.dependencies || []
+					});
+					
+					enhancedTasks.push({
+						...task,
+						enhancedComplexity: taskAnalysis.complexity,
+						confidenceScore: taskAnalysis.confidence,
+						dependencyComplexity: taskAnalysis.dependencyComplexity,
+						integrationRequirements: taskAnalysis.integrationRequirements
+					});
+				} catch (error) {
+					reportLog(`Enhanced analysis failed for task ${task.id}: ${error.message}`, 'warn');
+					enhancedTasks.push(task);
+				}
+			}
+			
+			enhancedAnalysis = {
+				tasks: enhancedTasks,
+				metadata: {
+					...tasksData.metadata,
+					enhancedAnalysisPerformed: true,
+					enhancedAnalysisTimestamp: new Date().toISOString()
+				}
+			};
+			
+			reportLog(`Enhanced analysis completed for ${enhancedTasks.length} tasks`, 'info');
+		} catch (error) {
+			reportLog(`Enhanced complexity analysis failed, falling back to standard analysis: ${error.message}`, 'warn');
+			enhancedAnalysis = tasksData;
+		}
 
 		let loadingIndicator = null;
 		if (outputFormat === 'text') {

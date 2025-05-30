@@ -19,6 +19,9 @@ import { getDebugFlag } from '../config-manager.js';
 import generateTaskFiles from './generate-task-files.js';
 import { displayAiUsageSummary } from '../ui.js';
 
+// Enhanced integration with RequirementProcessor
+import { RequirementProcessor } from '../../../src/ai_cicd_system/core/requirement_processor.js';
+
 // Define the Zod schema for a SINGLE task object
 const prdSingleTaskSchema = z.object({
 	id: z.number().int().positive(),
@@ -150,6 +153,36 @@ async function parsePRD(prdPath, tasksPath, numTasks, options = {}) {
 		const prdContent = fs.readFileSync(prdPath, 'utf8');
 		if (!prdContent) {
 			throw new Error(`Input file ${prdPath} is empty or could not be read.`);
+		}
+
+		// Enhanced PRD processing with RequirementProcessor integration
+		let processedRequirements = null;
+		let technicalSpecs = null;
+		let integrationPoints = null;
+		
+		try {
+			report('Initializing RequirementProcessor for enhanced analysis...', 'info');
+			const requirementProcessor = new RequirementProcessor({
+				enableEntityExtraction: true,
+				enableKeywordExtraction: true,
+				enableComplexityEstimation: true,
+				enableDependencyAnalysis: true
+			});
+			
+			await requirementProcessor.initialize?.();
+			
+			// Process requirements with enhanced analysis
+			processedRequirements = await requirementProcessor.parseRequirements(prdContent);
+			
+			if (processedRequirements) {
+				technicalSpecs = processedRequirements.technicalSpecs || [];
+				integrationPoints = processedRequirements.integrationPoints || [];
+				
+				report(`Enhanced analysis completed: ${technicalSpecs.length} technical specs, ${integrationPoints.length} integration points identified`, 'info');
+			}
+		} catch (error) {
+			report(`RequirementProcessor enhancement failed, falling back to standard processing: ${error.message}`, 'warn');
+			// Continue with standard processing
 		}
 
 		// Research-specific enhancements to the system prompt

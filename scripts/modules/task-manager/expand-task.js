@@ -15,6 +15,9 @@ import { generateTextService } from '../ai-services-unified.js';
 import { getDefaultSubtasks, getDebugFlag } from '../config-manager.js';
 import generateTaskFiles from './generate-task-files.js';
 
+// Enhanced task expansion with TaskDecomposer integration
+import { TaskDecomposer } from '../../../src/orchestration/TaskDecomposer.js';
+
 // --- Zod Schemas (Keep from previous step) ---
 const subtaskSchema = z
 	.object({
@@ -572,51 +575,120 @@ async function expandTask(
 			);
 		}
 
+		// Enhanced task expansion with TaskDecomposer integration
+		let enhancedSubtasks = null;
+		try {
+			logger.info('Attempting enhanced task expansion with TaskDecomposer...');
+			const taskDecomposer = new TaskDecomposer({
+				maxSubtasksPerTask: finalSubtaskCount,
+				enableDependencyAnalysis: true,
+				enableComplexityEstimation: true,
+				enablePriorityAssignment: true
+			});
+			
+			await taskDecomposer.initialize?.();
+			
+			// Convert task to requirements format for decomposition
+			const taskRequirements = {
+				functionalRequirements: [{
+					title: task.title,
+					description: task.description,
+					details: task.details || '',
+					complexity: task.complexity || 5,
+					estimatedHours: task.estimatedHours || 4
+				}],
+				metadata: {
+					parentTaskId: task.id,
+					targetSubtasks: finalSubtaskCount,
+					additionalContext: additionalContext
+				}
+			};
+			
+			// Generate subtasks using TaskDecomposer
+			const decomposedTasks = await taskDecomposer.decomposeRequirements(taskRequirements);
+			
+			if (decomposedTasks && decomposedTasks.length > 0) {
+				// Convert decomposed tasks to subtask format
+				enhancedSubtasks = decomposedTasks.map((decomposedTask, index) => ({
+					id: (task.subtasks?.length || 0) + index + 1,
+					title: decomposedTask.title,
+					description: decomposedTask.description,
+					dependencies: decomposedTask.dependencies.filter(depId => 
+						depId >= (task.subtasks?.length || 0) + 1 && 
+						depId <= (task.subtasks?.length || 0) + decomposedTasks.length
+					),
+					details: decomposedTask.metadata?.details || `Implementation details for ${decomposedTask.title}`,
+					status: 'pending',
+					testStrategy: decomposedTask.metadata?.testStrategy || `Test strategy for ${decomposedTask.title}`,
+					enhancedGeneration: true,
+					complexity: decomposedTask.complexity,
+					priority: decomposedTask.priority
+				}));
+				
+				logger.info(`TaskDecomposer generated ${enhancedSubtasks.length} enhanced subtasks`);
+			}
+		} catch (error) {
+			logger.warn(`TaskDecomposer enhancement failed, falling back to standard generation: ${error.message}`);
+			enhancedSubtasks = null;
+		}
+
 		let responseText = '';
 		let aiServiceResponse = null;
 
-		try {
-			const role = useResearch ? 'research' : 'main';
-
-			// Call generateTextService with the determined prompts and telemetry params
-			aiServiceResponse = await generateTextService({
-				prompt: promptContent,
-				systemPrompt: systemPrompt,
-				role,
-				session,
-				projectRoot,
-				commandName: 'expand-task',
-				outputType: outputFormat
-			});
-			responseText = aiServiceResponse.mainResult;
-
-			// Parse Subtasks
-			generatedSubtasks = parseSubtasksFromText(
-				responseText,
-				nextSubtaskId,
-				finalSubtaskCount,
-				task.id,
-				logger
-			);
-			logger.info(
-				`Successfully parsed ${generatedSubtasks.length} subtasks from AI response.`
-			);
-		} catch (error) {
-			if (loadingIndicator) stopLoadingIndicator(loadingIndicator);
-			logger.error(
-				`Error during AI call or parsing for task ${taskId}: ${error.message}`, // Added task ID context
-				'error'
-			);
-			// Log raw response in debug mode if parsing failed
-			if (
-				error.message.includes('Failed to parse valid subtasks') &&
-				getDebugFlag(session)
-			) {
-				logger.error(`Raw AI Response that failed parsing:\n${responseText}`);
+		// Use enhanced subtasks if available, otherwise proceed with AI generation
+		if (enhancedSubtasks && enhancedSubtasks.length > 0) {
+			generatedSubtasks = enhancedSubtasks;
+			logger.info(`Using ${generatedSubtasks.length} enhanced subtasks from TaskDecomposer`);
+			
+			if (loadingIndicator) {
+				stopLoadingIndicator(loadingIndicator);
+				loadingIndicator = null;
 			}
-			throw error;
-		} finally {
-			if (loadingIndicator) stopLoadingIndicator(loadingIndicator);
+		} else {
+			// Proceed with standard AI generation
+			try {
+				const role = useResearch ? 'research' : 'main';
+
+				// Call generateTextService with the determined prompts and telemetry params
+				aiServiceResponse = await generateTextService({
+					prompt: promptContent,
+					systemPrompt: systemPrompt,
+					role,
+					session,
+					projectRoot,
+					commandName: 'expand-task',
+					outputType: outputFormat
+				});
+				responseText = aiServiceResponse.mainResult;
+
+				// Parse Subtasks
+				generatedSubtasks = parseSubtasksFromText(
+					responseText,
+					nextSubtaskId,
+					finalSubtaskCount,
+					task.id,
+					logger
+				);
+				logger.info(
+					`Successfully parsed ${generatedSubtasks.length} subtasks from AI response.`
+				);
+			} catch (error) {
+				if (loadingIndicator) stopLoadingIndicator(loadingIndicator);
+				logger.error(
+					`Error during AI call or parsing for task ${taskId}: ${error.message}`, // Added task ID context
+					'error'
+				);
+				// Log raw response in debug mode if parsing failed
+				if (
+					error.message.includes('Failed to parse valid subtasks') &&
+					getDebugFlag(session)
+				) {
+					logger.error(`Raw AI Response that failed parsing:\n${responseText}`);
+				}
+				throw error;
+			} finally {
+				if (loadingIndicator) stopLoadingIndicator(loadingIndicator);
+			}
 		}
 
 		// --- Task Update & File Writing ---
