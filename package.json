@@ -11,9 +11,15 @@
     "db:validate": "node src/database/migrations/migration_runner.js validate",
     "db:create-migration": "node src/database/migrations/migration_runner.js create",
     "db:init": "npm run db:migrate",
+    "db:setup": "node database/scripts/setup_database.js setup",
+    "db:reset": "node database/scripts/setup_database.js reset",
+    "db:verify": "node database/scripts/setup_database.js verify",
+    "db:migrate-files": "node database/scripts/migrate_from_files.js",
+    "db:seed": "psql $DATABASE_URL -f database/seeds/001_initial_components.sql",
     "test": "jest",
     "test:coverage": "jest --coverage",
     "test:database": "jest src/database/",
+    "test:db-new": "node --test database/tests/*.test.js",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
     "start": "node src/index.js",
@@ -53,4 +59,3 @@
   },
   "homepage": "https://github.com/Zeeeepa/claude-task-master#readme"
 }
-

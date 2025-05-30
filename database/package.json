@@ -1,0 +1,40 @@
+{
+  "name": "@taskmaster/database",
+  "version": "1.0.0",
+  "description": "PostgreSQL database layer for the Unified CI/CD Orchestration System",
+  "type": "module",
+  "main": "lib/DatabaseManager.js",
+  "scripts": {
+    "setup": "node scripts/setup_database.js setup",
+    "reset": "node scripts/setup_database.js reset",
+    "verify": "node scripts/setup_database.js verify",
+    "migrate": "node scripts/migrate_from_files.js",
+    "seed": "psql $DATABASE_URL -f seeds/001_initial_components.sql",
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "pg": "^8.11.3"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "database",
+    "postgresql",
+    "migration",
+    "orm",
+    "taskmaster",
+    "cicd"
+  ],
+  "author": "Taskmaster Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Zeeeepa/claude-task-master.git",
+    "directory": "database"
+  }
+}
+
