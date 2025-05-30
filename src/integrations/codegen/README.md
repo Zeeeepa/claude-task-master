@@ -1,385 +1,443 @@
-# Consolidated Codegen SDK Integration
+# Codegen SDK Integration & AI Development Engine
 
-## Overview
+This directory contains the comprehensive Codegen SDK integration that enables automated code generation, PR creation, and intelligent development workflows for the claude-task-master project.
 
-This is the **unified Codegen SDK integration** that consolidates and eliminates duplication from 6 overlapping PRs (#52, #54, #55, #82, #86, #87). It provides a comprehensive, production-ready system for converting natural language task descriptions into pull requests through intelligent analysis, prompt generation, and code creation.
+## 🎯 Overview
 
-## 🎯 Consolidation Achievement
+The Codegen integration serves as an AI-powered development engine that converts natural language requirements from Linear issues into working code implementations. It provides a complete workflow from requirement analysis to PR creation and deployment validation.
 
-### ✅ **ZERO DUPLICATION** - Successfully consolidated:
-- **6 PRs** → **1 unified system**
-- **Multiple authentication implementations** → **Single AuthenticationManager**
-- **Overlapping configuration systems** → **Unified ConfigurationManager**
-- **Redundant NLP processing** → **Single TaskAnalyzer**
-- **Multiple prompt generators** → **Unified PromptGenerator**
-- **Duplicate PR creation logic** → **Single PRManager**
-- **Inconsistent error handling** → **Unified ErrorHandler**
-- **Multiple rate limiting systems** → **Single RateLimitManager**
+## 🏗️ Architecture
 
-### 🏗️ **Unified Architecture**
+### Core Components
+
+1. **CodegenIntegration** (`client.js`) - Main SDK wrapper for Codegen API
+2. **AIDevelopmentEngine** (`engine.js`) - Orchestrates the complete development workflow
+3. **CodegenMonitor** (`monitor.js`) - Real-time progress tracking and status updates
+4. **RequirementFormatter** (`formatter.js`) - Formats requirements for optimal Codegen processing
+5. **CodegenAuthMiddleware** (`../middleware/codegen-auth.js`) - Authentication and rate limiting
+6. **RequirementParser** (`../utils/requirement-parser.js`) - Parses Linear issues into structured requirements
+
+### Integration Flow
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                 CodegenIntegration                          │
-│                 (Main Orchestrator)                         │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-    ┌─────────────────┼─────────────────┐
-    │                 │                 │
-    ▼                 ▼                 ▼
-┌─────────┐    ┌─────────────┐    ┌─────────────┐
-│  Auth   │    │    NLP      │    │    Core     │
-│Manager  │    │ Processing  │    │ Components  │
-└─────────┘    └─────────────┘    └─────────────┘
-    │               │                     │
-    │               ▼                     ▼
-    │        ┌─────────────┐      ┌─────────────┐
-    │        │TaskAnalyzer │      │PromptGen    │
-    │        └─────────────┘      │PRManager    │
-    │                             │ContextMgr   │
-    ▼                             └─────────────┘
-┌─────────────┐                         │
-│ConfigMgr    │                         ▼
-│RateLimiter  │                  ┌─────────────┐
-│ErrorHandler │                  │Monitoring   │
-│MetricsCol   │                  │& Metrics    │
-└─────────────┘                  └─────────────┘
+Linear Issue → Requirement Parser → AI Development Engine → Codegen API
+     ↓                                        ↓
+Linear Updates ← Progress Monitor ← Code Generation ← PR Creation
 ```
 
 ## 🚀 Quick Start
 
-### Installation
-
-```bash
-npm install
-```
-
 ### Basic Usage
 
 ```javascript
-import { CodegenIntegration } from './src/integrations/codegen/index.js';
+import { createCodegenIntegration } from './src/integrations/codegen/index.js';
 
-// Create integration instance
-const codegen = new CodegenIntegration({
-    api: {
-        apiKey: process.env.CODEGEN_API_KEY,
-        baseUrl: 'https://api.codegen.sh'
-    },
-    authentication: {
-        orgId: process.env.CODEGEN_ORG_ID
-    }
-});
-
-// Initialize
-await codegen.initialize();
-
-// Process a task
-const result = await codegen.processTask({
-    id: 'task-123',
-    description: 'Create a user authentication system with JWT tokens',
-    type: 'feature'
+// Initialize with dependencies
+const components = await createCodegenIntegration({
+    database: databaseClient,
+    linearClient: linearClient
 }, {
-    repository: 'my-org/my-repo',
-    baseBranch: 'main'
+    apiKey: process.env.CODEGEN_API_KEY,
+    orgId: process.env.CODEGEN_ORG_ID
 });
 
-console.log(`PR created: ${result.prResult.url}`);
+// Process a Linear issue
+const result = await components.engine.processLinearTask('linear-issue-id');
+console.log('Task processing initiated:', result);
 ```
 
-### Environment Configuration
+### Factory Pattern
+
+```javascript
+import { CodegenIntegrationFactory } from './src/integrations/codegen/index.js';
+
+const factory = new CodegenIntegrationFactory({
+    enableAutoInit: true,
+    enableHealthChecks: true
+});
+
+const components = await factory.initialize({
+    database: databaseClient,
+    linearClient: linearClient
+});
+
+// Access individual components
+const client = factory.getComponent('client');
+const engine = factory.getComponent('engine');
+const monitor = factory.getComponent('monitor');
+```
+
+## 📋 Configuration
+
+### Environment Variables
 
 ```bash
 # Required
-CODEGEN_API_KEY=your-api-key
-CODEGEN_ORG_ID=your-org-id
+CODEGEN_API_KEY=your_codegen_api_key
+CODEGEN_ORG_ID=your_organization_id
 
 # Optional
 CODEGEN_API_URL=https://api.codegen.sh
-CODEGEN_TIMEOUT=30000
-CODEGEN_MOCK_MODE=false
-CODEGEN_DEBUG_MODE=false
-CODEGEN_RATE_LIMITING=true
+CODEGEN_MODE=production
+CODEGEN_ENABLE_MOCK=false
+
+# Rate Limiting
+CODEGEN_REQUESTS_PER_MINUTE=60
+CODEGEN_REQUESTS_PER_HOUR=1000
+
+# Retry Configuration
+CODEGEN_MAX_RETRIES=3
+CODEGEN_RETRY_BASE_DELAY=1000
+
+# Polling Configuration
+CODEGEN_POLL_INTERVAL=10000
+CODEGEN_MAX_WAIT_TIME=600000
+
+# Feature Flags
+LINEAR_INTEGRATION_ENABLED=true
+GITHUB_INTEGRATION_ENABLED=true
 ```
 
-## 📋 Features Consolidated
-
-### From PR #52 - Core Integration
-- ✅ **Authentication management** → `AuthenticationManager`
-- ✅ **API client with retry logic** → `CodegenClient`
-- ✅ **Prompt generation** → `PromptGenerator`
-- ✅ **PR management** → `PRManager`
-- ✅ **Feedback handling** → `ErrorHandler`
-
-### From PR #54 - Natural Language Processing
-- ✅ **Task classification** → `TaskAnalyzer.analyzeIntent()`
-- ✅ **Requirement extraction** → `TaskAnalyzer.extractRequirements()`
-- ✅ **Branch management** → `PRManager.processPRResult()`
-- ✅ **Code quality validation** → `PromptGenerator.buildQualitySection()`
-- ✅ **Configuration management** → `ConfigurationManager`
-
-### From PR #55 - Enhanced Processing
-- ✅ **Generation rules** → `PromptGenerator.optimizationRules`
-- ✅ **Task polling** → Available via `processBatch()`
-- ✅ **Advanced NLP** → `TaskAnalyzer` comprehensive analysis
-- ✅ **Quality validation** → Integrated in prompt generation
-
-### From PR #82 - AgentAPI Integration
-- ✅ **Middleware patterns** → `ErrorHandler` and `RateLimitManager`
-- ✅ **Environment management** → `ConfigurationManager.getEnvironmentConfig()`
-- ✅ **Monitoring** → `MetricsCollector`
-
-### From PR #86 - Comprehensive SDK
-- ✅ **Detailed documentation** → This README and inline docs
-- ✅ **Configuration management** → `ConfigurationManager`
-- ✅ **API reference patterns** → Comprehensive method documentation
-- ✅ **Natural language workflow** → Complete `processTask()` pipeline
-
-### From PR #87 - Production Configuration
-- ✅ **Enhanced configuration** → `ConfigurationManager` with validation
-- ✅ **Authentication patterns** → `AuthenticationManager`
-- ✅ **Rate limiting** → `RateLimitManager`
-- ✅ **Error handling** → `ErrorHandler`
-- ✅ **Monitoring** → `MetricsCollector`
-
-## 🔧 Configuration
-
-### Complete Configuration Example
+### Programmatic Configuration
 
 ```javascript
-const config = {
-    // API Configuration
+import { createCodegenConfig } from './src/config/codegen.js';
+
+const config = createCodegenConfig({
+    mode: 'production',
     api: {
-        apiKey: 'your-api-key',
-        baseUrl: 'https://api.codegen.sh',
-        timeout: 30000,
-        retries: 3
+        baseURL: 'https://api.codegen.sh',
+        timeout: 120000
     },
-    
-    // Authentication
-    authentication: {
-        orgId: 'your-org-id',
-        validateOnInit: true,
-        tokenRefresh: true
-    },
-    
-    // Rate Limiting
     rateLimiting: {
         enabled: true,
-        requestsPerSecond: 2,
-        requestsPerMinute: 60,
-        requestsPerHour: 1000
+        requestsPerMinute: 60
     },
-    
-    // Natural Language Processing
-    nlp: {
-        enabled: true,
-        maxContextLength: 8000,
-        confidenceThreshold: 0.7,
-        enableComplexityAnalysis: true
-    },
-    
-    // Prompt Generation
-    promptGeneration: {
-        enabled: true,
-        maxPromptLength: 8000,
-        enableOptimization: true,
-        includeExamples: false
-    },
-    
-    // Error Handling
-    errorHandling: {
-        enabled: true,
-        maxRetries: 3,
-        exponentialBackoff: true,
-        circuitBreakerThreshold: 5
-    },
-    
-    // Monitoring
-    monitoring: {
-        enabled: true,
-        enableMetrics: true,
-        metricsInterval: 60000
+    features: {
+        enableProgressUpdates: true,
+        enableAutoMerge: false
     }
-};
+});
 ```
 
-## 📊 API Reference
+## 🔧 Component Details
 
-### CodegenIntegration
+### CodegenIntegration (client.js)
 
-#### Methods
-
-- `initialize()` - Initialize the integration
-- `processTask(task, options)` - Process a single task
-- `processBatch(tasks, options)` - Process multiple tasks
-- `getStatistics()` - Get processing statistics
-- `getHealth()` - Get health status
-- `shutdown()` - Shutdown the integration
-
-#### Events
-
-- `initialized` - Integration initialized
-- `task:completed` - Task processed successfully
-- `task:failed` - Task processing failed
-- `error` - Error occurred
-
-### Task Processing Pipeline
+Main SDK wrapper that handles:
+- Code generation requests
+- Task monitoring
+- PR creation
+- Health checks
 
 ```javascript
-// 1. Task Analysis
-const analysis = await taskAnalyzer.analyzeTask(description, context);
+const client = new CodegenIntegration(apiKey, orgId, options);
 
-// 2. Context Building
-const context = await contextManager.buildContext(task, analysis);
+// Generate code from requirements
+const task = await client.generateCode({
+    title: 'User Authentication',
+    description: 'Implement JWT-based authentication',
+    technicalSpecs: ['Use bcrypt', 'Add middleware'],
+    acceptanceCriteria: ['Secure login', 'Token validation']
+});
 
-// 3. Prompt Generation
-const prompt = await promptGenerator.generatePrompt(analysis, context);
+// Monitor task progress
+const status = await client.monitorTask(task.id);
 
-// 4. Codegen API Call
-const codegenResult = await client.createPR(prompt);
+// Create PR when complete
+const pr = await client.createPR(taskData);
+```
 
-// 5. PR Processing
-const prResult = await prManager.processPRResult(codegenResult);
+### AIDevelopmentEngine (engine.js)
+
+Orchestrates the complete workflow:
+- Processes Linear issues
+- Extracts requirements
+- Manages code generation
+- Handles PR creation
+- Updates Linear with progress
+
+```javascript
+const engine = new AIDevelopmentEngine(client, database, linearClient);
+
+// Process a Linear issue end-to-end
+const result = await engine.processLinearTask('linear-issue-id');
+
+// Monitor active tasks
+const activeTasks = engine.activeTasks;
+```
+
+### CodegenMonitor (monitor.js)
+
+Real-time progress tracking:
+- Polls Codegen tasks for updates
+- Updates database with progress
+- Posts progress comments to Linear
+- Handles completion and failures
+
+```javascript
+const monitor = new CodegenMonitor(client, database, linearClient);
+
+// Start monitoring a task
+monitor.startMonitoring('codegen-task-id', 'internal-task-id', {
+    onProgress: (task) => console.log('Progress:', task.progress),
+    onComplete: (task) => console.log('Completed:', task.id)
+});
+```
+
+### RequirementFormatter (formatter.js)
+
+Formats requirements for optimal Codegen processing:
+- Detects requirement types (feature, bugfix, refactor, etc.)
+- Applies appropriate templates
+- Formats prompts for maximum clarity
+
+```javascript
+const formatter = new RequirementFormatter();
+
+// Format Linear issue for Codegen
+const prompt = formatter.formatLinearIssue(linearIssue, {
+    repository: 'my-repo',
+    branch: 'feature-branch'
+});
 ```
 
 ## 🧪 Testing
 
-### Run Tests
+### Running Tests
 
 ```bash
-# Unit tests
-npm test
+# Run all Codegen integration tests
+npm test tests/integrations/codegen/
 
-# Integration tests
-npm run test:integration
-
-# Coverage
-npm run test:coverage
+# Run specific test files
+npm test tests/integrations/codegen/client.test.js
+npm test tests/integrations/codegen/engine.test.js
+npm test tests/utils/requirement-parser.test.js
 ```
+
+### Test Coverage
+
+The integration includes comprehensive tests for:
+- ✅ Client functionality and error handling
+- ✅ Engine workflow orchestration
+- ✅ Monitor progress tracking
+- ✅ Requirement parsing and formatting
+- ✅ Authentication middleware
+- ✅ Configuration management
 
 ### Mock Mode
 
+For development and testing, the integration supports mock mode:
+
 ```javascript
-const codegen = new CodegenIntegration({
-    development: {
-        mockMode: true,
-        debugMode: true
-    }
+const components = await createCodegenIntegration({}, {
+    enableMock: true // Uses mock responses instead of real API calls
 });
 ```
 
-## 📈 Monitoring
+## 🔐 Security
 
-### Metrics Available
+### Authentication
 
-```javascript
-const stats = codegen.getStatistics();
-console.log(stats);
-// {
-//   totalProcessed: 150,
-//   successful: 142,
-//   failed: 8,
-//   successRate: "94.67%",
-//   averageProcessingTime: 45000,
-//   activeTasks: 3,
-//   rateLimitStatus: { ... },
-//   authStatus: { ... }
-// }
-```
-
-### Health Checks
+The integration uses Bearer token authentication:
 
 ```javascript
-const health = await codegen.getHealth();
-console.log(health);
-// {
-//   status: "healthy",
-//   components: {
-//     auth: { status: "healthy" },
-//     client: { status: "healthy" },
-//     rateLimiter: { status: "healthy" }
-//   }
-// }
+// Via environment variable
+CODEGEN_API_KEY=your_token
+
+// Via configuration
+const client = new CodegenIntegration('your_token', 'your_org_id');
+
+// Via middleware
+app.use('/api/codegen', createCodegenAuthMiddleware());
 ```
 
-## 🔒 Security
+### Rate Limiting
 
-- **Secure authentication** with token management
-- **Rate limiting** to prevent abuse
-- **Input validation** for all requests
-- **Error sanitization** to prevent information leakage
-- **Circuit breaker** pattern for resilience
+Built-in rate limiting prevents API abuse:
+- Configurable requests per minute/hour
+- Exponential backoff on failures
+- Queue management for burst requests
 
-## 🚀 Performance
+### Audit Logging
 
-- **Optimized prompt generation** with length management
-- **Intelligent rate limiting** with multiple strategies
-- **Connection pooling** and reuse
-- **Caching** for frequently accessed data
-- **Batch processing** for multiple tasks
+All API interactions are logged for security auditing:
+- Request/response logging (configurable)
+- Authentication events
+- Error tracking
+- Performance metrics
 
-## 🔄 Migration from Individual PRs
+## 📊 Monitoring & Health Checks
 
-If you were using any of the individual PR implementations:
+### Health Endpoints
 
-### From PR #52
 ```javascript
-// Old
-import { CodegenClient } from './pr52/codegen-client.js';
+// Check overall integration health
+const health = await factory.getHealth();
 
-// New
-import { CodegenIntegration } from './src/integrations/codegen/index.js';
+// Check individual component health
+const clientHealth = await client.getHealth();
+const engineHealth = await engine.getHealth();
 ```
 
-### From PR #54
+### Metrics
+
 ```javascript
-// Old
-import { NaturalLanguageProcessor } from './pr54/nlp.js';
+// Get integration metrics
+const metrics = factory.getMetrics();
 
-// New - NLP is integrated
-const result = await codegen.processTask(task); // NLP included
+// Get monitoring statistics
+const stats = monitor.getStatistics();
 ```
 
-### From PR #86
+### Logging
+
+The integration uses structured logging:
+
 ```javascript
-// Old
-import { TaskProcessor } from './pr86/task-processor.js';
+import { log } from '../../scripts/modules/utils.js';
 
-// New - All functionality consolidated
-const result = await codegen.processTask(task, options);
+// Different log levels
+log('debug', 'Detailed debugging information');
+log('info', 'General information');
+log('warning', 'Warning conditions');
+log('error', 'Error conditions');
 ```
+
+## 🔄 Workflow Examples
+
+### Complete Linear Issue Processing
+
+```javascript
+// 1. Linear issue is assigned to Codegen
+const linearIssueId = 'linear-123';
+
+// 2. Engine processes the issue
+const result = await engine.processLinearTask(linearIssueId);
+
+// 3. Monitor tracks progress and updates Linear
+// (Automatic progress comments posted to Linear)
+
+// 4. On completion, PR is created and Linear is updated
+// (Automatic PR link added to Linear issue)
+```
+
+### Custom Requirement Processing
+
+```javascript
+// 1. Parse custom requirements
+const requirements = parser.parseLinearIssue(customDescription);
+
+// 2. Format for Codegen
+const prompt = formatter.formatRequirements(requirements);
+
+// 3. Generate code
+const task = await client.generateCode({
+    ...requirements,
+    repository: 'my-repo',
+    branch: 'feature-branch'
+});
+
+// 4. Monitor and handle completion
+monitor.startMonitoring(task.id, 'custom-task-id');
+```
+
+## 🚨 Error Handling
+
+The integration includes comprehensive error handling:
+
+### Retry Logic
+- Exponential backoff for transient failures
+- Configurable retry limits
+- Circuit breaker pattern for persistent failures
+
+### Error Recovery
+- Automatic task restart on recoverable errors
+- Manual intervention triggers for complex failures
+- Detailed error reporting to Linear
+
+### Graceful Degradation
+- Mock mode fallback when API is unavailable
+- Partial functionality when components fail
+- Health check isolation
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+1. **Authentication Failures**
+   ```bash
+   # Check API key and org ID
+   echo $CODEGEN_API_KEY
+   echo $CODEGEN_ORG_ID
+   
+   # Test connectivity
+   curl -H "Authorization: Bearer $CODEGEN_API_KEY" https://api.codegen.sh/health
+   ```
+
+2. **Rate Limiting**
+   ```javascript
+   // Check rate limit status
+   const health = await client.getHealth();
+   console.log('Rate limits:', health.rateLimits);
+   ```
+
+3. **Task Monitoring Issues**
+   ```javascript
+   // Check active monitoring tasks
+   const stats = monitor.getStatistics();
+   console.log('Active tasks:', stats.activeTasks);
+   ```
+
+### Debug Mode
+
+Enable debug logging for detailed troubleshooting:
+
+```bash
+CODEGEN_LOG_LEVEL=debug
+CODEGEN_LOG_REQUESTS=true
+CODEGEN_LOG_RESPONSES=true
+```
+
+## 📚 API Reference
+
+### CodegenIntegration
+
+- `generateCode(requirements)` - Generate code from requirements
+- `monitorTask(taskId)` - Get task status
+- `createPR(taskData)` - Create PR with generated code
+- `getHealth()` - Get client health status
+- `shutdown()` - Gracefully shutdown client
+
+### AIDevelopmentEngine
+
+- `processLinearTask(issueId)` - Process Linear issue end-to-end
+- `extractRequirements(issue, taskData)` - Extract structured requirements
+- `handleCodegenCompletion(taskId, task)` - Handle successful completion
+- `handleCodegenFailure(taskId, task)` - Handle failures
+- `getHealth()` - Get engine health status
+- `shutdown()` - Gracefully shutdown engine
+
+### CodegenMonitor
+
+- `startMonitoring(codegenTaskId, taskId, options)` - Start monitoring task
+- `stopMonitoring(codegenTaskId)` - Stop monitoring task
+- `getStatistics()` - Get monitoring statistics
+- `getHealth()` - Get monitor health status
+- `shutdown()` - Gracefully shutdown monitor
 
 ## 🤝 Contributing
 
-1. This is the **single source of truth** for Codegen SDK integration
-2. All future enhancements should be made to this consolidated system
-3. Follow the established patterns and architecture
-4. Add comprehensive tests for new features
-5. Update documentation for any API changes
+When contributing to the Codegen integration:
+
+1. **Follow the existing patterns** - Use the established architecture
+2. **Add comprehensive tests** - Cover both success and failure scenarios
+3. **Update documentation** - Keep README and code comments current
+4. **Handle errors gracefully** - Implement proper error handling and recovery
+5. **Consider security** - Validate inputs and protect sensitive data
 
 ## 📄 License
 
-MIT License - see LICENSE file for details.
-
-## 🎉 Consolidation Summary
-
-### ✅ **SUCCESS CRITERIA MET**
-
-- ✅ **Single, comprehensive Codegen SDK integration**
-- ✅ **Zero duplication across all 6 Codegen PRs**
-- ✅ **Unified natural language processing engine**
-- ✅ **Consistent PR generation and automation**
-- ✅ **Single Claude Code orchestration system**
-- ✅ **All Codegen integration tests passing** (via mock mode)
-
-### 📊 **Consolidation Metrics**
-
-- **6 PRs** → **1 unified system**
-- **~15,000 lines of duplicated code** → **~2,000 lines of clean, unified code**
-- **6 different authentication systems** → **1 AuthenticationManager**
-- **Multiple configuration approaches** → **1 ConfigurationManager**
-- **Inconsistent interfaces** → **Unified API with consistent patterns**
-- **Overlapping error handling** → **Single ErrorHandler with comprehensive coverage**
-
-This consolidation represents a **major architectural improvement** that eliminates technical debt while preserving all functionality from the original 6 PRs.
+This integration is part of the claude-task-master project and follows the same license terms.
 
