@@ -1,6 +1,7 @@
 /**
  * models.js
- * Core functionality for managing AI model configurations
+ * Core functionality for managing AI model configurations and database models
+ * Enhanced with database integration for task composition components
  */
 
 import path from 'path';
@@ -23,6 +24,10 @@ import {
 	getAllProviders,
 	getBaseUrlForRole
 } from '../config-manager.js';
+
+// Import database models for task composition
+import { taskModel, subtaskModel } from '../../../src/database/models/TaskModel.js';
+import { workflowModel, workflowStepModel } from '../../../src/database/models/WorkflowModel.js';
 
 /**
  * Fetches the list of models from OpenRouter API.
@@ -643,5 +648,10 @@ export {
 	getModelConfiguration,
 	getAvailableModelsList,
 	setModel,
-	getApiKeyStatusReport
+	getApiKeyStatusReport,
+	// Export database models for task composition
+	taskModel,
+	subtaskModel,
+	workflowModel,
+	workflowStepModel
 };
