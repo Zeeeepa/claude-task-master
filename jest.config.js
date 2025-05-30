@@ -31,22 +31,47 @@ export default {
 	// Setup module aliases
 	moduleDirectories: ['node_modules', '<rootDir>'],
 
-	// Configure test coverage thresholds
+	// Configure test coverage thresholds - Updated to meet Phase 6 requirements
 	coverageThreshold: {
 		global: {
-			branches: 80,
-			functions: 80,
-			lines: 80,
-			statements: 80
+			branches: 90,
+			functions: 90,
+			lines: 90,
+			statements: 90
 		}
 	},
 
+	// Collect coverage from these files
+	collectCoverageFrom: [
+		'src/**/*.js',
+		'!src/**/*.test.js',
+		'!src/config/**',
+		'!src/**/__tests__/**',
+		'!src/**/node_modules/**'
+	],
+
 	// Generate coverage report in these formats
-	coverageReporters: ['text', 'lcov'],
+	coverageReporters: ['text', 'lcov', 'html', 'json'],
 
 	// Verbose output
 	verbose: true,
 
 	// Setup file
-	setupFilesAfterEnv: ['<rootDir>/tests/setup.js']
+	setupFilesAfterEnv: ['<rootDir>/tests/setup.js'],
+
+	// Test timeout
+	testTimeout: 30000,
+
+	// Maximum number of concurrent workers
+	maxWorkers: '50%',
+
+	// Test environment options
+	testEnvironmentOptions: {
+		node: {
+			experimental: {
+				vm: true
+			}
+		}
+	}
 };
+
